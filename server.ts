@@ -241,13 +241,10 @@ async function startServer() {
         }
       }
 
-      // Gece timer (otomatik gece bitmesi)
+      // Gece timer — sadece UI göstergesi, otomatik geçiş YOK
+      // Sadece nextDay butonu ile prep fazına geçilir (çift day++ bug'ını önler)
       if (gs.dayPhase === 'night') {
-        gs.dayTimer--;
-        if (gs.dayTimer <= 0) {
-          gs.dayPhase = 'prep'; gs.dayTimer = DAY_TICKS; gs.day++;
-          gs.customers = []; gs.waitList = [];
-        }
+        if (gs.dayTimer > 0) gs.dayTimer--;
       }
 
       // Spawn — sadece gündüz + kapanışa yakın durur
