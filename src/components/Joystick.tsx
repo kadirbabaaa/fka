@@ -1,107 +1,71 @@
-import React, { useRef, useState } from 'react';
+import React from 'react';
 
-interface JoystickProps {
+interface DPadProps {
   onMove: (x: number, y: number) => void;
 }
 
-export const Joystick: React.FC<JoystickProps> = ({ onMove }) => {
-  const joystickRef = useRef<HTMLDivElement>(null);
-  const [knobPos, setKnobPos] = useState({ x: 0, y: 0 });
-  const [isActive, setIsActive] = useState(false);
-
-  const handleMove = (clientX: number, clientY: number) => {
-    if (!joystickRef.current) return;
-    
-    const rect = joystickRef.current.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    
-    const dx = clientX - centerX;
-    const dy = clientY - centerY;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    const maxDistance = 50;
-
-    let finalX = dx;
-    let finalY = dy;
-
-    if (distance > maxDistance) {
-      const angle = Math.atan2(dy, dx);
-      finalX = Math.cos(angle) * maxDistance;
-      finalY = Math.sin(angle) * maxDistance;
-    }
-
-    setKnobPos({ x: finalX, y: finalY });
-    
-    // Normalize values between -1 and 1
-    const normalizedX = finalX / maxDistance;
-    const normalizedY = finalY / maxDistance;
-    
-    console.log('Joystick move:', normalizedX, normalizedY);
-    onMove(normalizedX, normalizedY);
+export const Joystick: React.FC<DPadProps> = ({ onMove }) => {
+  const handleDirection = (x: number, y: number) => {
+    onMove(x, y);
+    console.log('D-pad:', x, y);
   };
 
-  const handleEnd = () => {
-    setKnobPos({ x: 0, y: 0 });
-    setIsActive(false);
-    console.log('Joystick end');
-    onMove(0, 0);
-  };
-
-  const handleStart = (clientX: number, clientY: number) => {
-    setIsActive(true);
-    console.log('Joystick start');
-    handleMove(clientX, clientY);
-  };
+  const buttonClass = "w-16 h-16 bg-stone-600 hover:bg-stone-700 active:bg-stone-800 text-white rounded-lg shadow-lg flex items-center justify-center text-2xl font-bold border-2 border-stone-500 touch-none select-none";
 
   return (
-    <div
-      ref={joystickRef}
-      className="w-32 h-32 rounded-full bg-stone-300/70 border-4 border-stone-500 flex items-center justify-center touch-none select-none cursor-pointer"
-      style={{ userSelect: 'none' }}
-      onTouchStart={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const touch = e.touches[0];
-        handleStart(touch.clientX, touch.clientY);
-      }}
-      onTouchMove={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (isActive && e.touches[0]) {
-          handleMove(e.touches[0].clientX, e.touches[0].clientY);
-        }
-      }}
-      onTouchEnd={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        handleEnd();
-      }}
-      onMouseDown={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        handleStart(e.clientX, e.clientY);
-        
-        const handleMouseMove = (moveEvent: MouseEvent) => {
-          handleMove(moveEvent.clientX, moveEvent.clientY);
-        };
-        
-        const handleMouseUp = () => {
-          document.removeEventListener('mousemove', handleMouseMove);
-          document.removeEventListener('mouseup', handleMouseUp);
-          handleEnd();
-        };
-        
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-      }}
-    >
-      <div
-        className="w-16 h-16 rounded-full bg-stone-700 shadow-lg pointer-events-none"
-        style={{ 
-          transform: `translate(${knobPos.x}px, ${knobPos.y}px)`,
-          transition: isActive ? 'none' : 'transform 0.2s ease-out'
-        }}
-      />
+    <div className="grid grid-cols-3 gap-2 w-52 h-52 touch-none select-none">
+      {/* Top row */}
+      <div></div>
+      <button
+        className={buttonClass}
+        onTouchStart={(e) => { e.preventDefault(); handleDirection(0, -1); }}
+        onTouchEnd={(e) => { e.preventDefault(); handleDirection(0, 0); }}
+        onMouseDown={() => handleDirection(0, -1)}
+        onMouseUp={() => handleDirection(0, 0)}
+        onMouseLeave={() => handleDirection(0, 0)}
+      >
+        ↑
+      </button>
+      <div></div>
+
+      {/* Middle row */}
+      <button
+        className={buttonClass}
+        onTouchStart={(e) => { e.preventDefault(); handleDirection(-1, 0); }}
+        onTouchEnd={(e) => { e.preventDefault(); handleDirection(0, 0); }}
+        onMouseDown={() => handleDirection(-1, 0)}
+        onMouseUp={() => handleDirection(0, 0)}
+        onMouseLeave={() => handleDirection(0, 0)}
+      >
+        ←
+      </button>
+      <div className="w-16 h-16 bg-stone-400/50 rounded-lg border-2 border-stone-500 flex items-center justify-center">
+        <div className="w-8 h-8 bg-stone-600 rounded-full"></div>
+      </div>
+      <button
+        className={buttonClass}
+        onTouchStart={(e) => { e.preventDefault(); handleDirection(1, 0); }}
+        onTouchEnd={(e) => { e.preventDefault(); handleDirection(0, 0); }}
+        onMouseDown={() => handleDirection(1, 0)}
+        onMouseUp={() => handleDirection(0, 0)}
+        onMouseLeave={() => handleDirection(0, 0)}
+      >
+        →
+      </button>
+
+      {/* Bottom row */}
+      <div></div>
+      <button
+        className={buttonClass}
+        onTouchStart={(e) => { e.preventDefault(); handleDirection(0, 1); }}
+        onTouchEnd={(e) => { e.preventDefault(); handleDirection(0, 0); }}
+        onMouseDown={() => handleDirection(0, 1)}
+        onMouseUp={() => handleDirection(0, 0)}
+        onMouseLeave={() => handleDirection(0, 0)}
+      >
+        ↓
+      </button>
+      <div></div>
     </div>
   );
 };
