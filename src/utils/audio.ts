@@ -1,3 +1,5 @@
+import React from 'react';
+
 export function playSound(audioCtxRef: React.MutableRefObject<AudioContext | null>, type: string) {
   if (!audioCtxRef.current) {
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;

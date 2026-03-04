@@ -1,36 +1,54 @@
-export type Item = '🍎' | '🍞' | '🥛' | null;
+// ═══════════════════════════════════════════════════════════════════════════════
+// CLIENT TYPES — Shared'dan re-export + client-only sabitler
+// ═══════════════════════════════════════════════════════════════════════════════
 
-export interface Player {
-  id: string;
-  x: number;
-  y: number;
-  holding: Item;
-  color: string;
-  name: string;
-  hat: string;
-}
+// Shared'dan HER ŞEYİ re-export (tek kaynak)
+export {
+  // Types
+  type Item,
+  type StockKey,
+  type UpgradeKey,
+  type Player,
+  type Customer,
+  type WaitingGuest,
+  type Upgrades,
+  type CookStation,
+  type CookStationId,
+  type GameState,
+  // Constants
+  GAME_WIDTH,
+  GAME_HEIGHT,
+  DAY_TICKS,
+  NIGHT_TICKS,
+  WALL_Y1,
+  WALL_Y2,
+  DOOR_RANGES,
+  isInDoor,
+  UTIL_WALL_X1,
+  UTIL_WALL_X2,
+  UTIL_DOOR_RANGE,
+  isInUtilDoor,
+  INGREDIENTS,
+  COOK_STATION_DEFS,
+  TRASH_STATION,
+  SINK_STATION,
+  SEAT_SLOTS,
+  DISH_ITEMS,
+  UPGRADE_DEFS,
+  CLOSING_THRESHOLD,
+} from '../../shared/types';
 
-export interface Customer {
-  id: string;
-  x: number;
-  y: number;
-  targetY: number;
-  wants: Item;
-  patience: number;
-  maxPatience: number;
-}
-
-export interface GameState {
-  players: Record<string, Player>;
-  customers: Customer[];
-  score: number;
-  stock: Record<Exclude<Item, null>, number>;
-  marketName: string;
-}
-
-export const GAME_WIDTH = 800;
-export const GAME_HEIGHT = 600;
+// ─── Client-Only Sabitler ────────────────────────────────────────────────────
 export const PLAYER_SPEED = 5;
 
+// Masa pozisyonları (sadece render için)
+export const TABLE_X_SLOTS = [190, 390, 640, 890, 1090];
+export const TABLE_Y = 500;
+
+// Giriş kapısı (render + kuyruk gösterimi)
+export const ENTRANCE = { x: 640, y: 695 };
+export const OUTSIDE_QUEUE_Y = 700;
+
+// Karakter seçimi
 export const COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#a855f7', '#f97316', '#ec4899'];
 export const HATS = ['', '👑', '🎀', '🎩', '🧢', '🐱'];
