@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState } from 'react';
 
 interface JoystickProps {
   onMove: (x: number, y: number) => void;
@@ -7,9 +7,9 @@ interface JoystickProps {
 export const Joystick: React.FC<JoystickProps> = ({ onMove }) => {
   const joystickRef = useRef<HTMLDivElement>(null);
   const [knobPos, setKnobPos] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
+  const [isActive, setIsActive] = useState(false);
 
-  const handleMove = useCallback((clientX: number, clientY: number) => {
+  const handleMove = (clientX: number, clientY: number) => {
     if (!joystickRef.current) return;
     
     const rect = joystickRef.current.getBoundingClientRect();
@@ -21,64 +21,86 @@ export const Joystick: React.FC<JoystickProps> = ({ onMove }) => {
     const distance = Math.sqrt(dx * dx + dy * dy);
     const maxDistance = 50;
 
-    if (distance <= maxDistance) {
-      setKnobPos({ x: dx, y: dy });
-      onMove(dx / maxDistance, dy / maxDistance);
-    } else {
+    let finalX = dx;
+    let finalY = dy;
+
+    if (distance > maxDistance) {
       const angle = Math.atan2(dy, dx);
-      const x = Math.cos(angle) * maxDistance;
-      const y = Math.sin(angle) * maxDistance;
-      setKnobPos({ x, y });
-      onMove(x / maxDistance, y / maxDistance);
+      finalX = Math.cos(angle) * maxDistance;
+      finalY = Math.sin(angle) * maxDistance;
     }
-  }, [onMove]);
 
-  const handleEnd = useCallback(() => {
+    setKnobPos({ x: finalX, y: finalY });
+    
+    // Normalize values between -1 and 1
+    const normalizedX = finalX / maxDistance;
+    const normalizedY = finalY / maxDistance;
+    
+    console.log('Joystick move:', normalizedX, normalizedY);
+    onMove(normalizedX, normalizedY);
+  };
+
+  const handleEnd = () => {
     setKnobPos({ x: 0, y: 0 });
-    setIsDragging(false);
+    setIsActive(false);
+    console.log('Joystick end');
     onMove(0, 0);
-  }, [onMove]);
+  };
 
-  const handleStart = useCallback((clientX: number, clientY: number) => {
-    setIsDragging(true);
+  const handleStart = (clientX: number, clientY: number) => {
+    setIsActive(true);
+    console.log('Joystick start');
     handleMove(clientX, clientY);
-  }, [handleMove]);
+  };
 
   return (
     <div
       ref={joystickRef}
-      className="w-32 h-32 rounded-full bg-stone-300/50 border-4 border-stone-400/50 flex items-center justify-center touch-none select-none"
+      className="w-32 h-32 rounded-full bg-stone-300/70 border-4 border-stone-500 flex items-center justify-center touch-none select-none cursor-pointer"
+      style={{ userSelect: 'none' }}
       onTouchStart={(e) => {
         e.preventDefault();
+        e.stopPropagation();
         const touch = e.touches[0];
         handleStart(touch.clientX, touch.clientY);
       }}
       onTouchMove={(e) => {
         e.preventDefault();
-        if (isDragging) {
-          const touch = e.touches[0];
-          handleMove(touch.clientX, touch.clientY);
+        e.stopPropagation();
+        if (isActive && e.touches[0]) {
+          handleMove(e.touches[0].clientX, e.touches[0].clientY);
         }
       }}
       onTouchEnd={(e) => {
         e.preventDefault();
+        e.stopPropagation();
         handleEnd();
       }}
       onMouseDown={(e) => {
         e.preventDefault();
+        e.stopPropagation();
         handleStart(e.clientX, e.clientY);
+        
+        const handleMouseMove = (moveEvent: MouseEvent) => {
+          handleMove(moveEvent.clientX, moveEvent.clientY);
+        };
+        
+        const handleMouseUp = () => {
+          document.removeEventListener('mousemove', handleMouseMove);
+          document.removeEventListener('mouseup', handleMouseUp);
+          handleEnd();
+        };
+        
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
       }}
-      onMouseMove={(e) => {
-        if (isDragging) {
-          handleMove(e.clientX, e.clientY);
-        }
-      }}
-      onMouseUp={handleEnd}
-      onMouseLeave={handleEnd}
     >
       <div
-        className="w-16 h-16 rounded-full bg-stone-600 shadow-lg pointer-events-none transition-transform"
-        style={{ transform: `translate(${knobPos.x}px, ${knobPos.y}px)` }}
+        className="w-16 h-16 rounded-full bg-stone-700 shadow-lg pointer-events-none"
+        style={{ 
+          transform: `translate(${knobPos.x}px, ${knobPos.y}px)`,
+          transition: isActive ? 'none' : 'transform 0.2s ease-out'
+        }}
       />
     </div>
   );
