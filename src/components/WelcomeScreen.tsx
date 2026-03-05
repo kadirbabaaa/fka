@@ -6,7 +6,7 @@ interface WelcomeScreenProps {
 }
 
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onEnter }) => (
-    <div className="w-full h-full bg-gradient-to-b from-sky-400 via-sky-300 to-green-200 flex items-center justify-center p-4 overflow-hidden relative">
+    <div className="w-full h-full bg-gradient-to-b from-sky-400 via-sky-300 to-green-200 flex items-center justify-center p-4 overflow-hidden relative safe-top safe-bottom">
         {/* Bulutlar */}
         <div className="absolute top-10 left-10 text-6xl animate-bounce" style={{ animationDelay: '0s', animationDuration: '3s' }}>☁️</div>
         <div className="absolute top-20 right-20 text-8xl animate-bounce" style={{ animationDelay: '1s', animationDuration: '4s' }}>☁️</div>

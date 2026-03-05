@@ -132,14 +132,30 @@ export function useGameLoop({
       const state = gameStateRef.current;
 
       // ── 1. Hareket (WASD + Joystick) + client-side duvar çarpışması ─────
-      let dx = 0,
-        dy = 0;
-      if (keysRef.current.w) dy -= PLAYER_SPEED;
-      if (keysRef.current.s) dy += PLAYER_SPEED;
-      if (keysRef.current.a) dx -= PLAYER_SPEED;
-      if (keysRef.current.d) dx += PLAYER_SPEED;
-      dx += joystickVectorRef.current.x * PLAYER_SPEED;
-      dy += joystickVectorRef.current.y * PLAYER_SPEED;
+      let dx = 0;
+      let dy = 0;
+
+      // Klavye
+      if (keysRef.current.w) dy -= 1;
+      if (keysRef.current.s) dy += 1;
+      if (keysRef.current.a) dx -= 1;
+      if (keysRef.current.d) dx += 1;
+
+      // Joystick (eğer klavye yoksa joystick'e bak)
+      if (dx === 0 && dy === 0) {
+        dx = joystickVectorRef.current.x;
+        dy = joystickVectorRef.current.y;
+      }
+
+      // Hız Normalizasyonu (Çapraz giderken hızlanmayı engelle)
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > 0.1) {
+        // Dist > 1 ise (örneğin W+D basılınca sqrt(2) olur), 1'e sabitle
+        // Joystick zaten max 1 veriyor ama güvenliğe alalım.
+        const speedMultiplier = dist > 1 ? 1 / dist : 1;
+        dx = dx * speedMultiplier * PLAYER_SPEED;
+        dy = dy * speedMultiplier * PLAYER_SPEED;
+      }
 
       if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
         const lp = localPlayerRef.current;

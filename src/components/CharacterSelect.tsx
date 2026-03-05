@@ -23,7 +23,7 @@ export const CharacterSelect: React.FC<CharacterSelectProps> = ({
     marketName, setMarketName,
     onJoin,
 }) => (
-    <div className="w-full min-h-dvh bg-stone-900 flex items-center justify-center p-4 overflow-y-auto">
+    <div className="w-full min-h-dvh bg-stone-900 flex items-center justify-center p-4 overflow-y-auto safe-top safe-bottom">
         <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl">
             <h1 className="text-3xl font-black text-center mb-2 text-stone-800">{MARKET_NAME} 🏪</h1>
             <p className="text-center text-stone-500 mb-8 font-medium">Karakterini oluştur ve dükkana gir!</p>

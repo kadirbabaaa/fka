@@ -21,8 +21,9 @@ export const Joystick: React.FC<JoystickProps> = ({ onMove }) => {
     const dx = clientX - centerX;
     const dy = clientY - centerY;
     const distance = Math.sqrt(dx * dx + dy * dy);
-    const maxDistance = 50;
+    const maxDistance = 50; // max knob travel distance
 
+    // Normalize final output so pushing edge of knob = full speed (1.0)
     let finalX = dx;
     let finalY = dy;
 
@@ -33,6 +34,7 @@ export const Joystick: React.FC<JoystickProps> = ({ onMove }) => {
     }
 
     setKnobPos({ x: finalX, y: finalY });
+    // Normalize to -1.0 to 1.0 range based on maxDistance
     onMove(finalX / maxDistance, finalY / maxDistance);
   }, [onMove]);
 

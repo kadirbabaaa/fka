@@ -89,7 +89,7 @@ export const GameScreen: React.FC<Props> = ({
     const bs = settings.buttonSize;
 
     return (
-        <div className="w-full h-full bg-stone-950 flex flex-col overflow-hidden touch-none select-none safe-bottom">
+        <div className="w-full h-full bg-stone-950 flex flex-col overflow-hidden touch-none select-none safe-top safe-bottom">
 
             {/* ── Üst Bar ──────────────────────────────────────────────────────── */}
             <div className="flex-none h-12 px-2 flex items-center justify-between gap-2 bg-stone-950/90 border-b border-stone-800">
