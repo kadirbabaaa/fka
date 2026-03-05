@@ -36,6 +36,8 @@ export {
   DISH_ITEMS,
   UPGRADE_DEFS,
   CLOSING_THRESHOLD,
+  BURN_TICKS,
+  BURNED_FOOD
 } from '../../shared/types';
 
 // ─── Client-Only Sabitler ────────────────────────────────────────────────────

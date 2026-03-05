@@ -31,6 +31,8 @@ import {
   SEAT_SLOTS,
   DISH_ITEMS,
   UPGRADE_DEFS,
+  BURN_TICKS,
+  BURNED_FOOD,
 } from "./shared/types";
 
 // ─── Server-Only Sabitler ────────────────────────────────────────────────────
@@ -130,9 +132,16 @@ async function startServer() {
       const gs = rooms[roomId], p = gs.players[socket.id]; if (!p) return;
       const { x: px, y: py } = p;
 
-      // Çöp
+      // Çöp (Yanmış yemek atılırsa ceza kestir)
       if (Math.hypot(px - TRASH_STATION.x, py - TRASH_STATION.y) < INTERACT_R) {
-        p.holding = null; socket.emit("sound", "trash"); return;
+        if (p.holding === BURNED_FOOD) {
+          gs.score = Math.max(0, gs.score - 2); // Kömür atma cezası
+          io.to(roomId!).emit("sound", "fail");
+        } else {
+          socket.emit("sound", "trash");
+        }
+        p.holding = null;
+        return;
       }
 
       // Pişirme istasyonları
@@ -140,11 +149,18 @@ async function startServer() {
         const st = gs.cookStations[id];
         if (Math.hypot(px - def.pos.x, py - def.pos.y) < INTERACT_R) {
           if (p.holding === def.input && !st.input && !st.output) {
+            // Yemeği koy
             st.input = p.holding; st.timer = def.time; p.holding = null;
+            st.isBurned = false; st.burnTimer = 0;
             socket.emit("sound", "pickup");
-          } else if (!p.holding && st.output) {
-            p.holding = st.output; st.output = null;
+          } else if (!p.holding && st.output && !st.isBurned) {
+            // Normal (pişmiş) yemeği al
+            p.holding = st.output; st.output = null; st.burnTimer = 0;
             socket.emit("sound", "success");
+          } else if (!p.holding && st.isBurned) {
+            // YANMIŞ yemeği (kömür) al
+            p.holding = BURNED_FOOD; st.output = null; st.isBurned = false; st.burnTimer = 0;
+            socket.emit("sound", "trash");
           }
           return;
         }
@@ -221,12 +237,24 @@ async function startServer() {
       const gs = rooms[rid];
       if (!gs.stock) gs.stock = { '🫓': 10, '🥩': 10, '🥬': 10 };
 
-      // Pişirme timer
+      // Pişirme & Yanma timer
       for (const [id, def] of Object.entries(COOK_STATION_DEFS) as [keyof typeof COOK_STATION_DEFS, typeof COOK_STATION_DEFS[keyof typeof COOK_STATION_DEFS]][]) {
         const st = gs.cookStations[id];
         if (st.input && st.timer > 0) {
+          // Pişiyor
           st.timer--;
-          if (st.timer === 0) { st.output = def.output; st.input = null; }
+          if (st.timer === 0) {
+            st.output = def.output; st.input = null;
+            st.isBurned = false;
+            st.burnTimer = BURN_TICKS; // Yanma süreci başlar
+          }
+        } else if (st.output && st.burnTimer !== undefined && st.burnTimer > 0 && !st.isBurned) {
+          // Pişti, bekliyor, yanmaya yaklaşıyor
+          st.burnTimer--;
+          if (st.burnTimer === 0) {
+            st.isBurned = true; // Kömür oldu
+            io.to(rid).emit("sound", "fail");
+          }
         }
       }
 

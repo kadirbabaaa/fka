@@ -32,6 +32,8 @@ export interface CookStation {
     input: string | null;
     timer: number;
     output: string | null;
+    burnTimer?: number;    // Yemek piştikten sonra yanma sayacı
+    isBurned?: boolean;    // Yemek tamamen yandı mı?
 }
 
 export interface GameState {
@@ -56,6 +58,8 @@ export const GAME_HEIGHT = 720;
 export const DAY_TICKS = 1800;   // ~60 saniye (30fps)
 export const NIGHT_TICKS = 600;    // ~20 saniye
 export const CLOSING_THRESHOLD = 450; // son ~15sn müşteri gelmesin
+export const BURN_TICKS = 300;     // ~10 sn yemek yanma süresi
+export const BURNED_FOOD = '⬛';   // Çöpe atılacak yanan yemek
 
 // ─── Yatay Duvar & Kapılar (mutfak↔salon) ────────────────────────────────────
 export const WALL_Y1 = 230;
