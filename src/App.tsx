@@ -29,7 +29,7 @@ export default function App() {
   const [marketName, setMarketName] = useState(MARKET_NAME);
   const [playerColor, setPlayerColor] = useState(COLORS[0]);
   const [playerHat, setPlayerHat] = useState(HATS[0]);
-  const [roomId, setRoomId] = useState('');
+  const [roomId, setRoomId] = useState('terramarket'); // Tek Oda Sistemi
 
   const handleJoin = (e: React.FormEvent) => {
     e.preventDefault();

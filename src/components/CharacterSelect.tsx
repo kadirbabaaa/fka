@@ -12,8 +12,6 @@ interface CharacterSelectProps {
     setPlayerHat: (v: string) => void;
     marketName: string;
     setMarketName: (v: string) => void;
-    roomId: string;
-    setRoomId: (v: string) => void;
     onJoin: (e: React.FormEvent) => void;
 }
 
@@ -23,7 +21,6 @@ export const CharacterSelect: React.FC<CharacterSelectProps> = ({
     playerColor, setPlayerColor,
     playerHat, setPlayerHat,
     marketName, setMarketName,
-    roomId, setRoomId,
     onJoin,
 }) => (
     <div className="w-full min-h-dvh bg-stone-900 flex items-center justify-center p-4 overflow-y-auto">
@@ -98,20 +95,6 @@ export const CharacterSelect: React.FC<CharacterSelectProps> = ({
                         placeholder="Örn: Bizim Market"
                         className="w-full px-4 py-3 rounded-xl border-2 border-stone-200 focus:border-blue-500 outline-none transition-colors text-lg font-medium"
                     />
-                </div>
-
-                {/* Oda */}
-                <div>
-                    <label className="block text-sm font-bold text-stone-700 mb-2">Oda İsmi (Opsiyonel)</label>
-                    <input
-                        type="text"
-                        value={roomId}
-                        onChange={e => setRoomId(e.target.value)}
-                        maxLength={15}
-                        placeholder="Örn: askimla-market"
-                        className="w-full px-4 py-3 rounded-xl border-2 border-stone-200 focus:border-blue-500 outline-none transition-colors text-lg font-medium"
-                    />
-                    <p className="text-xs text-stone-400 mt-1">Aynı odaya girmek için aynı ismi yazın.</p>
                 </div>
 
                 <button
