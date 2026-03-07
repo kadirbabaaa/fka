@@ -49,6 +49,9 @@ export interface CookStation {
     output: string | null;
     burnTimer?: number;    // Yemek piştikten sonra yanma sayacı
     isBurned?: boolean;    // Yemek tamamen yandı mı?
+    id: string;           // Fırın ID'si (oven1, oven2, vs.)
+    x: number;            // Fırın pozisyonu
+    y: number;
 }
 
 export interface HoldingStation {
@@ -75,7 +78,7 @@ export interface GameState {
     upgrades: Upgrades;
     day: number;
     hasOrderedTonight: boolean;
-    cookStations: { pizza: CookStation; grill: CookStation; salad: CookStation };
+    cookStations: CookStation[]; // Array olarak değiştirdik
 }
 
 // ─── Boyut ───────────────────────────────────────────────────────────────────
@@ -91,10 +94,10 @@ export const BURNED_FOOD = '⬛';   // Çöpe atılacak yanan yemek
 
 // ─── Bekletme İstasyonları (Prep Counters / Plates) ──────────────────────────
 export const HOLDING_STATION_POSITIONS = [
-    { id: 'plate0', x: 920, y: 200, radius: 35 },
-    { id: 'plate1', x: 980, y: 200, radius: 35 },
-    { id: 'plate2', x: 1040, y: 200, radius: 35 },
-    { id: 'plate3', x: 1100, y: 200, radius: 35 },
+    { id: 'plate0', x: 600, y: 120, radius: 35 },
+    { id: 'plate1', x: 660, y: 120, radius: 35 },
+    { id: 'plate2', x: 720, y: 120, radius: 35 },
+    { id: 'plate3', x: 780, y: 120, radius: 35 },
 ];
 
 // ─── Yatay Duvar & Kapılar (mutfak↔salon) ────────────────────────────────────
@@ -117,23 +120,34 @@ export function isInUtilDoor(y: number): boolean {
 
 // ─── Malzeme İstasyonları ────────────────────────────────────────────────────
 export const INGREDIENTS = [
-    { key: '🫓' as StockKey, pos: { x: 200, y: 65 }, label: 'Hamur', color: '#fde68a' },
-    { key: '🥩' as StockKey, pos: { x: 450, y: 65 }, label: 'Et', color: '#fca5a5' },
-    { key: '🥬' as StockKey, pos: { x: 700, y: 65 }, label: 'Sebze', color: '#bbf7d0' },
+    { key: '🫓' as StockKey, pos: { x: 120, y: 65 }, label: 'Hamur', color: '#fde68a' },
+    { key: '🥩' as StockKey, pos: { x: 240, y: 65 }, label: 'Et', color: '#fca5a5' },
+    { key: '🥬' as StockKey, pos: { x: 360, y: 65 }, label: 'Sebze', color: '#bbf7d0' },
 ];
 
-// ─── Pişirme İstasyonları ────────────────────────────────────────────────────
-export const COOK_STATION_DEFS = {
-    pizza: { pos: { x: 200, y: 170 }, input: '🫓', output: '🍕', time: 90, label: '🍕 Pizzacı' },
-    grill: { pos: { x: 450, y: 170 }, input: '🥩', output: '🍔', time: 60, label: '🍔 Izgara' },
-    salad: { pos: { x: 700, y: 170 }, input: '🥬', output: '🥗', time: 30, label: '🥗 Salata' },
+// ─── Universal Fırın Sistemi ─────────────────────────────────────────────────
+// Her fırında her yemek yapılabilir
+export const RECIPE_DEFS = {
+    '🫓': { output: '🍕', time: 90, label: '🍕 Pizza' },
+    '🥩': { output: '🍔', time: 60, label: '🍔 Burger' },
+    '🥬': { output: '🥗', time: 30, label: '🥗 Salata' },
 } as const;
 
-export type CookStationId = keyof typeof COOK_STATION_DEFS;
+// Başlangıç fırın pozisyonları (sadece 1 fırın)
+export const INITIAL_OVEN_POSITIONS = [
+    { x: 120, y: 170 },
+];
+
+// Upgrade ile satın alınabilir ek fırın pozisyonları (2., 3., 4. fırın)
+export const ADDITIONAL_OVEN_POSITIONS = [
+    { x: 240, y: 170 },
+    { x: 360, y: 170 },
+    { x: 480, y: 170 },
+];
 
 // ─── Çöp Kutusu & Lavabo ───────────────────────────────────────────────────
-export const TRASH_STATION = { x: 900, y: 90 };  // Merkeze yakın
-export const SINK_STATION = { x: 1110, y: 90 }; // Sağ köşe
+export const TRASH_STATION = { x: 900, y: 90 };  // Sağ taraf
+export const SINK_STATION = { x: 1000, y: 90 }; // Sağ köşe
 
 // ─── Koltuklar ───────────────────────────────────────────────────────────────
 export const SEAT_SLOTS: { x: number; y: number }[] = [
@@ -153,3 +167,6 @@ export const UPGRADE_DEFS: Record<UpgradeKey, { costs: number[]; max: number }> 
     earnings: { costs: [40, 70], max: 2 },
     stockMax: { costs: [35, 55, 85], max: 3 },
 };
+
+// Fırın upgrade sistemi (2., 3., 4. fırın maliyetleri)
+export const OVEN_UPGRADE_COSTS = [80, 120, 180];

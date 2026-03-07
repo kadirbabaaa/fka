@@ -27,7 +27,10 @@ import {
   UTIL_WALL_X2,
   isInUtilDoor,
   INGREDIENTS,
-  COOK_STATION_DEFS,
+  RECIPE_DEFS,
+  INITIAL_OVEN_POSITIONS,
+  ADDITIONAL_OVEN_POSITIONS,
+  OVEN_UPGRADE_COSTS,
   TRASH_STATION,
   SINK_STATION,
   SEAT_SLOTS,
@@ -51,9 +54,16 @@ const LOGIC_STEP_MS = 1000 / 30;
 // ─── Room Yönetimi ───────────────────────────────────────────────────────────
 const rooms: Record<string, GameState> = {};
 
-function mkCook(): CookStation { return { input: null, timer: 0, output: null }; }
+function mkCook(id: string, x: number, y: number): CookStation { 
+    return { input: null, timer: 0, output: null, id, x, y }; 
+}
 
 function mkRoom(): GameState {
+  // Başlangıçta sadece 1 fırın
+  const initialOvens = INITIAL_OVEN_POSITIONS.map((pos, i) => 
+    mkCook(`oven${i + 1}`, pos.x, pos.y)
+  );
+
   return {
     players: {}, customers: [], waitList: [],
     holdingStations: HOLDING_STATION_POSITIONS.map(p => ({ id: p.id, item: CLEAN_PLATE })),
@@ -61,7 +71,7 @@ function mkRoom(): GameState {
     score: 0, stock: { '🫓': 10, '🥩': 10, '🥬': 10 },
     marketName: MARKET_NAME, dayPhase: 'prep', dayTimer: DAY_TICKS,
     upgrades: { patience: 0, earnings: 0, stockMax: 0 }, day: 1, hasOrderedTonight: false,
-    cookStations: { pizza: mkCook(), grill: mkCook(), salad: mkCook() },
+    cookStations: initialOvens,
   };
 }
 
@@ -212,21 +222,38 @@ async function startServer() {
         }
       }
 
-      // Pişirme istasyonları
-      for (const [id, def] of Object.entries(COOK_STATION_DEFS) as [keyof typeof COOK_STATION_DEFS, typeof COOK_STATION_DEFS[keyof typeof COOK_STATION_DEFS]][]) {
-        const st = gs.cookStations[id];
-        if (Math.hypot(px - def.pos.x, py - def.pos.y) < INTERACT_R) {
-          if (p.holding === def.input && !st.input && !st.output) {
-            st.input = p.holding; st.timer = def.time; p.holding = null;
-            st.isBurned = false; st.burnTimer = 0;
-            socket.emit("sound", "pickup");
-          } else if (p.holding === CLEAN_PLATE && st.output && !st.isBurned) {
-            p.holding = st.output; st.output = null; st.burnTimer = 0;
+      // Universal fırınlar - her fırında her yemek yapılabilir
+      for (const station of gs.cookStations) {
+        if (Math.hypot(px - station.x, py - station.y) < INTERACT_R) {
+          // Malzeme koyma - herhangi bir malzeme kabul edilir
+          if (INGREDIENTS.some(ing => ing.key === p.holding) && !station.input && !station.output) {
+            const recipe = RECIPE_DEFS[p.holding as keyof typeof RECIPE_DEFS];
+            if (recipe) {
+              station.input = p.holding; 
+              station.timer = recipe.time; 
+              p.holding = null;
+              station.isBurned = false; 
+              station.burnTimer = 0;
+              socket.emit("sound", "pickup");
+            }
+          } 
+          // Temiz tabakla yemek alma
+          else if (p.holding === CLEAN_PLATE && station.output && !station.isBurned) {
+            p.holding = station.output; 
+            station.output = null; 
+            station.burnTimer = 0;
             socket.emit("sound", "success");
-          } else if (!p.holding && st.isBurned) {
-            p.holding = BURNED_FOOD; st.output = null; st.isBurned = false; st.burnTimer = 0;
+          } 
+          // Yanmış yemek alma
+          else if (!p.holding && station.isBurned) {
+            p.holding = BURNED_FOOD; 
+            station.output = null; 
+            station.isBurned = false; 
+            station.burnTimer = 0;
             socket.emit("sound", "trash");
-          } else if (!p.holding && st.output && !st.isBurned) {
+          } 
+          // Hata durumu - tabaksız yemek almaya çalışma
+          else if (!p.holding && station.output && !station.isBurned) {
             socket.emit("sound", "fail");
           }
           return;
@@ -266,6 +293,33 @@ async function startServer() {
       io.to(roomId!).emit("sound", "success");
     });
 
+    socket.on("buyOven", () => {
+      if (!roomId || !rooms[roomId]) return;
+      const gs = rooms[roomId]; 
+      if (gs.dayPhase !== 'night') return;
+      
+      const currentOvenCount = gs.cookStations.length;
+      const maxOvens = INITIAL_OVEN_POSITIONS.length + ADDITIONAL_OVEN_POSITIONS.length;
+      
+      if (currentOvenCount >= maxOvens) {
+        socket.emit("sound", "fail");
+        return;
+      }
+      
+      const ovenIndex = currentOvenCount - INITIAL_OVEN_POSITIONS.length;
+      const cost = OVEN_UPGRADE_COSTS[ovenIndex];
+      
+      if (gs.score < cost) {
+        socket.emit("sound", "fail");
+        return;
+      }
+      
+      gs.score -= cost;
+      const newPos = ADDITIONAL_OVEN_POSITIONS[ovenIndex];
+      gs.cookStations.push(mkCook(`oven${currentOvenCount + 1}`, newPos.x, newPos.y));
+      socket.emit("sound", "success");
+    });
+
     socket.on("upgrade", (id: UpgradeKey) => {
       if (!roomId || !rooms[roomId]) return;
       const gs = rooms[roomId]; if (gs.dayPhase !== 'night') return;
@@ -290,7 +344,13 @@ async function startServer() {
       gs.dayPhase = 'prep'; gs.dayTimer = DAY_TICKS; gs.day++;
       gs.customers = []; gs.waitList = [];
       gs.hasOrderedTonight = false;
-      gs.cookStations = { pizza: mkCook(), grill: mkCook(), salad: mkCook() };
+      gs.cookStations.forEach(station => {
+        station.input = null;
+        station.timer = 0;
+        station.output = null;
+        station.isBurned = false;
+        station.burnTimer = 0;
+      });
       io.to(roomId!).emit("sound", "arrive");
     });
 
@@ -318,22 +378,25 @@ async function startServer() {
       const gs = rooms[rid];
       if (!gs.stock) gs.stock = { '🫓': 10, '🥩': 10, '🥬': 10 };
 
-      // Pişirme & Yanma timer
-      for (const [id, def] of Object.entries(COOK_STATION_DEFS) as [keyof typeof COOK_STATION_DEFS, typeof COOK_STATION_DEFS[keyof typeof COOK_STATION_DEFS]][]) {
-        const st = gs.cookStations[id];
-        if (st.input && st.timer > 0) {
+      // Universal fırın sistemi - pişirme & yanma timer
+      for (const station of gs.cookStations) {
+        if (station.input && station.timer > 0) {
           // Pişiyor
-          st.timer--;
-          if (st.timer === 0) {
-            st.output = def.output; st.input = null;
-            st.isBurned = false;
-            st.burnTimer = BURN_TICKS; // Yanma süreci başlar
+          station.timer--;
+          if (station.timer === 0) {
+            const recipe = RECIPE_DEFS[station.input as keyof typeof RECIPE_DEFS];
+            if (recipe) {
+              station.output = recipe.output; 
+              station.input = null;
+              station.isBurned = false;
+              station.burnTimer = BURN_TICKS; // Yanma süreci başlar
+            }
           }
-        } else if (st.output && st.burnTimer !== undefined && st.burnTimer > 0 && !st.isBurned) {
+        } else if (station.output && station.burnTimer !== undefined && station.burnTimer > 0 && !station.isBurned) {
           // Pişti, bekliyor, yanmaya yaklaşıyor
-          st.burnTimer--;
-          if (st.burnTimer === 0) {
-            st.isBurned = true; // Kömür oldu
+          station.burnTimer--;
+          if (station.burnTimer === 0) {
+            station.isBurned = true; // Kömür oldu
             io.to(rid).emit("sound", "fail");
           }
         }

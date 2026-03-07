@@ -37,6 +37,7 @@ export const GameScreen: React.FC<Props> = ({
     const [dayTimer, setDayTimer] = useState(DAY_TICKS);
     const [upgrades, setUpgrades] = useState<Upgrades>({ patience: 0, earnings: 0, stockMax: 0 });
     const [day, setDay] = useState(1);
+    const [ovenCount, setOvenCount] = useState(1);
     const [queueLen, setQueueLen] = useState(0);
 
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -53,6 +54,7 @@ export const GameScreen: React.FC<Props> = ({
             setUpgrades({ ...s.upgrades });
             setDay(s.day);
             setQueueLen(s.waitList?.length ?? 0);
+            setOvenCount(s.cookStations?.length ?? 1);
         }, 200);
         return () => clearInterval(id);
     }, []);
@@ -188,7 +190,9 @@ export const GameScreen: React.FC<Props> = ({
                 {dayPhase === 'night' && (
                     <UpgradeShop
                         score={score} upgrades={upgrades} day={day}
+                        ovenCount={ovenCount}
                         onUpgrade={id => emit('upgrade', id)}
+                        onBuyOven={() => emit('buyOven')}
                         onOrder={() => emit('order')}
                         onNextDay={() => emit('nextDay')}
                     />

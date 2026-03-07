@@ -19,7 +19,7 @@ import {
   ENTRANCE,
   OUTSIDE_QUEUE_Y,
   INGREDIENTS,
-  COOK_STATION_DEFS,
+  RECIPE_DEFS,
   HOLDING_STATION_POSITIONS,
 } from "../types/game";
 
@@ -277,10 +277,11 @@ export function useGameLoop({
       }
 
       // Pişirme istasyonları
+      // Universal fırınlar
       const cookStations = state.cookStations;
       if (cookStations) {
-        for (const id of ["pizza", "grill", "salad"] as const) {
-          drawCookStation(ctx, id, cookStations[id], time);
+        for (const station of cookStations) {
+          drawCookStation(ctx, station, time);
         }
       }
 

@@ -4,7 +4,6 @@ import {
   WALL_Y1,
   DOOR_RANGES,
   INGREDIENTS,
-  COOK_STATION_DEFS,
   TRASH_STATION,
   SINK_STATION,
   UTIL_WALL_X1,
@@ -94,17 +93,7 @@ export function drawFloor(ctx: CanvasRenderingContext2D) {
     ctx.fillRect(x - 52, y - 30, 104, 10);
   });
 
-  // ── Tezgah — pişirme istasyonları (alt sıra) ──────────────────────────────
-  for (const def of Object.values(COOK_STATION_DEFS)) {
-    const { x, y } = def.pos;
-    ctx.fillStyle = "#c8b8a2";
-    ctx.beginPath();
-    ctx.roundRect(x - 55, y - 33, 110, 66, 8);
-    ctx.fill();
-    ctx.strokeStyle = "#8b7355";
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-  }
+  // ── Fırın tezgahları artık dinamik çiziliyor (drawCookStation.ts'te) ──────
 
   // ── Lavabo (dekoratif) ──────────────────────────────────────────────────────
   const sx = SINK_STATION.x,

@@ -25,11 +25,8 @@ const DEFAULT_STATE: GameState = {
     upgrades: { patience: 0, earnings: 0, stockMax: 0 },
     day: 1,
     hasOrderedTonight: false,
-    cookStations: {
-        pizza: { input: null, timer: 0, output: null },
-        grill: { input: null, timer: 0, output: null },
-        salad: { input: null, timer: 0, output: null },
-    },
+    cookStations: [],
+
 };
 
 /**

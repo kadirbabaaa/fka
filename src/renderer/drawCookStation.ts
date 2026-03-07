@@ -1,21 +1,14 @@
-import { CookStation, COOK_STATION_DEFS, BURN_TICKS, BURNED_FOOD } from '../types/game';
-
-type StationId = keyof typeof COOK_STATION_DEFS;
+import { CookStation, RECIPE_DEFS, BURN_TICKS, BURNED_FOOD } from '../types/game';
 
 /**
- * Pişirme istasyonu çizer.
- * - Boş: sadece istasyon kutusu
- * - Pişiyor: progress ring animasyonu
- * - Hazır: pulse efekti + output emoji
+ * Universal fırın çizer - hangi yemek pişiyorsa o görünür
  */
 export function drawCookStation(
     ctx: CanvasRenderingContext2D,
-    id: StationId,
     station: CookStation,
     time: number,
 ) {
-    const def = COOK_STATION_DEFS[id];
-    const { x, y } = def.pos;
+    const { x, y } = station;
     const w = 76, h = 58;
 
     // ── 3D Fırın / İstasyon Görünümü ──────────────────────────────────────────
@@ -131,7 +124,10 @@ export function drawCookStation(
 
     if (station.input && station.timer > 0) {
         // Pişiyor — progress ring
-        const progress = 1 - station.timer / def.time;
+        const recipe = RECIPE_DEFS[station.input as keyof typeof RECIPE_DEFS];
+        if (!recipe) return;
+        
+        const progress = 1 - station.timer / recipe.time;
         const radius = 14;
 
         // Arka halka
@@ -209,11 +205,12 @@ export function drawCookStation(
             ctx.fillText('HAZIR!', x, contentY + 18);
         }
     } else {
-        // Boş — sadece label (istenen çıkış emojisini gösteriyoruz silik bir formatta)
-        ctx.font = '20px Arial';
+        // Boş — Universal fırın etiketi
+        ctx.font = '16px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(def.output, x, contentY);
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.fillText('🔥', x, contentY);
     }
 
     // ── Etiket (altta gövdenin hemen altında) ──────────────────────────────
@@ -221,5 +218,5 @@ export function drawCookStation(
     ctx.font = 'bold 11px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillText(def.label, x, y + h / 2 - 2);
+    ctx.fillText(`Fırın ${station.id.replace('oven', '')}`, x, y + h / 2 - 2);
 }
