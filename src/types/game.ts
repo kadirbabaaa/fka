@@ -39,6 +39,7 @@ export {
   BURN_TICKS,
   BURNED_FOOD,
   HOLDING_STATION_POSITIONS,
+  CHARACTER_TYPES,
   type HoldingStation
 } from '../../shared/types';
 

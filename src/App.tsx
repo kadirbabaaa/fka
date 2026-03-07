@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { COLORS, HATS } from './types/game';
+import { COLORS, CHARACTER_TYPES } from './types/game';
 import { MARKET_NAME } from './constants';
 import { useSocket } from './hooks/useSocket';
 import { useKeyboard } from './hooks/useKeyboard';
@@ -10,26 +10,19 @@ import { GameScreen } from './components/GameScreen';
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const localPlayerRef = useRef({ x: 400, y: 300 });
-
-  // isJoinedRef en başta — useKeyboard ve useSocket bunu kullanır
   const isJoinedRef = useRef(false);
 
-  // Socket + game state
   const { socket, isConnected, myId, gameStateRef, audioCtxRef } = useSocket(localPlayerRef);
-
-  // Klavye kontrolü (WASD + ok tuşları)
   const keysRef = useKeyboard({ isJoinedRef, socket, audioCtxRef });
 
-  // UI state
   const [showWelcome, setShowWelcome] = useState(true);
   const [isJoined, setIsJoined] = useState(false);
 
-  // Karakter seçimi
   const [playerName, setPlayerName] = useState('');
   const [marketName, setMarketName] = useState(MARKET_NAME);
-  const [playerColor, setPlayerColor] = useState(COLORS[0]);
-  const [playerHat, setPlayerHat] = useState(HATS[0]);
-  const [roomId, setRoomId] = useState('terramarket'); // Tek Oda Sistemi
+  const [charType, setCharType] = useState(0);
+  const [playerColor, setPlayerColor] = useState(CHARACTER_TYPES[0].bodyColor);
+  const [playerHat, setPlayerHat] = useState(CHARACTER_TYPES[0].hat);
 
   const handleJoin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +33,8 @@ export default function App() {
       name: playerName.trim(),
       color: playerColor,
       hat: playerHat,
-      roomId: roomId.trim().toLowerCase() || 'default',
+      charType,
+      roomId: 'terramarket',
       marketName: marketName.trim() || MARKET_NAME,
     });
 
@@ -48,12 +42,8 @@ export default function App() {
     setIsJoined(true);
   };
 
-  // ── Ekranlar ─────────────────────────────────────────────────────────────
-
   if (!isJoined) {
-    if (showWelcome) {
-      return <WelcomeScreen onEnter={() => setShowWelcome(false)} />;
-    }
+    if (showWelcome) return <WelcomeScreen onEnter={() => setShowWelcome(false)} />;
 
     return (
       <CharacterSelect
@@ -61,12 +51,13 @@ export default function App() {
         playerName={playerName} setPlayerName={setPlayerName}
         playerColor={playerColor} setPlayerColor={setPlayerColor}
         playerHat={playerHat} setPlayerHat={setPlayerHat}
+        charType={charType} setCharType={setCharType}
         marketName={marketName} setMarketName={setMarketName}
-        roomId={roomId} setRoomId={setRoomId}
         onJoin={handleJoin}
       />
     );
   }
+
 
   return (
     <GameScreen

@@ -11,7 +11,18 @@ export type UpgradeKey = 'patience' | 'earnings' | 'stockMax';
 export interface Player {
     id: string; x: number; y: number;
     holding: Item; color: string; name: string; hat: string;
+    charType?: number; // 0-5: hangi karakter tipi
 }
+
+// 6 Karakter Tipi — CharacterSelect + drawPlayer kullana
+export const CHARACTER_TYPES = [
+    { id: 0, name: 'Aşçı', hat: '👨‍🍳', bodyColor: '#f5f5f4', accent: '#a78bfa', label: 'Klasik Aşçı' },
+    { id: 1, name: 'Suşici', hat: '🍣', bodyColor: '#fca5a5', accent: '#dc2626', label: 'Hızlı Suşi' },
+    { id: 2, name: 'Ninja', hat: '🥷', bodyColor: '#292524', accent: '#ef4444', label: 'Gizli Ninja' },
+    { id: 3, name: 'Chef', hat: '🧑‍🍳', bodyColor: '#fed7aa', accent: '#f97316', label: 'Baş Chef' },
+    { id: 4, name: 'Bahçıvan', hat: '🌿', bodyColor: '#bbf7d0', accent: '#16a34a', label: 'Taze Bahçı' },
+    { id: 5, name: 'Kaptan', hat: '⛴️', bodyColor: '#bfdbfe', accent: '#1d4ed8', label: 'Kaptan' },
+] as const;
 
 export interface Customer {
     id: string;
@@ -109,9 +120,9 @@ export const COOK_STATION_DEFS = {
 
 export type CookStationId = keyof typeof COOK_STATION_DEFS;
 
-// ─── Çöp Kutusu ──────────────────────────────────────────────────────────────
-export const TRASH_STATION = { x: 920, y: 120 };
-export const SINK_STATION = { x: 1080, y: 120 }; // dekoratif
+// ─── Çöp Kutusu & Lavabo ───────────────────────────────────────────────────
+export const TRASH_STATION = { x: 900, y: 90 };  // Merkeze yakın
+export const SINK_STATION = { x: 1110, y: 90 }; // Sağ köşe
 
 // ─── Koltuklar ───────────────────────────────────────────────────────────────
 export const SEAT_SLOTS: { x: number; y: number }[] = [

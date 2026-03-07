@@ -2,6 +2,7 @@ import {
     GAME_WIDTH, GAME_HEIGHT, WALL_Y1, DOOR_RANGES,
     INGREDIENTS, COOK_STATION_DEFS, TRASH_STATION, SINK_STATION,
     UTIL_WALL_X1, UTIL_WALL_X2, UTIL_DOOR_RANGE,
+    HOLDING_STATION_POSITIONS,
 } from '../types/game';
 
 /** Restoran zemini: mutfak tezgahlar + salon ahşap + duvar + kapılar */
@@ -35,7 +36,6 @@ export function drawFloor(ctx: CanvasRenderingContext2D) {
                 ctx.fillStyle = 'rgba(0,0,0,0.05)';
                 ctx.fillRect(tx, ty, tile, tile);
             }
-            // Karo çizgisi
             ctx.strokeStyle = 'rgba(0,0,0,0.06)';
             ctx.lineWidth = 0.5;
             ctx.strokeRect(tx, ty, tile, tile);
@@ -46,29 +46,46 @@ export function drawFloor(ctx: CanvasRenderingContext2D) {
     ctx.fillStyle = '#a8a29e';
     ctx.fillRect(0, 0, GAME_WIDTH, 8);
 
+    // ── Dekoratif arka duvar kaplamasi (sağ panel + sol panel) ────────────────
+    // Sol mutfak paneli: Malzeme + ocak tezgahları
+    ctx.fillStyle = '#e7e5e4';
+    ctx.beginPath();
+    ctx.roundRect(10, 10, 805, 215, 12);
+    ctx.fill();
+    ctx.strokeStyle = '#c4b5a4';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Sağ mutfak paneli: Çöp, Lavabo, Tabaklar
+    ctx.fillStyle = '#e7e5e4';
+    ctx.beginPath();
+    ctx.roundRect(840, 10, 430, 215, 12);
+    ctx.fill();
+    ctx.strokeStyle = '#c4b5a4';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
     // ── Tezgah — malzeme rafları (üst sıra) ────────────────────────────────────
     INGREDIENTS.forEach(ing => {
         const { x, y } = ing.pos;
-        // Tezgah yüzeyi
-        ctx.fillStyle = '#d6d3d1';
+        ctx.fillStyle = '#d6cfc4';
         ctx.beginPath();
-        ctx.roundRect(x - 55, y - 30, 110, 60, 6);
+        ctx.roundRect(x - 55, y - 33, 110, 66, 8);
         ctx.fill();
         ctx.strokeStyle = '#a8a29e';
         ctx.lineWidth = 1.5;
         ctx.stroke();
-        // Tezgah üst parlama
-        ctx.fillStyle = 'rgba(255,255,255,0.15)';
-        ctx.fillRect(x - 53, y - 28, 106, 8);
+        // Üst parlama
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.fillRect(x - 52, y - 30, 104, 10);
     });
 
     // ── Tezgah — pişirme istasyonları (alt sıra) ──────────────────────────────
     for (const def of Object.values(COOK_STATION_DEFS)) {
         const { x, y } = def.pos;
-        // Tezgah yüzeyi
-        ctx.fillStyle = '#c4b5a4';
+        ctx.fillStyle = '#c8b8a2';
         ctx.beginPath();
-        ctx.roundRect(x - 55, y - 28, 110, 56, 6);
+        ctx.roundRect(x - 55, y - 33, 110, 66, 8);
         ctx.fill();
         ctx.strokeStyle = '#8b7355';
         ctx.lineWidth = 1.5;
@@ -77,10 +94,9 @@ export function drawFloor(ctx: CanvasRenderingContext2D) {
 
     // ── Lavabo (dekoratif) ──────────────────────────────────────────────────────
     const sx = SINK_STATION.x, sy = SINK_STATION.y;
-    // Tezgah
     ctx.fillStyle = '#d6d3d1';
     ctx.beginPath();
-    ctx.roundRect(sx - 40, sy - 30, 80, 60, 8);
+    ctx.roundRect(sx - 42, sy - 33, 84, 66, 10);
     ctx.fill();
     ctx.strokeStyle = '#a8a29e';
     ctx.lineWidth = 1.5;
@@ -88,37 +104,61 @@ export function drawFloor(ctx: CanvasRenderingContext2D) {
     // Lavabo çukuru
     ctx.fillStyle = '#94a3b8';
     ctx.beginPath();
-    ctx.roundRect(sx - 22, sy - 14, 44, 28, 10);
+    ctx.roundRect(sx - 24, sy - 16, 48, 30, 12);
     ctx.fill();
     // Su parlaması
     ctx.fillStyle = 'rgba(147,197,253,0.4)';
     ctx.beginPath();
-    ctx.ellipse(sx, sy, 12, 8, 0, 0, Math.PI * 2);
+    ctx.ellipse(sx, sy - 2, 14, 9, 0, 0, Math.PI * 2);
     ctx.fill();
     // Musluk
     ctx.strokeStyle = '#71717a';
     ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.moveTo(sx, sy - 14);
-    ctx.lineTo(sx, sy - 28);
-    ctx.lineTo(sx + 10, sy - 28);
+    ctx.moveTo(sx, sy - 16);
+    ctx.lineTo(sx, sy - 30);
+    ctx.lineTo(sx + 12, sy - 30);
     ctx.stroke();
+    ctx.lineCap = 'butt';
     // Etiket
     ctx.fillStyle = '#64748b';
     ctx.font = 'bold 10px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillText('🚿 Lavabo', sx, sy + 22);
+    ctx.fillText('🚿 Lavabo', sx, sy + 24);
 
     // ── Çöp kutusu tezgahı ──────────────────────────────────────────────────────
     const tx = TRASH_STATION.x, tty = TRASH_STATION.y;
     ctx.fillStyle = '#d6d3d1';
     ctx.beginPath();
-    ctx.roundRect(tx - 35, tty - 25, 70, 50, 8);
+    ctx.roundRect(tx - 40, tty - 33, 80, 66, 10);
     ctx.fill();
     ctx.strokeStyle = '#a8a29e';
     ctx.lineWidth = 1.5;
     ctx.stroke();
+
+    // ── Tabak / Bekletme rafı dekoratif arka plan ──────────────────────────────
+    const plates = HOLDING_STATION_POSITIONS;
+    if (plates.length > 0) {
+        const firstP = plates[0];
+        const lastP = plates[plates.length - 1];
+        const pw = lastP.x - firstP.x + 100;
+        ctx.fillStyle = '#c8c4be';
+        ctx.beginPath();
+        ctx.roundRect(firstP.x - 50, firstP.y - 33, pw, 66, 8);
+        ctx.fill();
+        ctx.strokeStyle = '#a8a29e';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Tabak rafı etiketi
+        ctx.fillStyle = '#78716c';
+        ctx.font = 'bold 9px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText('Bekletme Rafı', (firstP.x + lastP.x) / 2, firstP.y + 28);
+    }
 
     // ── Ok işaretleri (malzeme → pişirme akışı) ────────────────────────────────
     ctx.strokeStyle = 'rgba(0,0,0,0.08)';
@@ -126,14 +166,13 @@ export function drawFloor(ctx: CanvasRenderingContext2D) {
     ctx.setLineDash([4, 4]);
     INGREDIENTS.forEach(ing => {
         ctx.beginPath();
-        ctx.moveTo(ing.pos.x, ing.pos.y + 30);
-        ctx.lineTo(ing.pos.x, ing.pos.y + 55);
-        ctx.stroke();
-        // Ok ucu
-        ctx.beginPath();
-        ctx.moveTo(ing.pos.x - 5, ing.pos.y + 50);
+        ctx.moveTo(ing.pos.x, ing.pos.y + 33);
         ctx.lineTo(ing.pos.x, ing.pos.y + 58);
-        ctx.lineTo(ing.pos.x + 5, ing.pos.y + 50);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(ing.pos.x - 5, ing.pos.y + 53);
+        ctx.lineTo(ing.pos.x, ing.pos.y + 61);
+        ctx.lineTo(ing.pos.x + 5, ing.pos.y + 53);
         ctx.stroke();
     });
     ctx.setLineDash([]);
@@ -155,12 +194,9 @@ export function drawFloor(ctx: CanvasRenderingContext2D) {
     const uwx = UTIL_WALL_X1;
     const uww = UTIL_WALL_X2 - UTIL_WALL_X1;
     const [doorTop, doorBot] = UTIL_DOOR_RANGE;
-    // Üst kısım (duvarın kapının üstü)
     ctx.fillStyle = '#6b5240';
     ctx.fillRect(uwx, 0, uww, doorTop);
-    // Alt kısım (kapının altından duvara kadar)
     ctx.fillRect(uwx, doorBot, uww, WALL_Y1 - doorBot);
-    // Kapı açıklığı
     ctx.fillStyle = '#fde68a';
     ctx.fillRect(uwx, doorTop, uww, doorBot - doorTop);
     ctx.fillStyle = '#d97706';
