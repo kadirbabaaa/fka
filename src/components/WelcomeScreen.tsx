@@ -2,51 +2,144 @@ import React from 'react';
 import { MARKET_NAME } from '../constants';
 
 interface WelcomeScreenProps {
-    onEnter: () => void;
+    onPlay: () => void;
+    onSettings: () => void;
 }
 
-export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onEnter }) => (
-    <div className="w-full h-full bg-gradient-to-b from-sky-400 via-sky-300 to-green-200 flex items-center justify-center p-4 overflow-hidden relative safe-top safe-bottom">
-        {/* Bulutlar */}
-        <div className="absolute top-10 left-10 text-6xl animate-bounce" style={{ animationDelay: '0s', animationDuration: '3s' }}>☁️</div>
-        <div className="absolute top-20 right-20 text-8xl animate-bounce" style={{ animationDelay: '1s', animationDuration: '4s' }}>☁️</div>
-        <div className="absolute top-40 left-1/3 text-7xl animate-bounce" style={{ animationDelay: '2s', animationDuration: '5s' }}>☁️</div>
-        <div className="absolute top-10 right-10 text-4xl animate-spin" style={{ animationDuration: '20s' }}>☀️</div>
-        <div className="absolute bottom-10 left-10 text-5xl">🌳</div>
-        <div className="absolute bottom-10 right-10 text-5xl">🌳</div>
+const serviceCards = [
+    { title: 'Prep', text: 'Stokla, pisir, tabak hazirla.' },
+    { title: 'Serve', text: 'Kuyrugu erit, masayi temiz tut.' },
+    { title: 'Night', text: 'Upgrade al, yarina plan yap.' },
+];
 
-        <div className="relative z-10 flex flex-col items-center">
-            {/* Tabela */}
-            <div className="bg-gradient-to-r from-red-500 to-red-600 px-12 py-6 rounded-3xl shadow-2xl border-8 border-yellow-400 mb-8 animate-pulse">
-                <h1 className="text-6xl md:text-8xl font-black text-white text-center tracking-tight" style={{ textShadow: '4px 4px 0px rgba(0,0,0,0.3)' }}>
-                    {MARKET_NAME} 🏪
-                </h1>
-            </div>
+export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onPlay, onSettings }) => (
+    <div className="relative min-h-dvh overflow-x-hidden overflow-y-auto bg-[radial-gradient(circle_at_top,#fef3c7_0%,#fed7aa_28%,#7c2d12_70%,#1c1917_100%)] safe-top safe-bottom">
+        <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(to_right,transparent_0,transparent_47px,rgba(255,255,255,0.14)_48px),linear-gradient(to_bottom,transparent_0,transparent_47px,rgba(255,255,255,0.14)_48px)] [background-size:48px_48px]" />
+        <div className="absolute inset-x-0 top-0 h-40 bg-[linear-gradient(180deg,rgba(255,251,235,0.85),rgba(255,251,235,0))]" />
 
-            {/* Bina */}
-            <div className="bg-gradient-to-b from-orange-100 to-orange-200 rounded-3xl p-8 shadow-2xl border-8 border-orange-800 relative">
-                {/* Pencereler */}
-                <div className="flex gap-6 mb-6">
-                    {['🍕', '🍔', '🥗'].map(icon => (
-                        <div key={icon} className="w-32 h-32 bg-sky-200 rounded-2xl border-4 border-orange-900 flex items-center justify-center text-6xl">
-                            {icon}
-                        </div>
-                    ))}
+        <div className="relative mx-auto flex min-h-dvh w-full max-w-7xl flex-col justify-center gap-8 px-4 py-6 md:px-8 lg:flex-row lg:items-stretch lg:gap-10 lg:px-12">
+            <section className="flex w-full flex-col justify-between rounded-[32px] border border-white/30 bg-stone-950/72 p-6 text-stone-100 shadow-[0_24px_80px_rgba(0,0,0,0.35)] backdrop-blur md:p-8 lg:max-w-xl">
+                <div className="space-y-5">
+                    <div className="inline-flex w-fit items-center rounded-full border border-amber-300/40 bg-amber-200/12 px-3 py-1 text-[11px] font-black uppercase tracking-[0.24em] text-amber-100">
+                        Yerel co-op mutfak
+                    </div>
+
+                    <div className="space-y-3">
+                        <p className="text-sm font-semibold uppercase tracking-[0.28em] text-stone-300">Ana menü</p>
+                        <h1 className="max-w-md text-4xl font-black uppercase leading-none text-amber-50 md:text-6xl">
+                            {MARKET_NAME}
+                        </h1>
+                        <p className="max-w-lg text-sm leading-6 text-stone-300 md:text-base">
+                            Plate-up ritmini koruyan ama mobilde de rahat oynanan bir mutfak akisi.
+                            Servis, bulasik ve gece ekonomisi ayni ekranda net kalsin diye giris akisini sadeledim.
+                        </p>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-3">
+                        {serviceCards.map((card) => (
+                            <div key={card.title} className="rounded-2xl border border-white/12 bg-white/6 p-3">
+                                <div className="text-[11px] font-black uppercase tracking-[0.22em] text-amber-200">{card.title}</div>
+                                <p className="mt-2 text-sm leading-5 text-stone-300">{card.text}</p>
+                            </div>
+                        ))}
+                    </div>
                 </div>
 
-                {/* Kapı */}
-                <div className="bg-gradient-to-b from-amber-700 to-amber-900 w-48 h-64 mx-auto rounded-t-3xl border-4 border-amber-950 flex flex-col items-center justify-center relative">
-                    <div className="absolute top-4 text-4xl">🚪</div>
+                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                     <button
-                        onClick={onEnter}
-                        className="mt-16 bg-gradient-to-r from-green-400 to-green-500 hover:from-green-500 hover:to-green-600 text-white px-8 py-4 rounded-2xl font-black text-2xl shadow-xl border-4 border-green-600 transition-all transform hover:scale-110 active:scale-95"
+                        onClick={onPlay}
+                        className="flex-1 rounded-2xl bg-[linear-gradient(135deg,#f59e0b,#ea580c)] px-6 py-4 text-base font-black uppercase tracking-[0.16em] text-stone-950 transition-transform hover:scale-[1.01] active:scale-[0.99]"
                     >
-                        GİR 🚀
+                        Oyuna gir
+                    </button>
+                    <button
+                        onClick={onSettings}
+                        className="rounded-2xl border border-white/18 bg-white/8 px-6 py-4 text-base font-black uppercase tracking-[0.16em] text-stone-100 transition-colors hover:bg-white/14"
+                    >
+                        Ayarlar
                     </button>
                 </div>
-            </div>
+            </section>
 
-            <div className="w-full h-8 bg-green-600 rounded-full mt-4 shadow-lg" />
+            <section className="relative w-full overflow-hidden rounded-[32px] border border-stone-800/70 bg-stone-950/80 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.35)] md:p-8 lg:flex-1">
+                <div className="absolute inset-x-10 top-0 h-32 rounded-full bg-amber-400/15 blur-3xl" />
+                <div className="relative grid gap-4 md:grid-cols-[1.1fr_0.9fr]">
+                    <div className="rounded-[28px] border border-stone-700 bg-stone-900/90 p-5">
+                        <div className="flex items-center justify-between border-b border-stone-800 pb-4">
+                            <div>
+                                <p className="text-xs font-black uppercase tracking-[0.22em] text-stone-400">Servis panosu</p>
+                                <h2 className="mt-2 text-2xl font-black uppercase text-stone-100">Mutfak temposu</h2>
+                            </div>
+                            <div className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-black uppercase tracking-[0.2em] text-emerald-300">
+                                Hazır
+                            </div>
+                        </div>
+
+                        <div className="mt-5 grid gap-4">
+                            <div className="rounded-3xl bg-[linear-gradient(160deg,#1f2937,#111827)] p-4">
+                                <div className="flex items-end justify-between">
+                                    <div>
+                                        <div className="text-xs font-black uppercase tracking-[0.18em] text-stone-400">Hazırlık hattı</div>
+                                        <div className="mt-3 flex items-center gap-2">
+                                            <div className="h-14 w-14 rounded-2xl bg-amber-100" />
+                                            <div className="h-14 w-16 rounded-2xl bg-orange-500" />
+                                            <div className="h-14 w-14 rounded-2xl bg-emerald-300" />
+                                        </div>
+                                    </div>
+                                    <div className="w-28 rounded-2xl bg-stone-800/90 p-3 text-right">
+                                        <div className="text-[11px] font-black uppercase tracking-[0.18em] text-stone-500">Akış</div>
+                                        <div className="mt-2 text-2xl font-black text-amber-200">3x</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <div className="rounded-3xl bg-stone-900 p-4 ring-1 ring-white/5">
+                                    <div className="text-xs font-black uppercase tracking-[0.18em] text-stone-500">Yemek salonu</div>
+                                    <div className="mt-4 grid grid-cols-2 gap-3">
+                                        <div className="rounded-2xl bg-stone-800 p-4" />
+                                        <div className="rounded-2xl bg-stone-800 p-4" />
+                                        <div className="rounded-2xl bg-stone-800 p-4" />
+                                        <div className="rounded-2xl bg-stone-800 p-4" />
+                                    </div>
+                                </div>
+                                <div className="rounded-3xl bg-stone-900 p-4 ring-1 ring-white/5">
+                                    <div className="text-xs font-black uppercase tracking-[0.18em] text-stone-500">Gece notları</div>
+                                    <ul className="mt-4 space-y-3 text-sm leading-5 text-stone-300">
+                                        <li>Temiz tabak olmadan servis alamazsin.</li>
+                                        <li>Kirli masa yeni musteriyi bloke eder.</li>
+                                        <li>Gece siparisi tek sefer.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid gap-4">
+                        <div className="rounded-[28px] border border-stone-800 bg-[linear-gradient(180deg,#292524,#1c1917)] p-5">
+                            <div className="text-xs font-black uppercase tracking-[0.18em] text-stone-500">Çapraz platform</div>
+                            <div className="mt-4 space-y-4">
+                                <div className="rounded-2xl border border-white/8 bg-white/5 p-4">
+                                    <div className="text-sm font-black uppercase tracking-[0.16em] text-stone-100">Masaüstü</div>
+                                    <p className="mt-2 text-sm leading-5 text-stone-400">WASD, kisa HUD, daha temiz ust bar.</p>
+                                </div>
+                                <div className="rounded-2xl border border-white/8 bg-white/5 p-4">
+                                    <div className="text-sm font-black uppercase tracking-[0.16em] text-stone-100">Mobil</div>
+                                    <p className="mt-2 text-sm leading-5 text-stone-400">Buyuk dokunmatik alanlar ve tek elle duzen.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="rounded-[28px] border border-amber-400/20 bg-amber-300/10 p-5">
+                            <div className="text-xs font-black uppercase tracking-[0.18em] text-amber-100/80">Oturum</div>
+                            <div className="mt-3 text-3xl font-black uppercase text-amber-50">Hazir misin?</div>
+                            <p className="mt-2 text-sm leading-6 text-amber-50/80">
+                                Once outfit sec, sonra magazanin adini ayarla ve direkt mutfaga gir.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </div>
     </div>
 );

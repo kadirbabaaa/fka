@@ -10,130 +10,162 @@ interface Props {
 function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
     return (
         <button
+            type="button"
             onClick={onClick}
-            className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${on ? 'bg-purple-500' : 'bg-stone-600'}`}
+            className={`relative h-7 w-14 rounded-full transition-colors ${on ? 'bg-emerald-500' : 'bg-stone-600'}`}
         >
-            <div className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-6' : ''}`} />
+            <span className={`absolute top-1 left-1 h-5 w-5 rounded-full bg-white transition-transform ${on ? 'translate-x-7' : ''}`} />
         </button>
     );
 }
 
-/** Ayarlar modalı — ses, buton boyutu, joystick tarafı */
+function SliderRow({
+    label,
+    valueLabel,
+    min,
+    max,
+    step,
+    value,
+    onChange,
+}: {
+    label: string;
+    valueLabel: string;
+    min: number;
+    max: number;
+    step: number;
+    value: number;
+    onChange: (value: number) => void;
+}) {
+    return (
+        <label className="block rounded-2xl border border-white/8 bg-white/4 p-4">
+            <div className="flex items-center justify-between gap-4">
+                <span className="text-sm font-black uppercase tracking-[0.14em] text-stone-200">{label}</span>
+                <span className="text-xs font-black uppercase tracking-[0.16em] text-amber-200">{valueLabel}</span>
+            </div>
+            <input
+                type="range"
+                min={min}
+                max={max}
+                step={step}
+                value={value}
+                onChange={(e) => onChange(Number(e.target.value))}
+                className="mt-4 w-full accent-amber-400"
+            />
+        </label>
+    );
+}
+
 export const SettingsPanel: React.FC<Props> = ({ settings, onUpdate, onClose }) => (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-        <div className="bg-stone-900 rounded-2xl p-6 w-full max-w-sm shadow-2xl border border-stone-700 space-y-5">
-
-            {/* Başlık */}
-            <div className="flex items-center justify-between">
-                <h2 className="text-white font-black text-xl">⚙️ Ayarlar</h2>
-                <button onClick={onClose} className="text-stone-400 hover:text-white text-xl leading-none">✕</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+        <div className="max-h-[92dvh] w-full max-w-3xl overflow-y-auto rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,#1c1917,#0c0a09)] p-4 text-stone-100 shadow-[0_30px_120px_rgba(0,0,0,0.45)] md:p-6">
+            <div className="flex items-center justify-between gap-4 border-b border-white/8 pb-4">
+                <div>
+                    <div className="text-xs font-black uppercase tracking-[0.24em] text-stone-500">Ayarlar</div>
+                    <h2 className="mt-2 text-2xl font-black uppercase text-stone-50">Kontrol paneli</h2>
+                </div>
+                <button
+                    type="button"
+                    onClick={onClose}
+                    className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-sm font-black uppercase tracking-[0.16em] text-stone-100 transition-colors hover:bg-white/10"
+                >
+                    Kapat
+                </button>
             </div>
 
-            {/* Ses Seviyesi */}
-            <div>
-                <label className="block text-stone-300 text-sm font-bold mb-2">
-                    🔊 Ses Seviyesi — {Math.round(settings.masterVolume * 100)}%
-                </label>
-                <input
-                    type="range" min={0} max={1} step={0.05}
-                    value={settings.masterVolume}
-                    onChange={e => onUpdate({ masterVolume: parseFloat(e.target.value) })}
-                    className="w-full accent-purple-500 cursor-pointer"
-                />
-            </div>
+            <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_1fr]">
+                <div className="space-y-4">
+                    <SliderRow
+                        label="Ana ses seviyesi"
+                        valueLabel={`${Math.round(settings.masterVolume * 100)}%`}
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        value={settings.masterVolume}
+                        onChange={(value) => onUpdate({ masterVolume: value })}
+                    />
 
-            {/* SFX Toggle */}
-            <div className="flex items-center justify-between">
-                <span className="text-stone-300 text-sm font-bold">🎵 Ses Efektleri</span>
-                <Toggle on={settings.sfxOn} onClick={() => onUpdate({ sfxOn: !settings.sfxOn })} />
-            </div>
+                    <div className="rounded-2xl border border-white/8 bg-white/4 p-4">
+                        <div className="flex items-center justify-between gap-4">
+                            <div>
+                                <div className="text-sm font-black uppercase tracking-[0.14em] text-stone-200">Ses efektleri</div>
+                                <div className="mt-1 text-sm text-stone-400">Mutfak feedback seslerini ac kapa.</div>
+                            </div>
+                            <Toggle on={settings.sfxOn} onClick={() => onUpdate({ sfxOn: !settings.sfxOn })} />
+                        </div>
+                    </div>
 
-            {/* Buton Boyutu */}
-            <div>
-                <label className="block text-stone-300 text-sm font-bold mb-2">
-                    📱 Buton Boyutu — {settings.buttonSize}px
-                </label>
-                <input
-                    type="range" min={60} max={120} step={5}
-                    value={settings.buttonSize}
-                    onChange={e => onUpdate({ buttonSize: parseInt(e.target.value) })}
-                    className="w-full accent-blue-500 cursor-pointer"
-                />
-                <div className="flex justify-between text-stone-500 text-xs mt-1">
-                    <span>Küçük</span><span>Normal</span><span>Büyük</span>
+                    <div className="rounded-2xl border border-white/8 bg-white/4 p-4">
+                        <div className="text-sm font-black uppercase tracking-[0.14em] text-stone-200">Joystick tarafı</div>
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                            {(['left', 'right'] as const).map((side) => (
+                                <button
+                                    key={side}
+                                    type="button"
+                                    onClick={() => onUpdate({ joystickSide: side })}
+                                    className={`rounded-xl px-4 py-3 text-sm font-black uppercase tracking-[0.14em] transition-colors ${settings.joystickSide === side
+                                        ? 'bg-amber-300 text-stone-950'
+                                        : 'bg-stone-800 text-stone-300 hover:bg-stone-700'
+                                        }`}
+                                >
+                                    {side === 'left' ? 'Sol' : 'Sag'}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    <SliderRow
+                        label="Buton boyutu"
+                        valueLabel={`${settings.buttonSize}px`}
+                        min={60}
+                        max={120}
+                        step={5}
+                        value={settings.buttonSize}
+                        onChange={(value) => onUpdate({ buttonSize: value })}
+                    />
+
+                    <SliderRow
+                        label="Buton mesafesi"
+                        valueLabel={`${settings.buttonOffset}px`}
+                        min={10}
+                        max={150}
+                        step={10}
+                        value={settings.buttonOffset}
+                        onChange={(value) => onUpdate({ buttonOffset: value })}
+                    />
+
+                    <SliderRow
+                        label="Joystick boyutu"
+                        valueLabel={`${settings.joystickSize}px`}
+                        min={80}
+                        max={200}
+                        step={10}
+                        value={settings.joystickSize}
+                        onChange={(value) => onUpdate({ joystickSize: value })}
+                    />
+
+                    <SliderRow
+                        label="Joystick mesafesi"
+                        valueLabel={`${settings.joystickOffset}px`}
+                        min={10}
+                        max={150}
+                        step={10}
+                        value={settings.joystickOffset}
+                        onChange={(value) => onUpdate({ joystickOffset: value })}
+                    />
                 </div>
             </div>
 
-            {/* Buton Yüksekliği */}
-            <div className="mb-4">
-                <label className="block text-stone-300 text-sm font-bold mb-2">↕️ Buton Yüksekliği (Aşağıdan Mesafesi)</label>
-                <input
-                    type="range"
-                    min="10" max="150" step="10"
-                    value={settings.buttonOffset}
-                    onChange={(e) => onUpdate({ buttonOffset: Number(e.target.value) })}
-                    className="w-full accent-blue-500 cursor-pointer"
-                />
-                <div className="flex justify-between text-stone-500 text-xs mt-1">
-                    <span>Aşağıda</span><span>Yukarıda</span>
-                </div>
+            <div className="mt-5 flex justify-end">
+                <button
+                    type="button"
+                    onClick={onClose}
+                    className="rounded-2xl bg-[linear-gradient(135deg,#f59e0b,#ea580c)] px-6 py-4 text-sm font-black uppercase tracking-[0.18em] text-stone-950 transition-transform hover:scale-[1.01] active:scale-[0.99]"
+                >
+                    Kaydet ve don
+                </button>
             </div>
-
-            {/* Joystick Tarafı */}
-            <div className="flex items-center justify-between mb-4">
-                <span className="text-stone-300 text-sm font-bold">🕹️ Joystick Tarafı</span>
-                <div className="flex gap-2">
-                    {(['left', 'right'] as const).map(side => (
-                        <button
-                            key={side}
-                            onClick={() => onUpdate({ joystickSide: side })}
-                            className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-colors ${settings.joystickSide === side
-                                ? 'bg-blue-500 text-white'
-                                : 'bg-stone-700 text-stone-400'
-                                }`}
-                        >
-                            {side === 'left' ? '⬅️ Sol' : 'Sağ ➡️'}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Joystick Boyutu */}
-            <div className="mb-4">
-                <label className="block text-stone-300 text-sm font-bold mb-2">🕹️ Joystick Boyutu</label>
-                <input
-                    type="range"
-                    min="80" max="200" step="10"
-                    value={settings.joystickSize}
-                    onChange={(e) => onUpdate({ joystickSize: Number(e.target.value) })}
-                    className="w-full accent-blue-500 cursor-pointer"
-                />
-                <div className="flex justify-between text-stone-500 text-xs mt-1">
-                    <span>Küçük</span><span>Normal</span><span>Büyük</span>
-                </div>
-            </div>
-
-            {/* Joystick Yüksekliği */}
-            <div className="mb-6">
-                <label className="block text-stone-300 text-sm font-bold mb-2">↕️ Joystick Yüksekliği (Aşağıdan Mesafesi)</label>
-                <input
-                    type="range"
-                    min="10" max="150" step="10"
-                    value={settings.joystickOffset}
-                    onChange={(e) => onUpdate({ joystickOffset: Number(e.target.value) })}
-                    className="w-full accent-blue-500 cursor-pointer"
-                />
-                <div className="flex justify-between text-stone-500 text-xs mt-1">
-                    <span>Aşağıda</span><span>Yukarıda</span>
-                </div>
-            </div>
-
-            <button
-                onClick={onClose}
-                className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-black text-base transition-colors"
-            >
-                ✓ Kaydet & Kapat
-            </button>
         </div>
     </div>
 );

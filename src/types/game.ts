@@ -11,6 +11,7 @@ export {
   type Player,
   type Customer,
   type WaitingGuest,
+  type DirtyTable,
   type Upgrades,
   type CookStation,
   type CookStationId,
@@ -38,6 +39,8 @@ export {
   CLOSING_THRESHOLD,
   BURN_TICKS,
   BURNED_FOOD,
+  CLEAN_PLATE,
+  DIRTY_PLATE,
   HOLDING_STATION_POSITIONS,
   CHARACTER_TYPES,
   type HoldingStation

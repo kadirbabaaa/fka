@@ -1,11 +1,13 @@
 import React, { useRef, useState } from 'react';
-import { COLORS, CHARACTER_TYPES } from './types/game';
+import { CHARACTER_TYPES } from './types/game';
 import { MARKET_NAME } from './constants';
 import { useSocket } from './hooks/useSocket';
 import { useKeyboard } from './hooks/useKeyboard';
+import { useSettings } from './hooks/useSettings';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { CharacterSelect } from './components/CharacterSelect';
 import { GameScreen } from './components/GameScreen';
+import { SettingsPanel } from './components/SettingsPanel';
 
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -14,15 +16,17 @@ export default function App() {
 
   const { socket, isConnected, myId, gameStateRef, audioCtxRef } = useSocket(localPlayerRef);
   const keysRef = useKeyboard({ isJoinedRef, socket, audioCtxRef });
+  const { settings, update: updateSettings } = useSettings();
 
-  const [showWelcome, setShowWelcome] = useState(true);
   const [isJoined, setIsJoined] = useState(false);
+  const [entryScreen, setEntryScreen] = useState<'menu' | 'lobby'>('menu');
+  const [showSettings, setShowSettings] = useState(false);
 
   const [playerName, setPlayerName] = useState('');
   const [marketName, setMarketName] = useState(MARKET_NAME);
   const [charType, setCharType] = useState(0);
   const [playerColor, setPlayerColor] = useState(CHARACTER_TYPES[0].bodyColor);
-  const [playerHat, setPlayerHat] = useState(CHARACTER_TYPES[0].hat);
+  const [playerHat, setPlayerHat] = useState('');
 
   const handleJoin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,18 +47,35 @@ export default function App() {
   };
 
   if (!isJoined) {
-    if (showWelcome) return <WelcomeScreen onEnter={() => setShowWelcome(false)} />;
-
     return (
-      <CharacterSelect
-        isConnected={isConnected}
-        playerName={playerName} setPlayerName={setPlayerName}
-        playerColor={playerColor} setPlayerColor={setPlayerColor}
-        playerHat={playerHat} setPlayerHat={setPlayerHat}
-        charType={charType} setCharType={setCharType}
-        marketName={marketName} setMarketName={setMarketName}
-        onJoin={handleJoin}
-      />
+      <>
+        {entryScreen === 'menu' ? (
+          <WelcomeScreen
+            onPlay={() => setEntryScreen('lobby')}
+            onSettings={() => setShowSettings(true)}
+          />
+        ) : (
+          <CharacterSelect
+            isConnected={isConnected}
+            playerName={playerName} setPlayerName={setPlayerName}
+            playerColor={playerColor} setPlayerColor={setPlayerColor}
+            playerHat={playerHat} setPlayerHat={setPlayerHat}
+            charType={charType} setCharType={setCharType}
+            marketName={marketName} setMarketName={setMarketName}
+            onJoin={handleJoin}
+            onBack={() => setEntryScreen('menu')}
+            onOpenSettings={() => setShowSettings(true)}
+          />
+        )}
+
+        {showSettings && (
+          <SettingsPanel
+            settings={settings}
+            onUpdate={updateSettings}
+            onClose={() => setShowSettings(false)}
+          />
+        )}
+      </>
     );
   }
 
@@ -69,6 +90,8 @@ export default function App() {
       localPlayerRef={localPlayerRef}
       keysRef={keysRef}
       audioCtxRef={audioCtxRef}
+      settings={settings}
+      updateSettings={updateSettings}
     />
   );
 }

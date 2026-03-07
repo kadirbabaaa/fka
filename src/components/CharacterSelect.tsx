@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { CHARACTER_TYPES, COLORS } from '../types/game';
+import React from 'react';
+import { CHARACTER_TYPES } from '../types/game';
 import { MARKET_NAME } from '../constants';
 
 interface CharacterSelectProps {
@@ -15,115 +15,175 @@ interface CharacterSelectProps {
     marketName: string;
     setMarketName: (v: string) => void;
     onJoin: (e: React.FormEvent) => void;
+    onBack: () => void;
+    onOpenSettings: () => void;
+}
+
+function OutfitPreview({ bodyColor, accent }: { bodyColor: string; accent: string }) {
+    return (
+        <div className="relative flex h-24 items-end justify-center">
+            <div className="absolute bottom-0 h-3 w-16 rounded-full bg-black/10 blur-[2px]" />
+            <div className="relative h-20 w-16">
+                <div className="absolute left-1/2 top-0 h-8 w-8 -translate-x-1/2 rounded-full bg-[#f5d0a9]" />
+                <div className="absolute left-1/2 top-7 h-10 w-12 -translate-x-1/2 rounded-t-[18px] rounded-b-[14px]" style={{ backgroundColor: bodyColor }} />
+                <div className="absolute left-1/2 top-10 h-6 w-8 -translate-x-1/2 rounded-t-xl" style={{ backgroundColor: accent }} />
+                <div className="absolute left-[14px] top-[52px] h-8 w-3 rounded-b-xl bg-stone-800" />
+                <div className="absolute right-[14px] top-[52px] h-8 w-3 rounded-b-xl bg-stone-800" />
+                <div className="absolute left-[7px] top-[36px] h-3 w-3 rounded-full bg-[#f5d0a9]" />
+                <div className="absolute right-[7px] top-[36px] h-3 w-3 rounded-full bg-[#f5d0a9]" />
+            </div>
+        </div>
+    );
 }
 
 export const CharacterSelect: React.FC<CharacterSelectProps> = ({
     isConnected,
     playerName, setPlayerName,
-    playerColor, setPlayerColor,
-    playerHat, setPlayerHat,
+    setPlayerColor,
+    setPlayerHat,
     charType, setCharType,
     marketName, setMarketName,
     onJoin,
+    onBack,
+    onOpenSettings,
 }) => {
     const selectedChar = CHARACTER_TYPES[charType] ?? CHARACTER_TYPES[0];
 
     return (
-        <div className="w-full min-h-dvh bg-stone-900 flex items-center justify-center p-4 overflow-y-auto safe-top safe-bottom">
-            <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl">
-                <h1 className="text-3xl font-black text-center mb-1 text-stone-800">{MARKET_NAME} 🏪</h1>
-                <p className="text-center text-stone-500 mb-6 font-medium text-sm">Karakterini seç ve dükkana gir!</p>
-
-                <form onSubmit={onJoin} className="space-y-5">
-                    {/* Bağlantı durumu */}
-                    <div className="flex items-center justify-center gap-2">
-                        <div className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-                        <span className="text-xs font-bold text-stone-500">
-                            {isConnected ? 'Sunucuya Bağlı' : 'Sunucuya Bağlanıyor...'}
-                        </span>
-                    </div>
-
-                    {/* İsim */}
-                    <div>
-                        <label className="block text-xs font-bold text-stone-600 mb-1 uppercase tracking-wide">👤 Adın</label>
-                        <input
-                            type="text"
-                            value={playerName}
-                            onChange={e => setPlayerName(e.target.value)}
-                            maxLength={10}
-                            placeholder="Örn: Aşkım"
-                            className="w-full px-4 py-3 rounded-xl border-2 border-stone-200 focus:border-blue-500 outline-none transition-colors text-base font-medium"
-                            required
-                        />
-                    </div>
-
-                    {/* Karakter Tipi — Kart seçimi */}
-                    <div>
-                        <label className="block text-xs font-bold text-stone-600 mb-2 uppercase tracking-wide">🧑‍🍳 Karakterin</label>
-                        <div className="grid grid-cols-3 gap-2">
-                            {CHARACTER_TYPES.map((c, i) => (
-                                <button
-                                    key={c.id}
-                                    type="button"
-                                    onClick={() => {
-                                        setCharType(i);
-                                        setPlayerHat(c.hat);
-                                        setPlayerColor(c.bodyColor);
-                                    }}
-                                    className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all text-center ${charType === i
-                                            ? 'border-blue-500 bg-blue-50 shadow-md scale-105'
-                                            : 'border-stone-200 hover:border-stone-300 hover:bg-stone-50'
-                                        }`}
-                                    style={{
-                                        borderColor: charType === i ? c.accent : undefined,
-                                        backgroundColor: charType === i ? `${c.accent}18` : undefined,
-                                    }}
-                                >
-                                    <span className="text-3xl">{c.hat}</span>
-                                    <span className="text-xs font-black text-stone-700">{c.name}</span>
-                                    <span className="text-[10px] text-stone-400">{c.label}</span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Renk özelleştirme (opsiyonel) */}
-                    <div>
-                        <label className="block text-xs font-bold text-stone-600 mb-2 uppercase tracking-wide">🎨 Kıyafet Rengi</label>
-                        <div className="flex gap-2 justify-between">
-                            {COLORS.map(c => (
-                                <button
-                                    key={c}
-                                    type="button"
-                                    onClick={() => setPlayerColor(c)}
-                                    className={`w-9 h-9 rounded-full transition-transform ${playerColor === c ? 'scale-125 ring-4 ring-offset-2 ring-stone-800' : 'hover:scale-110'}`}
-                                    style={{ backgroundColor: c }}
-                                />
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Market İsmi */}
-                    <div>
-                        <label className="block text-xs font-bold text-stone-600 mb-1 uppercase tracking-wide">🏪 Market İsmi</label>
-                        <input
-                            type="text"
-                            value={marketName}
-                            onChange={e => setMarketName(e.target.value)}
-                            maxLength={20}
-                            placeholder="Örn: Bizim Market"
-                            className="w-full px-4 py-3 rounded-xl border-2 border-stone-200 focus:border-blue-500 outline-none transition-colors text-base font-medium"
-                        />
-                    </div>
-
+        <div className="min-h-dvh overflow-y-auto bg-[linear-gradient(180deg,#1c1917,#0c0a09)] safe-top safe-bottom">
+            <div className="mx-auto flex min-h-dvh w-full max-w-7xl flex-col gap-6 px-4 py-4 md:px-8 md:py-6">
+                <div className="flex items-center justify-between gap-3">
                     <button
-                        type="submit"
-                        className="w-full py-4 font-black text-lg transition-all active:scale-95 shadow-lg text-white rounded-xl"
-                        style={{ backgroundColor: selectedChar.accent }}
+                        type="button"
+                        onClick={onBack}
+                        className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-black uppercase tracking-[0.16em] text-stone-100 transition-colors hover:bg-white/10"
                     >
-                        DÜKKANA GİR 🚀
+                        Ana menu
                     </button>
-                </form>
+                    <div className="text-center">
+                        <div className="text-[11px] font-black uppercase tracking-[0.24em] text-stone-500">Lobi</div>
+                        <div className="mt-1 text-lg font-black uppercase text-stone-100">{MARKET_NAME}</div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onOpenSettings}
+                        className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-black uppercase tracking-[0.16em] text-stone-100 transition-colors hover:bg-white/10"
+                    >
+                        Ayarlar
+                    </button>
+                </div>
+
+                <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+                    <section className="rounded-[28px] border border-white/10 bg-white/5 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.25)] backdrop-blur md:p-6">
+                        <div className="flex flex-col gap-3 border-b border-white/8 pb-5 md:flex-row md:items-end md:justify-between">
+                            <div>
+                                <div className="text-xs font-black uppercase tracking-[0.24em] text-stone-500">Outfit secimi</div>
+                                <h1 className="mt-2 text-3xl font-black uppercase text-stone-50 md:text-4xl">Istasyonu sec</h1>
+                                <p className="mt-2 max-w-xl text-sm leading-6 text-stone-400">
+                                    Emoji yerine dogrudan uniform presetleri var. Kart secildiginde kiyafet rengi ve rol paleti birlikte geliyor.
+                                </p>
+                            </div>
+
+                            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-2 text-xs font-bold uppercase tracking-[0.18em] text-stone-300">
+                                <span className={`h-2.5 w-2.5 rounded-full ${isConnected ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                                {isConnected ? 'Server bagli' : 'Server baglaniyor'}
+                            </div>
+                        </div>
+
+                        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                            {CHARACTER_TYPES.map((char, index) => {
+                                const selected = charType === index;
+                                return (
+                                    <button
+                                        key={char.id}
+                                        type="button"
+                                        onClick={() => {
+                                            setCharType(index);
+                                            setPlayerHat('');
+                                            setPlayerColor(char.bodyColor);
+                                        }}
+                                        className={`rounded-[24px] border p-4 text-left transition-transform ${selected
+                                            ? 'scale-[1.01] border-transparent bg-stone-50 text-stone-900 shadow-[0_12px_40px_rgba(255,255,255,0.12)]'
+                                            : 'border-white/10 bg-white/[0.03] text-stone-100 hover:border-white/18 hover:bg-white/[0.06]'
+                                            }`}
+                                        style={selected ? { boxShadow: `0 18px 50px ${char.accent}33` } : undefined}
+                                    >
+                                        <OutfitPreview bodyColor={char.bodyColor} accent={char.accent} />
+                                        <div className="mt-3">
+                                            <div className="text-xs font-black uppercase tracking-[0.22em]" style={{ color: selected ? char.accent : '#d6d3d1' }}>
+                                                {char.name}
+                                            </div>
+                                            <div className="mt-2 text-sm font-semibold leading-5">{char.label}</div>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </section>
+
+                    <section className="rounded-[28px] border border-white/10 bg-stone-950/80 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.3)] md:p-6">
+                        <form onSubmit={onJoin} className="flex h-full flex-col gap-5">
+                            <div>
+                                <div className="text-xs font-black uppercase tracking-[0.24em] text-stone-500">Oturum kurulumu</div>
+                                <h2 className="mt-2 text-2xl font-black uppercase text-stone-50">Hazir ol</h2>
+                            </div>
+
+                            <div className="rounded-[24px] border border-white/8 bg-white/5 p-4">
+                                <OutfitPreview bodyColor={selectedChar.bodyColor} accent={selectedChar.accent} />
+                                <div className="mt-3 text-center">
+                                    <div className="text-xs font-black uppercase tracking-[0.2em]" style={{ color: selectedChar.accent }}>
+                                        {selectedChar.name}
+                                    </div>
+                                    <div className="mt-2 text-sm leading-5 text-stone-300">{selectedChar.label}</div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <label className="block">
+                                    <span className="mb-2 block text-xs font-black uppercase tracking-[0.22em] text-stone-400">Oyuncu adi</span>
+                                    <input
+                                        type="text"
+                                        value={playerName}
+                                        onChange={(e) => setPlayerName(e.target.value)}
+                                        maxLength={12}
+                                        placeholder="Orn: servis-1"
+                                        className="w-full rounded-2xl border border-white/10 bg-stone-900 px-4 py-3 text-base font-semibold text-stone-100 outline-none transition-colors placeholder:text-stone-500 focus:border-amber-300"
+                                        required
+                                    />
+                                </label>
+
+                                <label className="block">
+                                    <span className="mb-2 block text-xs font-black uppercase tracking-[0.22em] text-stone-400">Market adi</span>
+                                    <input
+                                        type="text"
+                                        value={marketName}
+                                        onChange={(e) => setMarketName(e.target.value)}
+                                        maxLength={24}
+                                        placeholder="Orn: Aksam servisi"
+                                        className="w-full rounded-2xl border border-white/10 bg-stone-900 px-4 py-3 text-base font-semibold text-stone-100 outline-none transition-colors placeholder:text-stone-500 focus:border-amber-300"
+                                    />
+                                </label>
+                            </div>
+
+                            <div className="mt-auto grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                                <button
+                                    type="button"
+                                    onClick={onBack}
+                                    className="rounded-2xl border border-white/12 bg-white/5 px-4 py-4 text-sm font-black uppercase tracking-[0.18em] text-stone-100 transition-colors hover:bg-white/10"
+                                >
+                                    Geri don
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="rounded-2xl px-4 py-4 text-sm font-black uppercase tracking-[0.18em] text-stone-950 transition-transform hover:scale-[1.01] active:scale-[0.99]"
+                                    style={{ background: `linear-gradient(135deg, ${selectedChar.accent}, ${selectedChar.bodyColor})` }}
+                                >
+                                    Dukkani ac
+                                </button>
+                            </div>
+                        </form>
+                    </section>
+                </div>
             </div>
         </div>
     );

@@ -1,47 +1,88 @@
-import { HoldingStation } from '../types/game';
+import { HoldingStation, CLEAN_PLATE } from '../types/game';
 
+/**
+ * Bekletme tabağı çizer — porselen tabak + gölge + yemek
+ */
 export function drawHoldingStation(
     ctx: CanvasRenderingContext2D,
     x: number,
     y: number,
     station: HoldingStation | undefined
 ) {
-    // ── Zemin / Tezgah Parçası (İsteğe Bağlı Altlık) ─────────────────────────
-    ctx.fillStyle = '#d6d3d1';
-    ctx.beginPath();
-    ctx.roundRect(x - 35, y - 25, 70, 50, 6);
-    ctx.fill();
-    ctx.strokeStyle = '#a8a29e';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
+    const hasFood = !!(station && station.item && station.item !== CLEAN_PLATE);
+    const hasCleanPlate = station?.item === CLEAN_PLATE;
 
-    // ── Tabak ──────────────────────────────────────────────────────────────
-    ctx.fillStyle = '#f8fafc'; // Beyaz porselen
+    // ── Tabak Gölgesi ─────────────────────────────────────────────────────────
+    ctx.fillStyle = 'rgba(0,0,0,0.08)';
     ctx.beginPath();
-    ctx.ellipse(x, y, 22, 14, 0, 0, Math.PI * 2);
+    ctx.ellipse(x + 2, y + 4, 24, 15, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Tabak iç gölgesi / derinliği
+    // ── Tabak dış halka (porselen kenar) ──────────────────────────────────────
+    const rimGrad = ctx.createRadialGradient(x, y, 12, x, y, 24);
+    rimGrad.addColorStop(0, '#f1f5f9');
+    rimGrad.addColorStop(1, '#e2e8f0');
+    ctx.fillStyle = rimGrad;
+    ctx.beginPath();
+    ctx.ellipse(x, y, 24, 15, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ── Tabak iç yüzey ───────────────────────────────────────────────────────
+    ctx.fillStyle = hasFood || hasCleanPlate ? '#fefefe' : '#f8fafc';
+    ctx.beginPath();
+    ctx.ellipse(x, y + 1, 17, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ── İç derinlik çizgisi ───────────────────────────────────────────────────
     ctx.strokeStyle = '#cbd5e1';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.ellipse(x, y + 2, 16, 10, 0, 0, Math.PI * 2);
+    ctx.ellipse(x, y + 1, 17, 10, 0, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Dış kenarlık
-    ctx.strokeStyle = '#e2e8f0';
+    // ── Dış kenar halkası ─────────────────────────────────────────────────────
+    ctx.strokeStyle = '#94a3b8';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.ellipse(x, y, 22, 14, 0, 0, Math.PI * 2);
+    ctx.ellipse(x, y, 24, 15, 0, 0, Math.PI * 2);
     ctx.stroke();
 
-    // ── İçindeki Yemek (Varsa) ─────────────────────────────────────────────
-    if (station && station.item) {
-        ctx.font = '28px Arial';
+    // ── Porselen parlaması ────────────────────────────────────────────────────
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(x - 6, y - 5, 8, 4, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ── Yemek (varsa) ─────────────────────────────────────────────────────────
+    if (hasFood) {
+        // Küçük buhar animasyonu yok ama hafif gölge
+        ctx.shadowColor = 'rgba(0,0,0,0.15)';
+        ctx.shadowBlur = 3;
+        ctx.font = '24px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-
-        // Yemeğin biraz yukarıda durması için y-6 offseti
-        ctx.fillText(station.item, x, y - 6);
+        ctx.fillText(station!.item!, x, y - 4);
+        ctx.shadowBlur = 0;
+    } else if (hasCleanPlate) {
+        ctx.fillStyle = '#cbd5e1';
+        ctx.beginPath();
+        ctx.ellipse(x, y - 1, 16, 9, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.ellipse(x, y - 3, 16, 9, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.ellipse(x, y - 3, 16, 9, 0, 0, Math.PI * 2);
+        ctx.stroke();
+    } else {
+        // Boş tabak: küçük boş işareti
+        ctx.fillStyle = '#d1d5db';
+        ctx.font = '10px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('boş', x, y);
     }
 }

@@ -13,9 +13,10 @@ body,
   background: #0c0a09;
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
-  touch-action: none;
+  touch-action: manipulation;
   user-select: none;
   -webkit-user-select: none;
+  font-family: "Trebuchet MS", "Avenir Next", "Segoe UI", sans-serif;
 }
 
 /* iOS safe area — notch ve home bar */

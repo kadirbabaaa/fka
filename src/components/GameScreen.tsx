@@ -6,7 +6,7 @@ import { UpgradeShop } from './UpgradeShop';
 import { SettingsPanel } from './SettingsPanel';
 import { MARKET_NAME } from '../constants';
 import { useGameLoop } from '../hooks/useGameLoop';
-import { useSettings } from '../hooks/useSettings';
+import { Settings } from '../hooks/useSettings';
 
 const MUSIC_URL = 'https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@main/Light%20Hearted%20-%20Jeremy%20Blake.mp3';
 
@@ -19,15 +19,16 @@ interface Props {
     localPlayerRef: React.MutableRefObject<{ x: number; y: number }>;
     keysRef: React.MutableRefObject<{ w: boolean; a: boolean; s: boolean; d: boolean }>;
     audioCtxRef: React.MutableRefObject<AudioContext | null>;
+    settings: Settings;
+    updateSettings: (patch: Partial<Settings>) => void;
 }
 
 export const GameScreen: React.FC<Props> = ({
     canvasRef, isJoined, myId, socket,
-    gameStateRef, localPlayerRef, keysRef, audioCtxRef,
+    gameStateRef, localPlayerRef, keysRef, audioCtxRef, settings, updateSettings,
 }) => {
     const joystickVectorRef = useRef({ x: 0, y: 0 });
     const audioRef = useRef<HTMLAudioElement | null>(null);
-    const { settings, update: updateSettings } = useSettings();
 
     const [musicOn, setMusicOn] = useState(false);
     const [showSettings, setShowSettings] = useState(false);

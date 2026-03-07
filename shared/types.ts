@@ -7,6 +7,8 @@
 export type Item = string | null;
 export type StockKey = '🫓' | '🥩' | '🥬';
 export type UpgradeKey = 'patience' | 'earnings' | 'stockMax';
+export const CLEAN_PLATE = '__clean_plate__';
+export const DIRTY_PLATE = '__dirty_plate__';
 
 export interface Player {
     id: string; x: number; y: number;
@@ -14,7 +16,7 @@ export interface Player {
     charType?: number; // 0-5: hangi karakter tipi
 }
 
-// 6 Karakter Tipi — CharacterSelect + drawPlayer kullana
+// 8 Karakter Tipi — CharacterSelect + drawPlayer kullanır
 export const CHARACTER_TYPES = [
     { id: 0, name: 'Aşçı', hat: '👨‍🍳', bodyColor: '#f5f5f4', accent: '#a78bfa', label: 'Klasik Aşçı' },
     { id: 1, name: 'Suşici', hat: '🍣', bodyColor: '#fca5a5', accent: '#dc2626', label: 'Hızlı Suşi' },
@@ -22,6 +24,8 @@ export const CHARACTER_TYPES = [
     { id: 3, name: 'Chef', hat: '🧑‍🍳', bodyColor: '#fed7aa', accent: '#f97316', label: 'Baş Chef' },
     { id: 4, name: 'Bahçıvan', hat: '🌿', bodyColor: '#bbf7d0', accent: '#16a34a', label: 'Taze Bahçı' },
     { id: 5, name: 'Kaptan', hat: '⛴️', bodyColor: '#bfdbfe', accent: '#1d4ed8', label: 'Kaptan' },
+    { id: 6, name: 'Garson', hat: '🍽️', bodyColor: '#fef3c7', accent: '#92400e', label: 'Şık Garson' },
+    { id: 7, name: 'Bulaşıkçı', hat: '🧽', bodyColor: '#e0f2fe', accent: '#0284c7', label: 'Temizlikçi' },
 ] as const;
 
 export interface Customer {
@@ -52,11 +56,17 @@ export interface HoldingStation {
     item: string | null;
 }
 
+export interface DirtyTable {
+    seatX: number;
+    seatY: number;
+}
+
 export interface GameState {
     players: Record<string, Player>;
     customers: Customer[];
     waitList: WaitingGuest[];
     holdingStations: HoldingStation[];
+    dirtyTables: DirtyTable[];
     score: number;
     stock: Record<StockKey, number>;
     marketName: string;
@@ -64,6 +74,7 @@ export interface GameState {
     dayTimer: number;
     upgrades: Upgrades;
     day: number;
+    hasOrderedTonight: boolean;
     cookStations: { pizza: CookStation; grill: CookStation; salad: CookStation };
 }
 

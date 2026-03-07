@@ -95,14 +95,53 @@ function drawWaitList(ctx: CanvasRenderingContext2D, list: WaitingGuest[]) {
   });
 }
 
+function drawDirtyTable(ctx: CanvasRenderingContext2D, seatX: number, seatY: number) {
+  const dir = seatY > TABLE_Y ? -1 : 1;
+  const plateY = seatY - dir * 18;
+
+  ctx.fillStyle = "rgba(0,0,0,0.12)";
+  ctx.beginPath();
+  ctx.ellipse(seatX + 1, plateY + 3, 18, 7, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#f8fafc";
+  ctx.beginPath();
+  ctx.ellipse(seatX, plateY, 18, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#94a3b8";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.ellipse(seatX, plateY, 18, 8, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.fillStyle = "#92400e";
+  ctx.beginPath();
+  ctx.arc(seatX - 4, plateY - 1, 2.5, 0, Math.PI * 2);
+  ctx.arc(seatX + 3, plateY + 1, 2, 0, Math.PI * 2);
+  ctx.arc(seatX + 8, plateY - 2, 1.5, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 // ─── drawFloor cache — sadece 1 kez çiz, sonra bitmapten kopyala ────────────
-let floorCache: OffscreenCanvas | null = null;
+let floorCache: OffscreenCanvas | HTMLCanvasElement | null = null;
 
 function drawFloorCached(ctx: CanvasRenderingContext2D) {
   if (!floorCache) {
-    floorCache = new OffscreenCanvas(GAME_WIDTH, GAME_HEIGHT);
+    if (typeof OffscreenCanvas !== "undefined") {
+      floorCache = new OffscreenCanvas(GAME_WIDTH, GAME_HEIGHT);
+    } else {
+      const canvas = document.createElement("canvas");
+      canvas.width = GAME_WIDTH;
+      canvas.height = GAME_HEIGHT;
+      floorCache = canvas;
+    }
     const offCtx = floorCache.getContext("2d");
-    if (offCtx) drawFloor(offCtx as unknown as CanvasRenderingContext2D);
+    if (offCtx) {
+      drawFloor(offCtx as unknown as CanvasRenderingContext2D);
+      TABLE_X_SLOTS.forEach((tx) =>
+        drawTable(offCtx as unknown as CanvasRenderingContext2D, tx, TABLE_Y),
+      );
+    }
   }
   ctx.drawImage(floorCache, 0, 0);
 }
@@ -127,11 +166,15 @@ export function useGameLoop({
     // Floor cache invalidate on mount
     floorCache = null;
 
-    let frameId: number;
+    let frameId = 0;
     let lastEmit = 0;
+    let lastFrameTime = 0;
 
     const render = (time: number) => {
       const state = gameStateRef.current;
+      const deltaMs = lastFrameTime === 0 ? 1000 / 60 : Math.min(50, time - lastFrameTime);
+      lastFrameTime = time;
+      const frameScale = deltaMs / (1000 / 60);
 
       // ── 1. Hareket (WASD + Joystick) + client-side duvar çarpışması ─────
       let dx = 0;
@@ -155,8 +198,8 @@ export function useGameLoop({
         // Dist > 1 ise (örneğin W+D basılınca sqrt(2) olur), 1'e sabitle
         // Joystick zaten max 1 veriyor ama güvenliğe alalım.
         const speedMultiplier = dist > 1 ? 1 / dist : 1;
-        dx = dx * speedMultiplier * PLAYER_SPEED;
-        dy = dy * speedMultiplier * PLAYER_SPEED;
+        dx = dx * speedMultiplier * PLAYER_SPEED * frameScale;
+        dy = dy * speedMultiplier * PLAYER_SPEED * frameScale;
       }
 
       if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
@@ -198,7 +241,6 @@ export function useGameLoop({
       drawFloorCached(ctx);
 
       // Masalar
-      TABLE_X_SLOTS.forEach((tx) => drawTable(ctx, tx, TABLE_Y));
 
       // Malzeme istasyonları (server ile uyumlu: hamur / et / sebze)
       const stock = state.stock ?? { "🫓": 0, "🥩": 0, "🥬": 0 };
@@ -244,6 +286,7 @@ export function useGameLoop({
 
       // Müşteriler
       state.customers.forEach((c) => drawCustomer(ctx, c));
+      (state.dirtyTables ?? []).forEach((t) => drawDirtyTable(ctx, t.seatX, t.seatY));
 
       // Kapıda bekleyenler
       drawWaitList(ctx, state.waitList ?? []);
@@ -293,7 +336,7 @@ export function useGameLoop({
       frameId = requestAnimationFrame(render);
     };
 
-    render(0);
+    frameId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(frameId);
   }, [isJoined, myId, socket]);
 }
