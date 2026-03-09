@@ -601,7 +601,7 @@ async function startServer() {
 
       if (c.personality === 'polite') {
         // Yanlış hedef — kibar müşteriye vurmak para cezası
-        gs.score = Math.max(0, gs.score - 20);
+        gs.score -= 20;
         socket.emit("sound", "fail");
         return;
       }
@@ -922,7 +922,7 @@ async function startServer() {
             if (gs.dayPhase === 'day') {
               c.patience--;
               if (c.patience <= 0) {
-                gs.score = Math.max(0, gs.score - 10);
+                gs.score -= 10;
                 gs.lives -= 1;
                 io.to(rid).emit("sound", "fail");
 

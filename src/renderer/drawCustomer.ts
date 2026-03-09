@@ -75,8 +75,8 @@ export function drawCustomer(ctx: CanvasRenderingContext2D, customer: Customer) 
     state.lastX = x;
     state.lastY = y;
 
-    // Sarsıntı offset (beat-up ani sarsıntı)
-    const shakeX = state.beatUpShake > 0 ? Math.sin(state.beatUpShake * 1.8) * 4 : 0;
+    // Sarsıntı offset (beat-up ani sarsıntı) - titreşimi azalttım
+    const shakeX = state.beatUpShake > 0 ? Math.sin(state.beatUpShake * 1.8) * 1.5 : 0;
     const bobbingY = Math.abs(Math.sin(state.bobPhase)) * 3.5 * state.bobAmount;
     const tilt = Math.sin(state.bobPhase) * 0.05 * state.bobAmount;
     const eatProgress = isEating ? eatTimer / EAT_TICKS : 0;

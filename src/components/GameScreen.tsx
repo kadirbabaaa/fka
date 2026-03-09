@@ -4,11 +4,12 @@ import { GameState, GAME_WIDTH, GAME_HEIGHT, DAY_TICKS, NIGHT_TICKS, Upgrades } 
 import { Joystick } from './Joystick';
 import { UpgradeShop } from './UpgradeShop';
 import { SettingsPanel } from './SettingsPanel';
+import { SettingsModal } from './SettingsModal';
+import { PatchNotesModal } from './PatchNotesModal';
 import { MARKET_NAME } from '../constants';
 import { useGameLoop } from '../hooks/useGameLoop';
 import { Settings } from '../hooks/useSettings';
 import { useVoiceChat } from '../hooks/useVoiceChat';
-import { SettingsModal } from './SettingsModal';
 
 const MUSIC_URL = 'https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@main/Light%20Hearted%20-%20Jeremy%20Blake.mp3';
 
@@ -50,6 +51,7 @@ export const GameScreen: React.FC<Props> = ({
     const [voiceActive, setVoiceActive] = useState(false);
     const [showVoiceSettings, setShowVoiceSettings] = useState(false);
     const [globalVoiceVol, setGlobalVoiceVol] = useState(1.0);
+    const [showPatchNotes, setShowPatchNotes] = useState(false);
     const audioElementsRef = useRef<Record<string, HTMLAudioElement>>({});
 
     const { isMuted, toggleMute, audioStreams } = useVoiceChat({
@@ -132,9 +134,9 @@ export const GameScreen: React.FC<Props> = ({
     const total = dayPhase === 'day' ? DAY_TICKS : NIGHT_TICKS;
     const progress = dayPhase === 'prep' ? 0 : 1 - dayTimer / total;
     const barColor = dayPhase === 'day'
-        ? `hsl(${45 - progress * 30}, 90%, 55%)`
+        ? `hsl(${45 - progress * 30}, 90 %, 55 %)`
         : dayPhase === 'night'
-            ? `hsl(${220 + progress * 20}, 70%, 40%)`
+            ? `hsl(${220 + progress * 20}, 70 %, 40 %)`
             : '#a78bfa';
 
     const bs = settings.buttonSize;
@@ -152,8 +154,8 @@ export const GameScreen: React.FC<Props> = ({
 
                 <div className="flex-1 max-w-xs flex flex-col items-center gap-0.5">
                     <span className="text-[10px] font-bold flex items-center gap-2" style={{ color: dayPhase === 'prep' ? '#a78bfa' : dayPhase === 'day' ? '#fbbf24' : '#818cf8' }}>
-                        <span>{dayPhase === 'prep' ? `🔧 Hazırlık — Gün ${day}` : dayPhase === 'day' ? `☀️ Gün ${day}` : `🌙 Gece ${day}`}
-                            {queueLen > 0 && dayPhase === 'day' ? ` · ⏳${queueLen}` : ''}</span>
+                        <span>{dayPhase === 'prep' ? `🔧 Hazırlık — Gün ${day} ` : dayPhase === 'day' ? `☀️ Gün ${day} ` : `🌙 Gece ${day} `}
+                            {queueLen > 0 && dayPhase === 'day' ? ` · ⏳${queueLen} ` : ''}</span>
                         <span className="flex gap-0.5 text-sm drop-shadow-md">
                             {Array.from({ length: 3 }).map((_, i) => (
                                 <span key={i} className="transition-transform duration-300">
@@ -163,7 +165,7 @@ export const GameScreen: React.FC<Props> = ({
                         </span>
                     </span>
                     <div className="w-full h-1.5 bg-stone-700 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full transition-all" style={{ width: `${progress * 100}%`, backgroundColor: barColor }} />
+                        <div className="h-full rounded-full transition-all" style={{ width: `${progress * 100}% `, backgroundColor: barColor }} />
                     </div>
                 </div>
 
@@ -173,8 +175,11 @@ export const GameScreen: React.FC<Props> = ({
                         <div className="text-base font-black leading-none">${score}</div>
                     </div>
                     <button onClick={() => setShowVoiceSettings(true)}
-                        className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm transition-colors ${voiceActive && !isMuted ? 'bg-green-600 hover:bg-green-500' : 'bg-stone-700 hover:bg-stone-600 text-stone-300'}`}
+                        className={`w - 8 h - 8 rounded - lg flex items - center justify - center text - sm transition - colors ${voiceActive && !isMuted ? 'bg-green-600 hover:bg-green-500' : 'bg-stone-700 hover:bg-stone-600 text-stone-300'} `}
                     >🎙️</button>
+                    <button onClick={() => setShowPatchNotes(true)}
+                        className="w-8 h-8 bg-stone-700 hover:bg-sky-700 text-stone-300 rounded-lg flex items-center justify-center text-sm"
+                    >ℹ️</button>
                     <button onClick={() => setShowSettings(true)}
                         className="w-8 h-8 bg-stone-700 hover:bg-stone-600 text-stone-300 rounded-lg flex items-center justify-center text-sm"
                     >⚙️</button>
@@ -193,8 +198,8 @@ export const GameScreen: React.FC<Props> = ({
 
                 {/* Joystick */}
                 <div
-                    className={`absolute z-10 ${settings.joystickSide === 'left' ? 'left-4' : 'right-4'}`}
-                    style={{ bottom: `${settings.joystickOffset}px` }}
+                    className={`absolute z - 10 ${settings.joystickSide === 'left' ? 'left-4' : 'right-4'} `}
+                    style={{ bottom: `${settings.joystickOffset} px` }}
                 >
                     <Joystick
                         size={settings.joystickSize}
@@ -204,8 +209,8 @@ export const GameScreen: React.FC<Props> = ({
 
                 {/* Kontrol butonları */}
                 <div
-                    className={`absolute z-10 flex flex-col gap-2 items-end ${settings.joystickSide === 'left' ? 'right-4' : 'left-4'}`}
-                    style={{ bottom: `${settings.buttonOffset}px` }}
+                    className={`absolute z - 10 flex flex - col gap - 2 items - end ${settings.joystickSide === 'left' ? 'right-4' : 'left-4'} `}
+                    style={{ bottom: `${settings.buttonOffset} px` }}
                 >
                     <button
                         onPointerDown={(e) => {
@@ -246,8 +251,8 @@ export const GameScreen: React.FC<Props> = ({
                     <button
                         onClick={toggleMusic}
                         style={{ width: Math.round(bs * 0.55), height: Math.round(bs * 0.55) }}
-                        className={`rounded-full shadow-md text-base border-2 flex items-center justify-center ${musicOn ? 'bg-purple-500 border-purple-400 text-white' : 'bg-stone-700 border-stone-600 text-stone-400'
-                            }`}
+                        className={`rounded - full shadow - md text - base border - 2 flex items - center justify - center ${musicOn ? 'bg-purple-500 border-purple-400 text-white' : 'bg-stone-700 border-stone-600 text-stone-400'
+                            } `}
                     >{musicOn ? '🎵' : '🔇'}</button>
                 </div>
 
@@ -315,6 +320,10 @@ export const GameScreen: React.FC<Props> = ({
 
             {showSettings && (
                 <SettingsPanel settings={settings} onUpdate={updateSettings} onClose={() => setShowSettings(false)} />
+            )}
+
+            {showPatchNotes && (
+                <PatchNotesModal onClose={() => setShowPatchNotes(false)} />
             )}
 
             {showVoiceSettings && (
