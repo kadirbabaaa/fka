@@ -36,11 +36,22 @@ export function useKeyboard({ isJoinedRef, socket, audioCtxRef, gameStateRef, lo
                 case ' ': case 'e': case 'E': {
                     e.preventDefault();
 
+                    // AudioContext'i burada da sağlama alalım
+                    if (audioCtxRef.current?.state === 'suspended') {
+                        audioCtxRef.current.resume();
+                    }
+
+                    socket?.emit('interact');
+                    break;
+                }
+
+                case 'f': case 'F': case 'q': case 'Q': {
+                    e.preventDefault();
+
                     const now = Date.now();
                     const gs = gameStateRef.current;
                     const lp = localPlayerRef.current;
 
-                    // Yakında aktif diyaloğu olan rude/recep var mı?
                     const PUNCH_RADIUS = 80;
                     const PUNCH_COOLDOWN_MS = 800;
                     if (now - lastPunchTime.current > PUNCH_COOLDOWN_MS) {
@@ -58,11 +69,9 @@ export function useKeyboard({ isJoinedRef, socket, audioCtxRef, gameStateRef, lo
                         if (punchTarget) {
                             socket?.emit('punchCustomer', punchTarget.id);
                             lastPunchTime.current = now;
-                            break; // dov ve interact etme
+                            break;
                         }
                     }
-
-                    socket?.emit('interact');
                     break;
                 }
             }
