@@ -15,7 +15,7 @@ export default function App() {
   const isJoinedRef = useRef(false);
 
   const { socket, isConnected, myId, gameStateRef, audioCtxRef } = useSocket(localPlayerRef);
-  const keysRef = useKeyboard({ isJoinedRef, socket, audioCtxRef });
+  const keysRef = useKeyboard({ isJoinedRef, socket, audioCtxRef, gameStateRef, localPlayerRef });
   const { settings, update: updateSettings } = useSettings();
 
   const [isJoined, setIsJoined] = useState(false);

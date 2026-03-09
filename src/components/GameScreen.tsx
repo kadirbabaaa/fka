@@ -41,6 +41,8 @@ export const GameScreen: React.FC<Props> = ({
     const [day, setDay] = useState(1);
     const [ovenCount, setOvenCount] = useState(1);
     const [queueLen, setQueueLen] = useState(0);
+    const [lives, setLives] = useState(3);
+    const [isGameOver, setIsGameOver] = useState(false);
 
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
@@ -97,6 +99,8 @@ export const GameScreen: React.FC<Props> = ({
             setDay(s.day);
             setQueueLen(s.waitList?.length ?? 0);
             setOvenCount(s.cookStations?.length ?? 1);
+            setLives(s.lives ?? 3);
+            setIsGameOver(s.isGameOver ?? false);
         }, 200);
         return () => clearInterval(id);
     }, []);
@@ -147,9 +151,14 @@ export const GameScreen: React.FC<Props> = ({
                 </div>
 
                 <div className="flex-1 max-w-xs flex flex-col items-center gap-0.5">
-                    <span className="text-[10px] font-bold" style={{ color: dayPhase === 'prep' ? '#a78bfa' : dayPhase === 'day' ? '#fbbf24' : '#818cf8' }}>
-                        {dayPhase === 'prep' ? `🔧 Hazırlık — Gün ${day}` : dayPhase === 'day' ? `☀️ Gün ${day}` : `🌙 Gece ${day}`}
-                        {queueLen > 0 && dayPhase === 'day' ? ` · ⏳${queueLen}` : ''}
+                    <span className="text-[10px] font-bold flex items-center gap-2" style={{ color: dayPhase === 'prep' ? '#a78bfa' : dayPhase === 'day' ? '#fbbf24' : '#818cf8' }}>
+                        <span>{dayPhase === 'prep' ? `🔧 Hazırlık — Gün ${day}` : dayPhase === 'day' ? `☀️ Gün ${day}` : `🌙 Gece ${day}`}
+                            {queueLen > 0 && dayPhase === 'day' ? ` · ⏳${queueLen}` : ''}</span>
+                        <span className="flex gap-0.5">
+                            {Array.from({ length: 3 }).map((_, i) => (
+                                <span key={i} className={i < lives ? 'text-red-500' : 'text-stone-700'}>❤️</span>
+                            ))}
+                        </span>
                     </span>
                     <div className="w-full h-1.5 bg-stone-700 rounded-full overflow-hidden">
                         <div className="h-full rounded-full transition-all" style={{ width: `${progress * 100}%`, backgroundColor: barColor }} />
@@ -198,6 +207,32 @@ export const GameScreen: React.FC<Props> = ({
                 >
                     <button
                         onPointerDown={(e) => {
+                            e.preventDefault();
+                            const now = Date.now();
+                            const PUNCH_RADIUS = 80;
+                            const PUNCH_COOLDOWN_MS = 800;
+                            // Rate limit check using an inline ref or state (GameScreen doesn't have lastPunchTime ref, let's just emit directly for now, server has cooldown anyway)
+                            const gs = gameStateRef.current;
+                            const lp = localPlayerRef.current;
+
+                            const punchTarget = gs.customers.find(c => {
+                                if (c.isLeaving || c.isBeatUp) return false;
+                                const visualY = c.isSeated ? c.seatY + 20 : c.y;
+                                const dist = Math.hypot(c.x - lp.x, visualY - lp.y);
+                                return dist <= PUNCH_RADIUS && (c.personality === 'rude' || c.personality === 'recep' || c.personality === 'thug');
+                            });
+
+                            if (punchTarget) {
+                                socket?.emit('punchCustomer', punchTarget.id);
+                            }
+                        }}
+                        style={{ width: settings.punchButtonSize, height: settings.punchButtonSize, touchAction: 'none' }}
+                        className="bg-red-500 active:bg-red-700 text-white rounded-full shadow-xl font-black text-sm border-4 border-red-300 flex items-center justify-center active:scale-95"
+                    >
+                        DÖV<br />👊
+                    </button>
+                    <button
+                        onPointerDown={(e) => {
                             e.preventDefault(); // Varsayılan dokunmatik gecikmeyi (300ms) engelle
                             emit('interact');
                         }}
@@ -231,13 +266,32 @@ export const GameScreen: React.FC<Props> = ({
                     </div>
                 )}
 
+                {/* GAME OVER Overlay */}
+                {isGameOver && (
+                    <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-red-950/90 backdrop-blur-md">
+                        <div className="text-center animate-bounce">
+                            <div className="text-6xl mb-4">🤬</div>
+                            <h2 className="text-red-500 font-black text-5xl tracking-widest drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]">GAME OVER</h2>
+                            <p className="text-red-200 text-lg mt-2 font-bold">Müşterileri çıldırttın ve restoranı terk ettiler!</p>
+                        </div>
+                        <button
+                            onClick={() => emit('resetDay')}
+                            className="px-10 py-5 bg-gradient-to-r from-stone-800 to-stone-900 hover:from-stone-700 hover:to-stone-800 text-red-500 rounded-2xl font-black text-2xl border-2 border-red-900 transition-all active:scale-95 shadow-[0_0_30px_rgba(239,68,68,0.4)]"
+                        >
+                            🔄 TEKRAR DENE
+                        </button>
+                    </div>
+                )}
+
                 {/* Gece: Upgrade Shop */}
-                {dayPhase === 'night' && (
+                {dayPhase === 'night' && !isGameOver && (
                     <UpgradeShop
                         score={score} upgrades={upgrades} day={day}
+                        lives={lives}
                         ovenCount={ovenCount}
                         onUpgrade={id => emit('upgrade', id)}
                         onBuyOven={() => emit('buyOven')}
+                        onBuyLife={() => emit('buyLife')}
                         onOrder={() => emit('order')}
                         onNextDay={() => emit('nextDay')}
                     />

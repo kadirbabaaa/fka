@@ -1,18 +1,23 @@
 import React, { useEffect, useRef } from 'react';
 import { Socket } from 'socket.io-client';
+import { GameState } from '../types/game';
 
 interface UseKeyboardProps {
     isJoinedRef: React.MutableRefObject<boolean>;
     socket: Socket | null;
     audioCtxRef: React.MutableRefObject<AudioContext | null>;
+    gameStateRef: React.MutableRefObject<GameState>;
+    localPlayerRef: React.MutableRefObject<{ x: number; y: number }>;
 }
 
 /**
- * WASD + Arrow tuşlarıyla hareket, Space/E ile etkileşim.
+ * WASD + Arrow tuşlarıyla hareket, Space/E ile etkişim.
+ * Rude/Recep müşteri yakınsa ve aktif diyaloğu varsa daha önce punchCustomer emit edilir.
  * keys ref'ini döndürür — game loop bunu her frame okur.
  */
-export function useKeyboard({ isJoinedRef, socket, audioCtxRef }: UseKeyboardProps) {
+export function useKeyboard({ isJoinedRef, socket, audioCtxRef, gameStateRef, localPlayerRef }: UseKeyboardProps) {
     const keys = useRef({ w: false, a: false, s: false, d: false });
+    const lastPunchTime = useRef(0);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -28,10 +33,38 @@ export function useKeyboard({ isJoinedRef, socket, audioCtxRef }: UseKeyboardPro
                 case 'a': case 'A': case 'ArrowLeft': keys.current.a = true; break;
                 case 's': case 'S': case 'ArrowDown': keys.current.s = true; break;
                 case 'd': case 'D': case 'ArrowRight': keys.current.d = true; break;
-                case ' ': case 'e': case 'E':
-                    e.preventDefault(); // boşluk tuşu sayfayı kaydırmasın
+                case ' ': case 'e': case 'E': {
+                    e.preventDefault();
+
+                    const now = Date.now();
+                    const gs = gameStateRef.current;
+                    const lp = localPlayerRef.current;
+
+                    // Yakında aktif diyaloğu olan rude/recep var mı?
+                    const PUNCH_RADIUS = 80;
+                    const PUNCH_COOLDOWN_MS = 800;
+                    if (now - lastPunchTime.current > PUNCH_COOLDOWN_MS) {
+                        const punchTarget = gs.customers.find(c => {
+                            if (c.isLeaving || c.isBeatUp) return false;
+
+                            // Oturuyorsa y ekseni yukarıda kalıyor, vurma noktasını masaya hizalayalım
+                            const visualY = c.isSeated ? c.seatY + 20 : c.y;
+                            const dist = Math.hypot(c.x - lp.x, visualY - lp.y);
+
+                            // Artık dialog şartı yok, sadece tipine ve mesafeye bakıyoruz
+                            return dist <= PUNCH_RADIUS && (c.personality === 'rude' || c.personality === 'recep' || c.personality === 'thug');
+                        });
+
+                        if (punchTarget) {
+                            socket?.emit('punchCustomer', punchTarget.id);
+                            lastPunchTime.current = now;
+                            break; // dov ve interact etme
+                        }
+                    }
+
                     socket?.emit('interact');
                     break;
+                }
             }
         };
 

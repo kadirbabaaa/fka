@@ -45,6 +45,7 @@ import {
   TABLE_HALF_W,
   TABLE_HALF_H,
 } from "./shared/types";
+import { DIALOGUES, Personality, DialogTrigger } from "./shared/dialogues";
 
 // ─── Server-Only Sabitler ────────────────────────────────────────────────────
 const INTERACT_R = 90;
@@ -85,6 +86,9 @@ function mkRoom(): GameState {
     upgrades: { patience: 0, earnings: 0, stockMax: 0 }, day: 1, hasOrderedTonight: false,
     cookStations: initialOvens,
     dirtyTrayCount: 0,
+    lives: 3,
+    isGameOver: false,
+    revengeQueue: [],
   };
 }
 
@@ -111,6 +115,15 @@ function tryQueueSeat(gs: GameState, io: Server, rid: string) {
       x: seat.x, y: GAME_HEIGHT + 60, targetY: seat.y,
       wants: guest.wants, patience: maxP, maxPatience: maxP,
       isSeated: false, isEating: false, eatTimer: 0,
+      tipAmount: undefined,
+      personality: guest.personality,
+      currentDialog: guest.currentDialog,
+      dialogTimer: guest.dialogTimer,
+      isBeatUp: false,
+      isLeaving: false,
+      bodyShape: guest.bodyShape,
+      bodyColor: guest.bodyColor,
+      punchCount: 0,
     });
     io.to(rid).emit("sound", "arrive");
   }
@@ -560,6 +573,83 @@ async function startServer() {
       socket.emit("sound", "success");
     });
 
+    // Gece mağazasında can satın alma
+    socket.on("buyLife", () => {
+      if (!roomId || !rooms[roomId]) return;
+      const gs = rooms[roomId];
+      if (gs.dayPhase !== 'night') return;
+      const LIFE_COST = 75;
+      if (gs.lives >= 3) { socket.emit("sound", "fail"); return; }
+      if (gs.score < LIFE_COST) { socket.emit("sound", "fail"); return; }
+      gs.score -= LIFE_COST;
+      gs.lives = Math.min(3, gs.lives + 1);
+      socket.emit("sound", "success");
+    });
+
+    // Müşteri Dövme — sadece gündüz, sadece rude/recep tipleri geçerli hedef
+    socket.on("punchCustomer", (customerId: string) => {
+      if (!roomId || !rooms[roomId]) return;
+      const gs = rooms[roomId];
+      if (gs.dayPhase !== 'day') return;
+
+      const cIdx = gs.customers.findIndex(c => c.id === customerId);
+      if (cIdx === -1) return;
+      const c = gs.customers[cIdx];
+
+      // Cooldown kontrolü — beatUpTimer>30 ise vuramazsın (art arda spam koruması)
+      if (c.beatUpTimer && c.beatUpTimer > 30) return;
+
+      if (c.personality === 'polite') {
+        // Yanlış hedef — kibar müşteriye vurmak para cezası
+        gs.score = Math.max(0, gs.score - 20);
+        socket.emit("sound", "fail");
+        return;
+      }
+
+      // Doğru hedef — rude / recep
+      c.beatUpTimer = 60; // 2 saniye sarsıntı
+      c.isBeatUp = true;
+      c.punchCount = (c.punchCount || 0) + 1;
+
+      // İntikam İhtimali
+      const revengeChance = c.personality === 'recep' ? 0.6 : 0.3;
+      if (Math.random() < revengeChance) {
+        // 3 ile 4 dakika arası (30fps: 5400 - 7200 frame)
+        const delay = 5400 + Math.floor(Math.random() * 1800);
+        gs.revengeQueue.push(delay);
+      }
+
+      const MAX_PUNCHES = 4;
+
+      if (c.punchCount >= MAX_PUNCHES) {
+        // 4. vuruşta kaçar
+        const leaveDialogs: Record<string, string[]> = {
+          rude: ["YETER BE! Gidiyorum!", "Polisi arayacam lan!", "Mahvettiniz beni, lanet olsun!"],
+          recep: ["BÖHÖHÖYT! Anam babam öldüm bittim!", "Yeter vurma lan, gidiyom amk!", "Kırılmadık kemik bırakmadın be!"]
+        };
+        const dialogPool = leaveDialogs[c.personality] || leaveDialogs.rude;
+        c.currentDialog = dialogPool[Math.floor(Math.random() * dialogPool.length)];
+        c.dialogTimer = 60;
+
+        c.isLeaving = true;
+        c.isSeated = false; // Ayağa kalk! Maskelenme bug'ını düzeltir.
+        c.beatUpTimer = 0;  // Titremeyi kes!
+        c.targetY = 900;
+        tryQueueSeat(gs, io, roomId!);
+      } else {
+        // 1-3 vuruş arası sadece complain bekle
+        const hitDialogs: Record<string, string[]> = {
+          rude: ["AH!", "Napiyorsun lan!", "Yavaş vur amk!"],
+          recep: ["Böhöyt!", "Anaaam!", "Vurma lan dümbelek!"]
+        };
+        const dialogPool = hitDialogs[c.personality] || hitDialogs.rude;
+        c.currentDialog = dialogPool[Math.floor(Math.random() * dialogPool.length)];
+        c.dialogTimer = 30; // Kısa complains
+      }
+
+      socket.emit("sound", "pickup"); // Vurma sesi
+    });
+
     // Dükkanı aç — prep → day geçişi
     socket.on("openShop", () => {
       if (!roomId || !rooms[roomId]) return;
@@ -588,6 +678,30 @@ async function startServer() {
       if (!roomId || !rooms[roomId]) return;
       delete rooms[roomId].players[socket.id];
       if (!Object.keys(rooms[roomId].players).length) delete rooms[roomId];
+    });
+
+    socket.on("resetDay", () => {
+      if (!roomId || !rooms[roomId]) return;
+      const gs = rooms[roomId];
+      if (!gs.isGameOver) return;
+
+      // Oyunu baştan başlat ama upgrade ve skor kalsın, canları doldur
+      gs.isGameOver = false;
+      gs.lives = 3;
+      gs.dayPhase = 'prep';
+      gs.dayTimer = DAY_TICKS;
+      gs.customers = [];
+      gs.waitList = [];
+      gs.hasOrderedTonight = false;
+      gs.dirtyTables = []; // Kalan kirli masaları temizle
+      gs.cookStations.forEach(station => {
+        station.input = null;
+        station.timer = 0;
+        station.output = null;
+        station.isBurned = false;
+        station.burnTimer = 0;
+      });
+      io.to(roomId).emit("sound", "arrive");
     });
   });
 
@@ -666,37 +780,167 @@ async function startServer() {
           const currentRate = baseRate + (dayProgress * 0.001);
 
           if (Math.random() < currentRate && gs.customers.length + gs.waitList.length < 10) {
+            const personalities: Personality[] = ['polite', 'rude', 'recep'];
+            const pers = personalities[Math.floor(Math.random() * personalities.length)];
+            let dialog: string | undefined;
+            let timer: number | undefined;
+
+            if (Math.random() < 0.3) {
+              const list = DIALOGUES[pers].entry;
+              dialog = list[Math.floor(Math.random() * list.length)];
+              timer = 90; // 3 seconds at 30fps
+            }
+
+            // Rastgele görsel özellikler ata
+            const bodyShapes = [1, 2, 3, 4] as const;
+            const bodyColors: Record<Personality, string[]> = {
+              polite: ['#3b82f6', '#0ea5e9', '#6366f1', '#8b5cf6'],
+              rude: ['#f59e0b', '#ef4444', '#f97316', '#dc2626'],
+              recep: ['#7c3aed', '#b91c1c', '#1d4ed8', '#064e3b'],
+              thug: ['#000000', '#1c1917', '#7f1d1d', '#57534e'], // siyah ve koyu kızıl tonlar
+            };
+            const bodyShape = bodyShapes[Math.floor(Math.random() * bodyShapes.length)];
+            const colorPool = bodyColors[pers];
+            const bodyColor = colorPool[Math.floor(Math.random() * colorPool.length)];
+
             gs.waitList.push({
               id: Math.random().toString(36).slice(2, 9),
               wants: DISH_ITEMS[Math.floor(Math.random() * DISH_ITEMS.length)],
+              personality: pers,
+              currentDialog: dialog,
+              dialogTimer: timer,
+              bodyShape,
+              bodyColor,
             });
+          }
+
+          // Revenge Queue İşleme (İntikam Çetesi Spawnu)
+          for (let i = gs.revengeQueue.length - 1; i >= 0; i--) {
+            gs.revengeQueue[i]--;
+            if (gs.revengeQueue[i] <= 0) {
+              gs.revengeQueue.splice(i, 1); // Süresi dolanı çıkar
+
+              // 3-4 Thug spawnla
+              const thugCount = 3 + Math.floor(Math.random() * 2);
+              for (let j = 0; j < thugCount; j++) {
+                const bodyShapes = [2, 4] as const; // Thuglar iri/tombul olur
+                const bodyShape = bodyShapes[Math.floor(Math.random() * bodyShapes.length)];
+                const bodyColors = ['#000000', '#1c1917', '#7f1d1d', '#57534e']; // Siyah-kırmızı
+                const bodyColor = bodyColors[Math.floor(Math.random() * bodyColors.length)];
+
+                const list = DIALOGUES.thug.revenge;
+                const dialog = list[Math.floor(Math.random() * list.length)];
+
+                gs.waitList.push({
+                  id: Math.random().toString(36).slice(2, 9),
+                  wants: DISH_ITEMS[Math.floor(Math.random() * DISH_ITEMS.length)],
+                  personality: 'thug',
+                  currentDialog: dialog,
+                  dialogTimer: 150, // Konuşma balonu 5sn dursun (uzun)
+                  bodyShape,
+                  bodyColor,
+                });
+              }
+              // Uyarı sesi çal
+              io.to(rid).emit("sound", "fail"); // Kötü bir şey geldiği belli olsun
+            }
           }
         }
         tryQueueSeat(gs, io, rid);
 
+        // WaitList dialog timer
+        gs.waitList.forEach(guest => {
+          if (guest.dialogTimer && guest.dialogTimer > 0) {
+            guest.dialogTimer--;
+            if (guest.dialogTimer <= 0) guest.currentDialog = undefined;
+          }
+        });
+
         // Müşteri güncelle
         for (let i = gs.customers.length - 1; i >= 0; i--) {
           const c = gs.customers[i];
+
+          if (c.dialogTimer && c.dialogTimer > 0) {
+            c.dialogTimer--;
+            if (c.dialogTimer <= 0) c.currentDialog = undefined;
+          }
+
+          // Beat-up timer: efekt bittikten sonra sıfırla
+          if (c.beatUpTimer && c.beatUpTimer > 0) {
+            c.beatUpTimer--;
+            if (c.beatUpTimer <= 0) {
+              c.beatUpTimer = 0;
+            }
+          }
+
+          if (c.isLeaving) {
+            c.y += 3; // Aşağı doğru yürü
+            if (c.y >= GAME_HEIGHT + 60) {
+              gs.customers.splice(i, 1);
+            }
+            continue;
+          }
+
           if (c.isEating) {
             c.eatTimer--;
+
+            // Yemek yerken / Beklerken arada bir konuşma tetikleme (%0.1 şans her frame)
+            if (!c.currentDialog && Math.random() < 0.001) {
+              const list = DIALOGUES[c.personality].eating;
+              c.currentDialog = list[Math.floor(Math.random() * list.length)];
+              c.dialogTimer = 90;
+            }
+
             if (c.eatTimer <= 0) {
               gs.dirtyTables.push({ seatX: c.seatX, seatY: c.seatY, tip: c.tipAmount || 0 });
-              gs.customers.splice(i, 1);
+
+              // Mutlu çıkış
+              c.isLeaving = true;
+              c.targetY = GAME_HEIGHT + 60;
+              if (Math.random() < 0.4) {
+                const list = DIALOGUES[c.personality].leaving_happy;
+                c.currentDialog = list[Math.floor(Math.random() * list.length)];
+                c.dialogTimer = 90;
+              }
               tryQueueSeat(gs, io, rid);
             }
             continue;
           }
+
           if (!c.isSeated) {
             c.y = Math.max(c.targetY, c.y - 3);
             if (c.y <= c.targetY) c.isSeated = true;
           } else {
+            // Wait/Seated random dialog
+            if (!c.currentDialog && Math.random() < 0.001) {
+              const list = DIALOGUES[c.personality].waiting;
+              c.currentDialog = list[Math.floor(Math.random() * list.length)];
+              c.dialogTimer = 90;
+            }
+
             // BUG-6: sadece gündüz patience azalır (gece/prep'te dondur)
             if (gs.dayPhase === 'day') {
               c.patience--;
               if (c.patience <= 0) {
-                gs.score = Math.max(0, gs.score - 5);
-                gs.customers.splice(i, 1);
+                gs.score = Math.max(0, gs.score - 10);
+                gs.lives -= 1;
                 io.to(rid).emit("sound", "fail");
+
+                if (gs.lives <= 0) {
+                  gs.isGameOver = true;
+                  gs.customers = [];
+                  gs.waitList = [];
+                  io.to(rid).emit("sound", "fail"); // Maybe game over sound later
+                  break; // Stop updating other customers
+                }
+
+                // Sinirli çıkış
+                c.isLeaving = true;
+                c.targetY = GAME_HEIGHT + 60;
+                const list = DIALOGUES[c.personality].leaving_angry;
+                c.currentDialog = list[Math.floor(Math.random() * list.length)];
+                c.dialogTimer = 90;
+
                 tryQueueSeat(gs, io, rid);
               }
             }

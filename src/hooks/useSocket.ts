@@ -27,6 +27,9 @@ const DEFAULT_STATE: GameState = {
     hasOrderedTonight: false,
     cookStations: [],
     dirtyTrayCount: 0,
+    lives: 3,
+    isGameOver: false,
+    revengeQueue: [],
 };
 
 /**

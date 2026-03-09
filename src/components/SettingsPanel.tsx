@@ -116,13 +116,23 @@ export const SettingsPanel: React.FC<Props> = ({ settings, onUpdate, onClose }) 
 
                 <div className="space-y-4">
                     <SliderRow
-                        label="Buton boyutu"
+                        label="Buton boyutu (Al-Ver)"
                         valueLabel={`${settings.buttonSize}px`}
                         min={60}
                         max={120}
                         step={5}
                         value={settings.buttonSize}
                         onChange={(value) => onUpdate({ buttonSize: value })}
+                    />
+
+                    <SliderRow
+                        label="Buton boyutu (Döv)"
+                        valueLabel={`${settings.punchButtonSize}px`}
+                        min={60}
+                        max={120}
+                        step={5}
+                        value={settings.punchButtonSize}
+                        onChange={(value) => onUpdate({ punchButtonSize: value })}
                     />
 
                     <SliderRow

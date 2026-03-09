@@ -4,6 +4,8 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // ─── Temel Tipler ────────────────────────────────────────────────────────────
+import { Personality } from './dialogues';
+
 export type Item = string | null;
 export type StockKey = '🍞' | '🥩' | '🥬';
 export type UpgradeKey = 'patience' | 'earnings' | 'stockMax';
@@ -37,9 +39,32 @@ export interface Customer {
     patience: number; maxPatience: number;
     isSeated: boolean; isEating: boolean; eatTimer: number;
     tipAmount?: number;
+
+    // Personality & Dialogues
+    personality: Personality;
+    currentDialog?: string;
+    dialogTimer?: number;
+    isBeatUp?: boolean;
+    isLeaving?: boolean;
+
+    // Visual Variety
+    bodyShape: 1 | 2 | 3 | 4;   // 1=normal, 2=tombul, 3=uzun ince, 4=kısa tıknaz
+    bodyColor: string;            // Kıyafet rengi
+    beatUpTimer?: number;         // Vurulunca başlatılan efekt timer (30 frame)
+    punchCount?: number;          // Kaç kere vuruldu? (4 kere vurulunca kaçar)
 }
 
-export interface WaitingGuest { id: string; wants: Item; }
+export interface WaitingGuest {
+    id: string;
+    wants: Item;
+    personality: Personality;
+    currentDialog?: string;
+    dialogTimer?: number;
+    isBeatUp?: boolean;
+    // Visual Variety (gerekli, Customer'a kopyalanacak)
+    bodyShape: 1 | 2 | 3 | 4;
+    bodyColor: string;
+}
 
 export interface Upgrades {
     patience: number; earnings: number; stockMax: number;
@@ -107,6 +132,13 @@ export interface GameState {
     hasOrderedTonight: boolean;
     cookStations: CookStation[]; // Array olarak değiştirdik
     dirtyTrayCount: number;      // Kirli tabak biriktirme sepeti
+
+    // Game Over & Penalty
+    lives: number;
+    isGameOver: boolean;
+
+    // Revenge System (Intikam Cetesi)
+    revengeQueue: number[]; // Her timer 0'a ulastiginda thuglar gelir
 }
 
 // ─── Boyut ───────────────────────────────────────────────────────────────────

@@ -8,17 +8,19 @@ export interface Settings {
     buttonOffset: number;    // 0-200 px (bottom padding)
     joystickSide: 'left' | 'right';
     joystickSize: number;    // 80-200 px
-    joystickOffset: number;  // 10-150 px bottom padding
+    punchButtonSize: number; // 40-100 px (Döv butonu)
+    joystickOffset: number;  // 10-100 px
 }
 
 const DEFAULTS: Settings = {
     masterVolume: 0.5,
     sfxOn: true,
     buttonSize: 80,
-    buttonOffset: 20, // Default bottom gap
+    buttonOffset: 32,
     joystickSide: 'left',
     joystickSize: 128,
-    joystickOffset: 20,
+    punchButtonSize: 72,
+    joystickOffset: 32,
 };
 
 const LS_KEY = 'terracraft-settings';
