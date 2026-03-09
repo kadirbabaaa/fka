@@ -611,18 +611,17 @@ async function startServer() {
       c.isBeatUp = true;
       c.punchCount = (c.punchCount || 0) + 1;
 
-      // İntikam İhtimali
-      const revengeChance = c.personality === 'recep' ? 0.6 : 0.3;
-      if (Math.random() < revengeChance) {
-        // 3 ile 4 dakika arası (30fps: 5400 - 7200 frame)
-        const delay = 5400 + Math.floor(Math.random() * 1800);
-        gs.revengeQueue.push(delay);
-      }
-
       const MAX_PUNCHES = 4;
 
       if (c.punchCount >= MAX_PUNCHES) {
-        // 4. vuruşta kaçar
+        // 4. vuruşta kaçar ve intikam yemini edebilir
+        const revengeChance = c.personality === 'recep' ? 0.6 : 0.3;
+        if (Math.random() < revengeChance) {
+          // 3 ile 4 dakika arası (30fps: 5400 - 7200 frame)
+          const delay = 5400 + Math.floor(Math.random() * 1800);
+          gs.revengeQueue.push(delay);
+        }
+
         const leaveDialogs: Record<string, string[]> = {
           rude: ["YETER BE! Gidiyorum!", "Polisi arayacam lan!", "Mahvettiniz beni, lanet olsun!"],
           recep: ["BÖHÖHÖYT! Anam babam öldüm bittim!", "Yeter vurma lan, gidiyom amk!", "Kırılmadık kemik bırakmadın be!"]
@@ -694,6 +693,8 @@ async function startServer() {
       gs.waitList = [];
       gs.hasOrderedTonight = false;
       gs.dirtyTables = []; // Kalan kirli masaları temizle
+      gs.revengeQueue = []; // İntikam çetelerini sustur
+      gs.dirtyTrayCount = 0;
       gs.cookStations.forEach(station => {
         station.input = null;
         station.timer = 0;
