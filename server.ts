@@ -939,10 +939,12 @@ async function startServer() {
               const playerCount = Object.keys(gs.players).length || 1;
               const patienceDrain = 1 + (playerCount - 1) * 0.25; // 1: 1.0, 2: 1.25, 3: 1.5, 4: 1.75
 
-              // Şanslı azaltma (tam sayı kalması için)
-              if (Math.random() < patienceDrain) {
-                c.patience--;
-              }
+              // KESİN DÜZELTME: patienceDrain 1.25 ise -> Kesin 1 azalt, %25 ihtimalle +1 daha azalt.
+              const baseDrain = Math.floor(patienceDrain);
+              const extraChance = patienceDrain - baseDrain;
+              const actualDrain = baseDrain + (Math.random() < extraChance ? 1 : 0);
+
+              c.patience -= actualDrain;
 
               if (c.patience <= 0) {
                 gs.score -= 10;
