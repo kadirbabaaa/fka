@@ -50,7 +50,7 @@ export const CharacterSelect: React.FC<CharacterSelectProps> = ({
     const selectedChar = CHARACTER_TYPES[charType] ?? CHARACTER_TYPES[0];
 
     return (
-        <div className="min-h-dvh overflow-y-auto bg-[linear-gradient(180deg,#1c1917,#0c0a09)] safe-top safe-bottom">
+        <div className="menu-screen bg-[linear-gradient(180deg,#1c1917,#0c0a09)] safe-top safe-bottom">
             <div className="mx-auto flex min-h-dvh w-full max-w-7xl flex-col gap-6 px-4 py-4 md:px-8 md:py-6">
                 <div className="flex items-center justify-between gap-3">
                     <button

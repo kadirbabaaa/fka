@@ -54,13 +54,13 @@ const LOGIC_STEP_MS = 1000 / 30;
 // ─── Room Yönetimi ───────────────────────────────────────────────────────────
 const rooms: Record<string, GameState> = {};
 
-function mkCook(id: string, x: number, y: number): CookStation { 
-    return { input: null, timer: 0, output: null, id, x, y }; 
+function mkCook(id: string, x: number, y: number): CookStation {
+  return { input: null, timer: 0, output: null, id, x, y };
 }
 
 function mkRoom(): GameState {
   // Başlangıçta sadece 1 fırın
-  const initialOvens = INITIAL_OVEN_POSITIONS.map((pos, i) => 
+  const initialOvens = INITIAL_OVEN_POSITIONS.map((pos, i) =>
     mkCook(`oven${i + 1}`, pos.x, pos.y)
   );
 
@@ -197,7 +197,8 @@ async function startServer() {
 
         if (!p.holding && plate.item) {
           p.holding = plate.item;
-          plate.item = null;
+          // Yemekli tabak alınırsa arkasında temiz tabak kalsın
+          plate.item = isDish(plate.item) ? CLEAN_PLATE : null;
           socket.emit("sound", "pickup");
           return;
         }
@@ -224,29 +225,29 @@ async function startServer() {
           if (INGREDIENTS.some(ing => ing.key === p.holding) && !station.input && !station.output) {
             const recipe = RECIPE_DEFS[p.holding as keyof typeof RECIPE_DEFS];
             if (recipe) {
-              station.input = p.holding; 
-              station.timer = recipe.time; 
+              station.input = p.holding;
+              station.timer = recipe.time;
               p.holding = null;
-              station.isBurned = false; 
+              station.isBurned = false;
               station.burnTimer = 0;
               socket.emit("sound", "pickup");
             }
-          } 
+          }
           // Temiz tabakla yemek alma
           else if (p.holding === CLEAN_PLATE && station.output && !station.isBurned) {
-            p.holding = station.output; 
-            station.output = null; 
+            p.holding = station.output;
+            station.output = null;
             station.burnTimer = 0;
             socket.emit("sound", "success");
-          } 
+          }
           // Yanmış yemek alma
           else if (!p.holding && station.isBurned) {
-            p.holding = BURNED_FOOD; 
-            station.output = null; 
-            station.isBurned = false; 
+            p.holding = BURNED_FOOD;
+            station.output = null;
+            station.isBurned = false;
             station.burnTimer = 0;
             socket.emit("sound", "trash");
-          } 
+          }
           // Hata durumu - tabaksız yemek almaya çalışma
           else if (!p.holding && station.output && !station.isBurned) {
             socket.emit("sound", "fail");
@@ -290,39 +291,39 @@ async function startServer() {
 
     socket.on("buyOven", () => {
       if (!roomId || !rooms[roomId]) return;
-      const gs = rooms[roomId]; 
+      const gs = rooms[roomId];
       if (gs.dayPhase !== 'night') return;
-      
+
       const currentOvenCount = gs.cookStations.length;
       const maxOvens = INITIAL_OVEN_POSITIONS.length + ADDITIONAL_OVEN_POSITIONS.length;
-      
+
       // Max fırın kontrolü
       if (currentOvenCount >= maxOvens) {
         socket.emit("sound", "fail");
         return;
       }
-      
+
       const ovenIndex = currentOvenCount - INITIAL_OVEN_POSITIONS.length;
-      
+
       // Array bounds kontrolü
       if (ovenIndex < 0 || ovenIndex >= OVEN_UPGRADE_COSTS.length) {
         socket.emit("sound", "fail");
         return;
       }
-      
+
       const cost = OVEN_UPGRADE_COSTS[ovenIndex];
-      
+
       if (gs.score < cost) {
         socket.emit("sound", "fail");
         return;
       }
-      
+
       // Pozisyon kontrolü
       if (ovenIndex >= ADDITIONAL_OVEN_POSITIONS.length) {
         socket.emit("sound", "fail");
         return;
       }
-      
+
       gs.score -= cost;
       const newPos = ADDITIONAL_OVEN_POSITIONS[ovenIndex];
       gs.cookStations.push(mkCook(`oven${currentOvenCount + 1}`, newPos.x, newPos.y));
@@ -384,102 +385,102 @@ async function startServer() {
       lagMs -= LOGIC_STEP_MS;
       steps++;
       for (const rid of Object.keys(rooms)) {
-      const gs = rooms[rid];
-      if (!gs.stock) gs.stock = { '🫓': 10, '🥩': 10, '🥬': 10 };
+        const gs = rooms[rid];
+        if (!gs.stock) gs.stock = { '🫓': 10, '🥩': 10, '🥬': 10 };
 
-      // Universal fırın sistemi - pişirme & yanma timer
-      for (const station of gs.cookStations) {
-        if (station.input && station.timer > 0) {
-          // Pişiyor
-          station.timer--;
-          if (station.timer === 0) {
-            const recipe = RECIPE_DEFS[station.input as keyof typeof RECIPE_DEFS];
-            if (recipe) {
-              station.output = recipe.output; 
-              station.input = null;
-              station.isBurned = false;
-              station.burnTimer = BURN_TICKS; // Yanma süreci başlar
+        // Universal fırın sistemi - pişirme & yanma timer
+        for (const station of gs.cookStations) {
+          if (station.input && station.timer > 0) {
+            // Pişiyor
+            station.timer--;
+            if (station.timer === 0) {
+              const recipe = RECIPE_DEFS[station.input as keyof typeof RECIPE_DEFS];
+              if (recipe) {
+                station.output = recipe.output;
+                station.input = null;
+                station.isBurned = false;
+                station.burnTimer = BURN_TICKS; // Yanma süreci başlar
+              }
+            }
+          } else if (station.output && station.burnTimer !== undefined && station.burnTimer > 0 && !station.isBurned) {
+            // Pişti, bekliyor, yanmaya yaklaşıyor
+            station.burnTimer--;
+            if (station.burnTimer === 0) {
+              station.isBurned = true; // Kömür oldu
+              io.to(rid).emit("sound", "fail");
             }
           }
-        } else if (station.output && station.burnTimer !== undefined && station.burnTimer > 0 && !station.isBurned) {
-          // Pişti, bekliyor, yanmaya yaklaşıyor
-          station.burnTimer--;
-          if (station.burnTimer === 0) {
-            station.isBurned = true; // Kömür oldu
-            io.to(rid).emit("sound", "fail");
+        }
+
+        // Prep fazında timer işlemez — oyuncu dükkanı açana kadar bekle
+        if (gs.dayPhase === 'prep') {
+          // Pişirme devam eder (hazırlık yapabilsin) ama timer yok, müşteri yok
+        }
+
+        // Gündüz timer
+        if (gs.dayPhase === 'day') {
+          if (gs.dayTimer > 0) gs.dayTimer--;
+          if (gs.dayTimer <= 0 && gs.customers.length === 0 && gs.waitList.length === 0) {
+            gs.dayPhase = 'night'; gs.dayTimer = NIGHT_TICKS; gs.hasOrderedTonight = false;
+            const c = cap(gs.upgrades.stockMax);
+            (['🫓', '🥩', '🥬'] as StockKey[]).forEach(k => {
+              gs.stock[k] = Math.min(c, gs.stock[k] + 5);
+            });
           }
         }
-      }
 
-      // Prep fazında timer işlemez — oyuncu dükkanı açana kadar bekle
-      if (gs.dayPhase === 'prep') {
-        // Pişirme devam eder (hazırlık yapabilsin) ama timer yok, müşteri yok
-      }
-
-      // Gündüz timer
-      if (gs.dayPhase === 'day') {
-        if (gs.dayTimer > 0) gs.dayTimer--;
-        if (gs.dayTimer <= 0 && gs.customers.length === 0 && gs.waitList.length === 0) {
-          gs.dayPhase = 'night'; gs.dayTimer = NIGHT_TICKS; gs.hasOrderedTonight = false;
-          const c = cap(gs.upgrades.stockMax);
-          (['🫓', '🥩', '🥬'] as StockKey[]).forEach(k => {
-            gs.stock[k] = Math.min(c, gs.stock[k] + 5);
-          });
+        // Gece timer — sadece UI göstergesi, otomatik geçiş YOK
+        // Sadece nextDay butonu ile prep fazına geçilir (çift day++ bug'ını önler)
+        if (gs.dayPhase === 'night') {
+          if (gs.dayTimer > 0) gs.dayTimer--;
         }
-      }
 
-      // Gece timer — sadece UI göstergesi, otomatik geçiş YOK
-      // Sadece nextDay butonu ile prep fazına geçilir (çift day++ bug'ını önler)
-      if (gs.dayPhase === 'night') {
-        if (gs.dayTimer > 0) gs.dayTimer--;
-      }
+        // Spawn — sadece gündüz + kapanışa yakın durur
+        if (gs.dayPhase === 'day' && gs.dayTimer > CLOSING_THRESHOLD) {
+          // Günden güne artan zorluk (ilk günlerde az, ilerledikçe artan baz oran)
+          const baseRate = 0.001 + Math.min(gs.day * 0.0005, 0.005);
 
-      // Spawn — sadece gündüz + kapanışa yakın durur
-      if (gs.dayPhase === 'day' && gs.dayTimer > CLOSING_THRESHOLD) {
-        // Günden güne artan zorluk (ilk günlerde az, ilerledikçe artan baz oran)
-        const baseRate = 0.001 + Math.min(gs.day * 0.0005, 0.005);
+          // Gün içindeki ilerlemeye göre hafif artış (öğle yoğunluğu)
+          const dayProgress = 1 - gs.dayTimer / DAY_TICKS;
+          const currentRate = baseRate + (dayProgress * 0.001);
 
-        // Gün içindeki ilerlemeye göre hafif artış (öğle yoğunluğu)
-        const dayProgress = 1 - gs.dayTimer / DAY_TICKS;
-        const currentRate = baseRate + (dayProgress * 0.001);
-
-        if (Math.random() < currentRate && gs.customers.length + gs.waitList.length < 10) {
-          gs.waitList.push({
-            id: Math.random().toString(36).slice(2, 9),
-            wants: DISH_ITEMS[Math.floor(Math.random() * DISH_ITEMS.length)],
-          });
-        }
-      }
-      tryQueueSeat(gs, io, rid);
-
-      // Müşteri güncelle
-      for (let i = gs.customers.length - 1; i >= 0; i--) {
-        const c = gs.customers[i];
-        if (c.isEating) {
-          c.eatTimer--;
-          if (c.eatTimer <= 0) {
-            gs.dirtyTables.push({ seatX: c.seatX, seatY: c.seatY });
-            gs.customers.splice(i, 1);
-            tryQueueSeat(gs, io, rid);
+          if (Math.random() < currentRate && gs.customers.length + gs.waitList.length < 10) {
+            gs.waitList.push({
+              id: Math.random().toString(36).slice(2, 9),
+              wants: DISH_ITEMS[Math.floor(Math.random() * DISH_ITEMS.length)],
+            });
           }
-          continue;
         }
-        if (!c.isSeated) {
-          c.y = Math.max(c.targetY, c.y - 3);
-          if (c.y <= c.targetY) c.isSeated = true;
-        } else {
-          // BUG-6: sadece gündüz patience azalır (gece/prep'te dondur)
-          if (gs.dayPhase === 'day') {
-            c.patience--;
-            if (c.patience <= 0) {
-              gs.score = Math.max(0, gs.score - 5);
+        tryQueueSeat(gs, io, rid);
+
+        // Müşteri güncelle
+        for (let i = gs.customers.length - 1; i >= 0; i--) {
+          const c = gs.customers[i];
+          if (c.isEating) {
+            c.eatTimer--;
+            if (c.eatTimer <= 0) {
+              gs.dirtyTables.push({ seatX: c.seatX, seatY: c.seatY });
               gs.customers.splice(i, 1);
-              io.to(rid).emit("sound", "fail");
               tryQueueSeat(gs, io, rid);
             }
+            continue;
+          }
+          if (!c.isSeated) {
+            c.y = Math.max(c.targetY, c.y - 3);
+            if (c.y <= c.targetY) c.isSeated = true;
+          } else {
+            // BUG-6: sadece gündüz patience azalır (gece/prep'te dondur)
+            if (gs.dayPhase === 'day') {
+              c.patience--;
+              if (c.patience <= 0) {
+                gs.score = Math.max(0, gs.score - 5);
+                gs.customers.splice(i, 1);
+                io.to(rid).emit("sound", "fail");
+                tryQueueSeat(gs, io, rid);
+              }
+            }
           }
         }
-      }
 
         io.to(rid).emit("state", gs);
       }
