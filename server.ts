@@ -603,6 +603,9 @@ async function startServer() {
       if (cIdx === -1) return;
       const c = gs.customers[cIdx];
 
+      // Adam zaten dükkanı terk ediyorsa vurulmaz
+      if (c.isLeaving) return;
+
       // Cooldown kontrolü — beatUpTimer>30 ise vuramazsın (art arda spam koruması)
       if (c.beatUpTimer && c.beatUpTimer > 30) return;
 
