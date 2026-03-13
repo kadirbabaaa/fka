@@ -136,9 +136,9 @@ export const GameScreen: React.FC<Props> = ({
     const total = dayPhase === 'day' ? DAY_TICKS : NIGHT_TICKS;
     const progress = dayPhase === 'prep' ? 0 : 1 - dayTimer / total;
     const barColor = dayPhase === 'day'
-        ? `hsl(${45 - progress * 30}, 90 %, 55 %)`
+        ? `hsl(${45 - progress * 30}, 90%, 55%)`
         : dayPhase === 'night'
-            ? `hsl(${220 + progress * 20}, 70 %, 40 %)`
+            ? `hsl(${220 + progress * 20}, 70%, 40%)`
             : '#a78bfa';
 
     const bs = settings.buttonSize;
@@ -203,8 +203,8 @@ export const GameScreen: React.FC<Props> = ({
 
                 {/* Joystick */}
                 <div
-                    className={`absolute z - 10 ${settings.joystickSide === 'left' ? 'left-4' : 'right-4'} `}
-                    style={{ bottom: `${settings.joystickOffset} px` }}
+                    className={`absolute z-10 ${settings.joystickSide === 'left' ? 'left-4' : 'right-4'}`}
+                    style={{ bottom: `${settings.joystickOffset}px` }}
                 >
                     <Joystick
                         size={settings.joystickSize}
@@ -214,8 +214,8 @@ export const GameScreen: React.FC<Props> = ({
 
                 {/* Kontrol butonları */}
                 <div
-                    className={`absolute z - 10 flex flex - col gap - 2 items - end ${settings.joystickSide === 'left' ? 'right-4' : 'left-4'} `}
-                    style={{ bottom: `${settings.buttonOffset} px` }}
+                    className={`absolute z-10 flex flex-col gap-2 items-end ${settings.joystickSide === 'left' ? 'right-4' : 'left-4'}`}
+                    style={{ bottom: `${settings.buttonOffset}px` }}
                 >
                     <button
                         onPointerDown={(e) => {
@@ -256,8 +256,7 @@ export const GameScreen: React.FC<Props> = ({
                     <button
                         onClick={toggleMusic}
                         style={{ width: Math.round(bs * 0.55), height: Math.round(bs * 0.55) }}
-                        className={`rounded - full shadow - md text - base border - 2 flex items - center justify - center ${musicOn ? 'bg-purple-500 border-purple-400 text-white' : 'bg-stone-700 border-stone-600 text-stone-400'
-                            } `}
+                        className={`rounded-full shadow-md text-base border-2 flex items-center justify-center ${musicOn ? 'bg-purple-500 border-purple-400 text-white' : 'bg-stone-700 border-stone-600 text-stone-400'}`}
                     >{musicOn ? '🎵' : '🔇'}</button>
                 </div>
 
