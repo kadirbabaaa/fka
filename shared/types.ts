@@ -201,8 +201,8 @@ export const INGREDIENTS = [
     { key: '🍞' as StockKey, pos: { x: 150, y: 65 }, label: 'Hamur', color: '#fde68a' },
     { key: '🥩' as StockKey, pos: { x: 300, y: 65 }, label: 'Et', color: '#fca5a5' },
     { key: '🥬' as StockKey, pos: { x: 450, y: 65 }, label: 'Sebze', color: '#bbf7d0' },
-    { key: '🥘' as StockKey, pos: { x: 1000, y: 65 }, label: 'Çorba', color: '#fbbf24' },
-    { key: '🍢' as StockKey, pos: { x: 1150, y: 65 }, label: 'Kebap', color: '#92400e' },
+    { key: '🥘' as StockKey, pos: { x: 850, y: 65 }, label: 'Çorba', color: '#fbbf24' },
+    { key: '🍢' as StockKey, pos: { x: 950, y: 65 }, label: 'Kebap', color: '#92400e' },
 ];
 
 // ─── Universal Fırın Sistemi ─────────────────────────────────────────────────
