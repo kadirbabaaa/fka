@@ -606,8 +606,9 @@ async function startServer() {
       // Adam zaten dükkanı terk ediyorsa vurulmaz
       if (c.isLeaving) return;
 
-      // Cooldown kontrolü — beatUpTimer>30 ise vuramazsın (art arda spam koruması)
-      if (c.beatUpTimer && c.beatUpTimer > 30) return;
+      // Cooldown kontrolü — beatUpTimer>10 ise vuramazsın (art arda spam koruması)
+      // Daha kısa cooldown = daha hızlı vuruş imkanı
+      if (c.beatUpTimer && c.beatUpTimer > 10) return;
 
       if (c.personality === 'polite') {
         // Yanlış hedef — kibar müşteriye vurmak para cezası

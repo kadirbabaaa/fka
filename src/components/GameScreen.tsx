@@ -34,6 +34,7 @@ export const GameScreen: React.FC<Props> = ({
 }) => {
     const joystickVectorRef = useRef({ x: 0, y: 0 });
     const audioRef = useRef<HTMLAudioElement | null>(null);
+    const lastPunchTimeRef = useRef<number>(0);
 
     const [musicOn, setMusicOn] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
@@ -235,8 +236,14 @@ export const GameScreen: React.FC<Props> = ({
                             e.preventDefault();
                             const now = Date.now();
                             const PUNCH_RADIUS = 80;
-                            const PUNCH_COOLDOWN_MS = 800;
-                            // Rate limit check using an inline ref or state (GameScreen doesn't have lastPunchTime ref, let's just emit directly for now, server has cooldown anyway)
+                            const PUNCH_COOLDOWN_MS = 300; // Cooldown'u 300ms'ye indirdim (daha hızlı vuruş)
+                            
+                            // Cooldown kontrolü — çok hızlı art arda vurmayı engelle
+                            if (now - lastPunchTimeRef.current < PUNCH_COOLDOWN_MS) {
+                                return; // Cooldown içindeyse işlem yapma
+                            }
+                            
+                            lastPunchTimeRef.current = now;
                             const gs = gameStateRef.current;
                             const lp = localPlayerRef.current;
 
