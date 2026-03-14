@@ -282,7 +282,7 @@ export const GameScreen: React.FC<Props> = ({
 
                 {/* Hazırlık: Dükkanı Aç */}
                 {dayPhase === 'prep' && (
-                    <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 bg-black/50 backdrop-blur-sm">
+                    <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 bg-black/40">
                         <div className="text-center">
                             <div className="text-5xl mb-2">🔧</div>
                             <h2 className="text-white font-black text-2xl">Gün {day} — Hazırlık</h2>
