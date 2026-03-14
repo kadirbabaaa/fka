@@ -249,3 +249,35 @@ export const UPGRADE_DEFS: Record<UpgradeKey, { costs: number[]; max: number }> 
 
 // Fırın upgrade sistemi (2., 3., 4. fırın maliyetleri)
 export const OVEN_UPGRADE_COSTS = [80, 120, 180];
+
+// ─── Yardımcı Fonksiyonlar (GameState oluşturmak için) ───────────────────────
+export function mkCook(id: string, x: number, y: number): CookStation {
+  return { input: null, timer: 0, output: null, id, x, y };
+}
+
+export function mkGameState(): GameState {
+  // Başlangıçta sadece 1 fırın
+  const initialOvens = INITIAL_OVEN_POSITIONS.map((pos, i) =>
+    mkCook(`oven${i + 1}`, pos.x, pos.y)
+  );
+
+  // Tabak rafları ve servis bloklarını birleştir
+  const allHoldingStations = [
+    ...HOLDING_STATION_POSITIONS.map(p => ({ id: p.id, items: [CLEAN_PLATE], type: p.type, maxItems: 1 })),
+    ...COUNTER_POSITIONS.map(p => ({ id: p.id, items: [], type: p.type, maxItems: 1 })),
+  ];
+
+  return {
+    players: {}, customers: [], waitList: [],
+    holdingStations: allHoldingStations,
+    dirtyTables: [],
+    score: 0, stock: { '🍞': 10, '🥩': 10, '🥬': 10 },
+    marketName: "TerraMarket", dayPhase: 'prep', dayTimer: DAY_TICKS,
+    upgrades: { patience: 0, earnings: 0, stockMax: 0 }, day: 1, hasOrderedTonight: false,
+    cookStations: initialOvens,
+    dirtyTrayCount: 0,
+    lives: 3,
+    isGameOver: false,
+    revengeQueue: [],
+  };
+}

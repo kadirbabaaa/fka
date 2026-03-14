@@ -1,8 +1,9 @@
 import express from "express";
 import { createServer as createViteServer } from "vite";
+import { MARKET_NAME } from "./src/constants";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import { MARKET_NAME } from "./src/constants";
+
 
 // ─── Shared'dan import (tek kaynak) ──────────────────────────────────────────
 import {
@@ -44,8 +45,10 @@ import {
   MAX_TRAY_CAPACITY,
   TABLE_HALF_W,
   TABLE_HALF_H,
+
 } from "./shared/types";
 import { DIALOGUES, Personality, DialogTrigger } from "./shared/dialogues";
+import * as RoomManager from "./shared/roomManager";
 
 // ─── Server-Only Sabitler ────────────────────────────────────────────────────
 const INTERACT_R = 90;
@@ -58,45 +61,14 @@ const LOGIC_STEP_MS = 1000 / 30;
 const TABLE_X_SLOTS = [190, 390, 640, 890, 1090];
 const TABLE_Y = 500;
 
-// ─── Room Yönetimi ───────────────────────────────────────────────────────────
-const rooms: Record<string, GameState> = {};
 
-function mkCook(id: string, x: number, y: number): CookStation {
-  return { input: null, timer: 0, output: null, id, x, y };
-}
 
-function mkRoom(): GameState {
-  // Başlangıçta sadece 1 fırın
-  const initialOvens = INITIAL_OVEN_POSITIONS.map((pos, i) =>
-    mkCook(`oven${i + 1}`, pos.x, pos.y)
-  );
-
-  // Tabak rafları ve servis bloklarını birleştir
-  const allHoldingStations = [
-    ...HOLDING_STATION_POSITIONS.map(p => ({ id: p.id, items: [CLEAN_PLATE], type: p.type, maxItems: 1 })),
-    ...COUNTER_POSITIONS.map(p => ({ id: p.id, items: [], type: p.type, maxItems: 1 })),
-  ];
-
-  return {
-    players: {}, customers: [], waitList: [],
-    holdingStations: allHoldingStations,
-    dirtyTables: [],
-    score: 0, stock: { '🍞': 10, '🥩': 10, '🥬': 10 },
-    marketName: MARKET_NAME, dayPhase: 'prep', dayTimer: DAY_TICKS,
-    upgrades: { patience: 0, earnings: 0, stockMax: 0 }, day: 1, hasOrderedTonight: false,
-    cookStations: initialOvens,
-    dirtyTrayCount: 0,
-    lives: 3,
-    isGameOver: false,
-    revengeQueue: [],
-  };
-}
 
 // ─── Yardımcı Fonksiyonlar ───────────────────────────────────────────────────
 function patLimit(lv: number) { return 1200 + 300 * lv; } // Biraz daha sabırsız oldular (eskiden 1500 + 400dü)
 function earn(lv: number) { return 10 + 5 * lv; }
-function cap(lv: number) { return 15 + 5 * lv; }
 function isDish(item: Item): item is string { return !!item && DISH_ITEMS.includes(item as any); }
+function cap(lv: number) { return 15 + 5 * lv; }
 
 function tryQueueSeat(gs: GameState, io: Server, rid: string) {
   if (gs.dayPhase !== "day") return;
@@ -144,21 +116,22 @@ async function startServer() {
 
     socket.on("join", (d: { name: string; color: string; hat: string; charType?: number; roomId: string; marketName: string }) => {
       roomId = d.roomId || "default";
-      if (!rooms[roomId]) { rooms[roomId] = mkRoom(); if (d.marketName) rooms[roomId].marketName = d.marketName; }
-      const gs = rooms[roomId]; socket.join(roomId);
-      gs.players[socket.id] = {
+      if (!RoomManager.roomExists(roomId)) { RoomManager.createRoom(roomId, d.marketName); }
+      const gs = RoomManager.getRoomState(roomId)!; socket.join(roomId);
+      RoomManager.addPlayerToRoom(roomId, socket.id, {
         id: socket.id,
         x: GAME_WIDTH / 2 + (Math.random() - .5) * 120,
         y: 340 + (Math.random() - .5) * 50,
         holding: null, color: d.color, name: d.name || "Oyuncu", hat: d.hat || "", charType: d.charType ?? 0,
-      };
-      socket.emit("init", { id: socket.id, state: gs });
+        peerId: undefined
+      });
+      socket.emit("init", { id: socket.id, state: RoomManager.getRoomState(roomId) });
     });
 
     // Voice Chat - PeerJS ID'lerini dağıt
     socket.on("updatePeerId", (peerId: string) => {
-      if (!roomId || !rooms[roomId]?.players[socket.id]) return;
-      const gs = rooms[roomId];
+      if (!roomId || !RoomManager.getRoomState(roomId)?.players[socket.id]) return;
+      const gs = RoomManager.getRoomState(roomId)!;
       gs.players[socket.id].peerId = peerId;
       // Odadakilere yeni kullanıcının peer idsini haber ver
       io.to(roomId).emit("peerMap",
@@ -168,14 +141,14 @@ async function startServer() {
 
     // 👕 Kostüm Değiştir
     socket.on("changeCosmetic", (charType: number) => {
-      if (!roomId || !rooms[roomId]?.players[socket.id]) return;
+      if (!roomId || !RoomManager.getRoomState(roomId)?.players[socket.id]) return;
       if (typeof charType !== 'number' || charType < 0 || charType > 7) return;
-      rooms[roomId].players[socket.id].charType = charType;
+      RoomManager.getRoomState(roomId)!.players[socket.id].charType = charType;
     });
 
     socket.on("move", ({ x, y }: { x: number; y: number }) => {
-      if (!roomId || !rooms[roomId]?.players[socket.id]) return;
-      const p = rooms[roomId].players[socket.id];
+      if (!roomId || !RoomManager.getRoomState(roomId)?.players[socket.id]) return;
+      const p = RoomManager.getRoomState(roomId)!.players[socket.id];
       let nx = Math.max(20, Math.min(GAME_WIDTH - 20, x));
       let ny = Math.max(20, Math.min(GAME_HEIGHT - 20, y));
 
@@ -215,12 +188,12 @@ async function startServer() {
     });
 
     socket.on("interact", () => {
-      if (!roomId || !rooms[roomId]) return;
+      if (!roomId || !RoomManager.getRoomState(roomId)) return;
       // BUG-1: 200ms cooldown
       const now = Date.now();
       if (now - lastInteract < INTERACT_COOLDOWN) return;
       lastInteract = now;
-      const gs = rooms[roomId], p = gs.players[socket.id]; if (!p) return;
+      const gs = RoomManager.getRoomState(roomId)!, p = gs.players[socket.id]; if (!p) return;
       if (gs.dayPhase === "night") return;
       const { x: px, y: py } = p;
 
@@ -520,8 +493,8 @@ async function startServer() {
     });
 
     socket.on("order", () => {
-      if (!roomId || !rooms[roomId]) return;
-      const gs = rooms[roomId]; if (gs.dayPhase !== 'night') return;
+      if (!roomId || !RoomManager.getRoomState(roomId)) return;
+      const gs = RoomManager.getRoomState(roomId)!; if (gs.dayPhase !== 'night') return;
       if (gs.hasOrderedTonight) { socket.emit("sound", "fail"); return; }
       const c = cap(gs.upgrades.stockMax);
       (['🍞', '🥩', '🥬'] as StockKey[]).forEach(k => { gs.stock[k] = c; });
@@ -530,8 +503,8 @@ async function startServer() {
     });
 
     socket.on("buyOven", () => {
-      if (!roomId || !rooms[roomId]) return;
-      const gs = rooms[roomId];
+      if (!roomId || !RoomManager.getRoomState(roomId)) return;
+      const gs = RoomManager.getRoomState(roomId)!;
       if (gs.dayPhase !== 'night') return;
 
       const currentOvenCount = gs.cookStations.length;
@@ -571,8 +544,8 @@ async function startServer() {
     });
 
     socket.on("upgrade", (id: UpgradeKey) => {
-      if (!roomId || !rooms[roomId]) return;
-      const gs = rooms[roomId]; if (gs.dayPhase !== 'night') return;
+      if (!roomId || !RoomManager.getRoomState(roomId)) return;
+      const gs = RoomManager.getRoomState(roomId)!; if (gs.dayPhase !== 'night') return;
       const def = UPGRADE_DEFS[id]; if (!def) return;
       const lv = gs.upgrades[id]; if (lv >= def.max) return;
       const cost = def.costs[lv]; if (gs.score < cost) { socket.emit("sound", "fail"); return; }
@@ -582,8 +555,8 @@ async function startServer() {
 
     // Gece mağazasında can satın alma
     socket.on("buyLife", () => {
-      if (!roomId || !rooms[roomId]) return;
-      const gs = rooms[roomId];
+      if (!roomId || !RoomManager.getRoomState(roomId)) return;
+      const gs = RoomManager.getRoomState(roomId)!;
       if (gs.dayPhase !== 'night') return;
       const LIFE_COST = 75;
       if (gs.lives >= 3) { socket.emit("sound", "fail"); return; }
@@ -595,8 +568,8 @@ async function startServer() {
 
     // Müşteri Dövme — sadece gündüz, sadece rude/recep tipleri geçerli hedef
     socket.on("punchCustomer", (customerId: string) => {
-      if (!roomId || !rooms[roomId]) return;
-      const gs = rooms[roomId];
+      if (!roomId || !RoomManager.getRoomState(roomId)) return;
+      const gs = RoomManager.getRoomState(roomId)!;
       if (gs.dayPhase !== 'day') return;
 
       const cIdx = gs.customers.findIndex(c => c.id === customerId);
@@ -672,15 +645,15 @@ async function startServer() {
 
     // Dükkanı aç — prep → day geçişi
     socket.on("openShop", () => {
-      if (!roomId || !rooms[roomId]) return;
-      const gs = rooms[roomId]; if (gs.dayPhase !== 'prep') return;
+      if (!roomId || !RoomManager.getRoomState(roomId)) return;
+      const gs = RoomManager.getRoomState(roomId)!; if (gs.dayPhase !== 'prep') return;
       gs.dayPhase = 'day'; gs.dayTimer = DAY_TICKS;
       io.to(roomId!).emit("sound", "arrive");
     });
 
     socket.on("nextDay", () => {
-      if (!roomId || !rooms[roomId]) return;
-      const gs = rooms[roomId]; if (gs.dayPhase !== 'night') return;
+      if (!roomId || !RoomManager.getRoomState(roomId)) return;
+      const gs = RoomManager.getRoomState(roomId)!; if (gs.dayPhase !== 'night') return;
       gs.dayPhase = 'prep'; gs.dayTimer = DAY_TICKS; gs.day++;
       gs.customers = []; gs.waitList = [];
       gs.hasOrderedTonight = false;
@@ -696,30 +669,38 @@ async function startServer() {
 
     // ─── Disconnect: Oyuncuyu odadan çıkar ────────────────────────────────────
     socket.on("disconnect", () => {
-      if (!roomId || !rooms[roomId]) return;
+      if (!roomId) return;
+      const room = RoomManager.getRoomState(roomId);
+      if (!room) return;
+
       console.log(`[Server] Player ${socket.id} disconnected from room ${roomId}`);
-      delete rooms[roomId].players[socket.id];
-      // Oda boşsa sil
-      if (!Object.keys(rooms[roomId].players).length) {
-        console.log(`[Server] Room ${roomId} is now empty, deleting...`);
-        delete rooms[roomId];
+      RoomManager.removePlayerFromRoom(roomId, socket.id);
+
+      if (RoomManager.isRoomEmpty(roomId)) {
+        console.log(`[Server] Room ${roomId} is empty, stopping loop and deleting.`);
+        const gs = RoomManager.getRoomState(roomId);
+        if (gs && gs.loopInterval) {
+          clearInterval(gs.loopInterval);
+          gs.loopInterval = undefined;
+        }
+        RoomManager.deleteRoom(roomId);
       } else {
         // Kalan oyunculara state'i gönder
-        io.to(roomId).emit("state", rooms[roomId]);
+        io.to(roomId).emit("state", RoomManager.getRoomState(roomId));
       }
     });
 
     // ─── State Re-sync: Ön plana gelen oyuncu state'i ister ──────────────────
     socket.on("requestSync", () => {
-      if (!roomId || !rooms[roomId]) return;
+      if (!roomId || !RoomManager.getRoomState(roomId)) return;
       console.log(`[Server] Player ${socket.id} requesting state sync`);
-      const gs = rooms[roomId];
+      const gs = RoomManager.getRoomState(roomId)!;
       socket.emit("state", gs);
     });
 
     socket.on("resetDay", () => {
-      if (!roomId || !rooms[roomId]) return;
-      const gs = rooms[roomId];
+      if (!roomId || !RoomManager.getRoomState(roomId)) return;
+      const gs = RoomManager.getRoomState(roomId)!;
       if (!gs.isGameOver) return;
 
       // Oyunu baştan başlat ama upgrade ve skor kalsın, canları doldur
@@ -757,10 +738,9 @@ async function startServer() {
     while (lagMs >= LOGIC_STEP_MS && steps < 5) {
       lagMs -= LOGIC_STEP_MS;
       steps++;
-      for (const rid of Object.keys(rooms)) {
-        const gs = rooms[rid];
+      for (const rid of RoomManager.getRoomIds()) {
+        const gs = RoomManager.getRoomState(rid);
         if (!gs) continue;
-        if (!gs.stock) gs.stock = { '🍞': 10, '🥩': 10, '🥬': 10 };
 
         // Universal fırın sistemi - pişirme & yanma timer
         for (const station of gs.cookStations) {
@@ -1004,7 +984,7 @@ async function startServer() {
                 const list = DIALOGUES[c.personality].leaving_angry;
                 c.currentDialog = list[Math.floor(Math.random() * list.length)];
                 c.dialogTimer = 90;
-                tryQueueSeat(gs, io, rid);;
+                tryQueueSeat(gs, io, rid);
               }
             }
           }
