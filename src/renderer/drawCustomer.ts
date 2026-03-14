@@ -1,358 +1,278 @@
 import { Customer, TABLE_Y, EAT_TICKS } from '../types/game';
 
-type CustomerRenderState = {
-    lastX: number;
-    lastY: number;
+type CRS = {
+    lastX: number; lastY: number;
     faceRight: boolean;
-    bobPhase: number;
-    bobAmount: number;
-    beatUpShake: number; // Beat-up efekti için sarsıntı frame sayacı
+    bobPhase: number; bobAmount: number;
+    beatUpShake: number;
 };
 
-const customerRenderState = new Map<string, CustomerRenderState>();
+const crs = new Map<string, CRS>();
 
-function getRenderState(id: string, x: number, y: number) {
-    if (!customerRenderState.has(id)) {
-        customerRenderState.set(id, {
-            lastX: x,
-            lastY: y,
-            faceRight: true,
-            bobPhase: 0,
-            bobAmount: 0,
-            beatUpShake: 0,
-        });
-    }
-
-    return customerRenderState.get(id)!;
+function getCRS(id: string, x: number, y: number): CRS {
+    if (!crs.has(id)) crs.set(id, { lastX: x, lastY: y, faceRight: true, bobPhase: 0, bobAmount: 0, beatUpShake: 0 });
+    return crs.get(id)!;
 }
 
-/**
- * Müşteri vücudunu bodyShape'e göre çizer.
- * 1=Normal, 2=Tombul, 3=Uzun ince, 4=Kısa tıknaz
- */
-function getBodyProps(bodyShape: 1 | 2 | 3 | 4) {
-    switch (bodyShape) {
-        case 2: // Tombul
-            return { bodyW: 30, bodyH: 18, headR: 14, neckH: 2, legLen: 10 };
-        case 3: // Uzun ince
-            return { bodyW: 18, bodyH: 12, headR: 10, neckH: 5, legLen: 18 };
-        case 4: // Kısa tıknaz
-            return { bodyW: 26, bodyH: 16, headR: 11, neckH: 1, legLen: 8 };
-        case 1:
-        default: // Normal
-            return { bodyW: 24, bodyH: 14, headR: 12, neckH: 3, legLen: 14 };
+// Vücut şekli parametreleri — PlateUp tarzı şişman/ince/normal/tıknaz
+function bodyProps(shape: 1 | 2 | 3 | 4) {
+    switch (shape) {
+        case 2: return { bw: 28, bh: 20, hr: 16, neck: 2, leg: 11, feet: 9 }; // tombul
+        case 3: return { bw: 16, bh: 12, hr: 11, neck: 5, leg: 20, feet: 6 }; // uzun ince
+        case 4: return { bw: 25, bh: 17, hr: 13, neck: 1, leg: 9,  feet: 8 }; // kısa tıknaz
+        default:return { bw: 21, bh: 15, hr: 13, neck: 3, leg: 15, feet: 7 }; // normal
     }
+}
+
+function stk(ctx: CanvasRenderingContext2D, color = '#1a0a0a', w = 3) {
+    ctx.strokeStyle = color; ctx.lineWidth = w; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
+}
+
+// Saç rengi — vücut rengine göre uyumlu koyu ton
+const HAIR_COLORS = ['#2d1b0e','#1a1a1a','#5c3317','#8b4513','#2c2c54','#1a3a1a'];
+function hairColor(bodyColor: string, id: string): string {
+    const hash = id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+    return HAIR_COLORS[hash % HAIR_COLORS.length];
 }
 
 export function drawCustomer(ctx: CanvasRenderingContext2D, customer: Customer) {
     const { id, x, y, seatY, wants, patience, maxPatience, isSeated, isEating, eatTimer, beatUpTimer } = customer;
-    const bodyShape = customer.bodyShape ?? 1;
+    const shape = customer.bodyShape ?? 1;
     const bodyColor = customer.bodyColor ?? '#475569';
     const facingUp = seatY > TABLE_Y;
-    const state = getRenderState(id, x, y);
+    const st = getCRS(id, x, y);
 
-    const dx = x - state.lastX;
-    const dy = y - state.lastY;
-    const distance = Math.hypot(dx, dy);
-    const isMoving = !isSeated && distance > 0.9;
+    const dx = x - st.lastX, dy = y - st.lastY;
+    const moving = !isSeated && (dx * dx + dy * dy > 0.8);
 
-    if (isMoving) {
-        state.bobPhase += 0.28;
-        state.bobAmount = Math.min(1, state.bobAmount + 0.18);
-        if (Math.abs(dx) > 0.25) state.faceRight = dx > 0;
+    if (moving) {
+        st.bobPhase  += 0.26;
+        st.bobAmount  = Math.min(1, st.bobAmount + 0.16);
+        if (Math.abs(dx) > 0.2) st.faceRight = dx > 0;
     } else {
-        state.bobAmount = Math.max(0, state.bobAmount - 0.22);
-        if (state.bobAmount > 0) state.bobPhase += 0.18;
-        else state.bobPhase = 0;
+        st.bobAmount = Math.max(0, st.bobAmount - 0.20);
+        if (st.bobAmount > 0) st.bobPhase += 0.16;
+        else st.bobPhase = 0;
     }
 
-    // Beat-up shake efekti — eğer beatUpTimer varsa sarsıntı sayacını güncelle
-    if (beatUpTimer && beatUpTimer > 0 && state.beatUpShake <= 0) {
-        state.beatUpShake = 30; // 30 frame (1 saniye) sarsıntı
-    }
-    if (state.beatUpShake > 0) state.beatUpShake--;
+    if (beatUpTimer && beatUpTimer > 0 && st.beatUpShake <= 0) st.beatUpShake = 28;
+    if (st.beatUpShake > 0) st.beatUpShake--;
 
-    state.lastX = x;
-    state.lastY = y;
+    st.lastX = x; st.lastY = y;
 
-    // Sarsıntı offset (beat-up ani sarsıntı) - titreşimi azalttım
-    const shakeX = state.beatUpShake > 0 ? Math.sin(state.beatUpShake * 1.8) * 1.5 : 0;
-    const bobbingY = Math.abs(Math.sin(state.bobPhase)) * 3.5 * state.bobAmount;
-    const tilt = Math.sin(state.bobPhase) * 0.05 * state.bobAmount;
-    const eatProgress = isEating ? eatTimer / EAT_TICKS : 0;
+    const shakeX  = st.beatUpShake > 0 ? Math.sin(st.beatUpShake * 2) * 2 : 0;
+    const bobY    = Math.abs(Math.sin(st.bobPhase)) * 4 * st.bobAmount;
+    const tilt    = Math.sin(st.bobPhase) * 0.06 * st.bobAmount;
+    const legSwing = moving ? Math.sin(st.bobPhase) * 6 : 0;
+    const beatUp  = st.beatUpShake > 0;
+    const eatPct  = isEating ? eatTimer / EAT_TICKS : 0;
 
-    const { bodyW, bodyH, headR, neckH, legLen } = getBodyProps(bodyShape);
+    const { bw, bh, hr, neck, leg, feet } = bodyProps(shape);
+    const hair = hairColor(bodyColor, id);
 
     ctx.save();
     ctx.translate(x + shakeX, y);
+    if (beatUp) ctx.globalAlpha = 0.88;
 
-    // Kırmızı tint efekti (beat-up aktifken)
-    const isBeatUpActive = state.beatUpShake > 0;
-    if (isBeatUpActive) {
-        ctx.globalAlpha = 0.85;
-    }
-
+    // ── Zemin gölgesi ────────────────────────────────────────────────────────
     if (!isSeated) {
-        ctx.fillStyle = 'rgba(0,0,0,0.2)';
-        ctx.beginPath();
-        ctx.ellipse(0, 16, 15, 6, 0, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.fillStyle = 'rgba(0,0,0,0.18)';
+        ctx.beginPath(); ctx.ellipse(0, 18, 17, 7, 0, 0, Math.PI * 2); ctx.fill();
     }
 
+    // ── Sandalye (oturuyorsa) ─────────────────────────────────────────────────
     if (isSeated) {
-        ctx.fillStyle = '#8b5a2b';
+        ctx.fillStyle = '#9b6d3a';
         ctx.beginPath();
-        ctx.roundRect(-14, facingUp ? 8 : -14, 28, 6, 3);
+        ctx.roundRect(-16, facingUp ? 10 : -16, 32, 7, 4);
         ctx.fill();
+        ctx.strokeStyle = '#7a5428'; ctx.lineWidth = 1.5; ctx.stroke();
     }
 
-    ctx.translate(0, -bobbingY);
+    ctx.translate(0, -bobY);
     ctx.rotate(tilt);
-    if (!isSeated) ctx.scale(state.faceRight ? 1 : -1, 1);
+    if (!isSeated) ctx.scale(st.faceRight ? 1 : -1, 1);
 
-    const bodyY = isSeated ? 2 : 0;
-
-    // Alt gövde (pantolon/etek benzeri) — daha koyu renk
-    ctx.fillStyle = '#0f172a';
-    ctx.beginPath();
-    ctx.roundRect(-bodyW / 2, bodyY + 2, bodyW, bodyH / 2 + 4, [0, 0, 8, 8]);
-    ctx.fill();
-
-    // Üst gövde (kıyafet rengi kişiliğe göre)
-    ctx.fillStyle = isBeatUpActive ? '#ef4444' : bodyColor;
-    ctx.beginPath();
-    ctx.roundRect(-bodyW / 2, bodyY - bodyH, bodyW, bodyH + 4, [8, 8, 0, 0]);
-    ctx.fill();
-
-    // Bacaklar (sadece yürürken görünür — seating durumunda gizli)
+    // ── BACAKLAR ─────────────────────────────────────────────────────────────
     if (!isSeated) {
-        const swing = Math.sin(state.bobPhase) * 4 * state.bobAmount;
-        ctx.fillStyle = '#1e293b';
-        ctx.beginPath();
-        ctx.roundRect(-8 + swing, bodyY + 4, 7, legLen, 3);
-        ctx.roundRect(1 - swing, bodyY + 4, 7, legLen, 3);
-        ctx.fill();
+        // Sol bacak
+        ctx.beginPath(); ctx.roundRect(-bw / 2 - 2 + legSwing, bh / 2 + neck + 2, bw / 2 + 1, leg, [0, 0, 4, 4]);
+        ctx.fillStyle = '#1a1a2e'; ctx.fill(); stk(ctx);
+        // Sol ayak
+        ctx.beginPath(); ctx.ellipse(-bw / 4 + legSwing, bh / 2 + neck + leg + 5, feet + 2, 4, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#111'; ctx.fill(); stk(ctx, '#000', 2);
 
-        // Ayaklar
-        ctx.fillStyle = '#374151';
-        ctx.beginPath();
-        ctx.roundRect(-10 + swing, bodyY + 4 + legLen, 10, 5, 2);
-        ctx.roundRect(-1 - swing, bodyY + 4 + legLen, 10, 5, 2);
-        ctx.fill();
+        // Sağ bacak
+        ctx.beginPath(); ctx.roundRect(1 - legSwing, bh / 2 + neck + 2, bw / 2 + 1, leg, [0, 0, 4, 4]);
+        ctx.fillStyle = '#252540'; ctx.fill(); stk(ctx);
+        // Sağ ayak
+        ctx.beginPath(); ctx.ellipse(bw / 4 - legSwing, bh / 2 + neck + leg + 5, feet + 2, 4, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#111'; ctx.fill(); stk(ctx, '#000', 2);
     }
 
-    // Eller
-    ctx.fillStyle = '#f5d0a9';
-    if (isSeated) {
-        const handY = facingUp ? bodyY - bodyH + 6 : bodyY + 4;
-        ctx.beginPath();
-        ctx.arc(-bodyW / 2 + 4, handY, 4, 0, Math.PI * 2);
-        ctx.arc(bodyW / 2 - 4, handY, 4, 0, Math.PI * 2);
-        ctx.fill();
+    // ── GÖVDE ────────────────────────────────────────────────────────────────
+    const bodyY = isSeated ? (facingUp ? -bh / 2 - 4 : -bh / 2 - 10) : -bh / 2;
+
+    // Kıyafet gövdesi (konturlu)
+    ctx.beginPath(); ctx.roundRect(-bw / 2 - 2, bodyY, bw + 4, bh + 4, 9);
+    const bg = ctx.createLinearGradient(-bw / 2, bodyY, bw / 2, bodyY + bh);
+    bg.addColorStop(0, beatUp ? '#ef4444' : lighten(bodyColor, 28));
+    bg.addColorStop(1, beatUp ? '#dc2626' : bodyColor);
+    ctx.fillStyle = bg; ctx.fill(); stk(ctx);
+
+    // Kıyafet detay (düğme çizgisi)
+    ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, bodyY + 3); ctx.lineTo(0, bodyY + bh - 2);
+    ctx.stroke();
+
+    // Parlaklık
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.beginPath(); ctx.roundRect(-bw / 2, bodyY, bw, 6, [9, 9, 0, 0]); ctx.fill();
+
+    // ── KOLLAR ───────────────────────────────────────────────────────────────
+    const armSwing = moving ? Math.sin(st.bobPhase + Math.PI) * 5 : 0;
+    // Arka kol
+    ctx.beginPath(); ctx.roundRect(-bw / 2 - 10, bodyY - 1 - armSwing, 9, bh - 2, 5);
+    ctx.fillStyle = darken(bodyColor, 18); ctx.fill(); stk(ctx);
+    // Ön kol
+    ctx.beginPath(); ctx.roundRect(bw / 2 + 1, bodyY - 1 + armSwing, 9, bh - 2, 5);
+    ctx.fillStyle = bodyColor; ctx.fill(); stk(ctx);
+
+    // ── BAŞ ──────────────────────────────────────────────────────────────────
+    const headY = bodyY - neck - hr - 2;
+
+    // Boyun
+    ctx.beginPath(); ctx.roundRect(-5, bodyY - neck, 10, neck + 4, 3);
+    ctx.fillStyle = '#f5c090'; ctx.fill();
+
+    // Kafa (yuvarlak, büyük)
+    ctx.beginPath(); ctx.arc(0, headY, hr, 0, Math.PI * 2);
+    const hg = ctx.createRadialGradient(-4, headY - 4, 2, 0, headY, hr);
+    hg.addColorStop(0, '#fde8cc'); hg.addColorStop(1, '#f0b882');
+    ctx.fillStyle = hg; ctx.fill(); stk(ctx);
+
+    // Saç
+    ctx.beginPath();
+    ctx.arc(0, headY, hr, Math.PI, 0);
+    ctx.fillStyle = hair; ctx.fill();
+    ctx.beginPath();
+    ctx.arc(0, headY - hr + 4, hr * 0.7, Math.PI, 0);
+    ctx.fillStyle = hair; ctx.fill();
+
+    // Yanaklar
+    ctx.fillStyle = 'rgba(255,130,100,0.25)';
+    ctx.beginPath(); ctx.ellipse(-hr * 0.55, headY + 2, hr * 0.38, hr * 0.28, -0.2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(hr * 0.55, headY + 2, hr * 0.38, hr * 0.28, 0.2, 0, Math.PI * 2); ctx.fill();
+
+    // Gözler (sabırsız = şaşkın, yiyor = mutlu, normal = nötr)
+    const patiencePct = Math.max(0, patience / maxPatience);
+    ctx.fillStyle = '#1a0a0a';
+
+    if (patiencePct < 0.25 && !isEating) {
+        // Kızgın gözler (çatık kaş)
+        ctx.beginPath(); ctx.ellipse(-hr * 0.38, headY - 1, 4, 3.5, 0.35, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(hr * 0.38, headY - 1, 4, 3.5, -0.35, 0, Math.PI * 2); ctx.fill();
+        // Kaşlar
+        ctx.strokeStyle = '#1a0a0a'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(-hr * 0.55, headY - 6); ctx.lineTo(-hr * 0.18, headY - 3); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(hr * 0.55, headY - 6); ctx.lineTo(hr * 0.18, headY - 3); ctx.stroke();
+        // Kızgın ağız
+        ctx.beginPath(); ctx.arc(0, headY + 6, 5, Math.PI, 0); ctx.stroke();
+    } else if (isEating) {
+        // Yeme animasyonu
+        const blink = Math.sin(Date.now() / 200) > 0.5;
+        if (blink) {
+            ctx.beginPath(); ctx.moveTo(-hr * 0.42, headY); ctx.lineTo(-hr * 0.18, headY); ctx.lineWidth = 2.5; ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(hr * 0.18, headY); ctx.lineTo(hr * 0.42, headY); ctx.lineWidth = 2.5; ctx.stroke();
+        } else {
+            ctx.beginPath(); ctx.ellipse(-hr * 0.30, headY, 3.5, 4, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(hr * 0.30, headY, 3.5, 4, 0, 0, Math.PI * 2); ctx.fill();
+        }
+        // Mutlu ağız
+        ctx.strokeStyle = '#7a3020'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.arc(0, headY + 5, 6, 0.1, Math.PI - 0.1); ctx.stroke();
+        // Yemek balonu (eatTimer)
+        const eatAlpha = 1 - eatPct;
+        ctx.globalAlpha = eatAlpha * 0.8;
+        ctx.font = '14px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('😋', hr + 8, headY - hr);
+        ctx.globalAlpha = beatUp ? 0.88 : 1;
     } else {
-        const swing = Math.sin(state.bobPhase) * 3.5 * state.bobAmount;
-        ctx.beginPath();
-        ctx.arc(-bodyW / 2 - 2 + swing, 5, 4.5, 0, Math.PI * 2);
-        ctx.arc(bodyW / 2 + 2 - swing, 5, 4.5, 0, Math.PI * 2);
-        ctx.fill();
+        // Normal gözler
+        ctx.beginPath(); ctx.ellipse(-hr * 0.34, headY - 1, 3.5, 4.5, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(hr * 0.34, headY - 1, 3.5, 4.5, 0, 0, Math.PI * 2); ctx.fill();
+        // Göz parıltısı
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.beginPath(); ctx.ellipse(-hr * 0.28, headY - 3, 1.5, 2, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(hr * 0.40, headY - 3, 1.5, 2, 0, 0, Math.PI * 2); ctx.fill();
+        // Nötr ağız
+        ctx.strokeStyle = '#7a3020'; ctx.lineWidth = 1.8; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.arc(0, headY + 5, 5, 0.2, Math.PI - 0.2); ctx.stroke();
     }
 
-    // Baş
-    const headY = isSeated ? (facingUp ? -bodyH - neckH : 2) : -bodyH - neckH - headR;
-    const eatingHeadOffset = isEating ? Math.sin((1 - eatProgress) * Math.PI * 8) * 1.8 : 0;
-
-    ctx.fillStyle = 'rgba(0,0,0,0.14)';
-    ctx.beginPath();
-    ctx.ellipse(0, headY + headR + 4, headR - 2, 3, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = isBeatUpActive ? '#fca5a5' : '#f5d0a9';
-    ctx.beginPath();
-    ctx.arc(0, headY + eatingHeadOffset, headR, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Yüz ifadesi
-    const showFace = !isSeated || !facingUp;
-    if (showFace) {
-        const eyeY = headY - 2 + eatingHeadOffset;
-        ctx.fillStyle = isBeatUpActive ? '#ffffff' : '#111827';
-        ctx.beginPath();
-
-        if (isBeatUpActive) {
-            // Korkmuş gözler (daha büyük) — beat-up aktif
-            ctx.ellipse(-headR * 0.35, eyeY, 3, 4, 0, 0, Math.PI * 2);
-            ctx.ellipse(headR * 0.35, eyeY, 3, 4, 0, 0, Math.PI * 2);
-            ctx.fill();
-            // Göz akı
-            ctx.fillStyle = '#111827';
-            ctx.beginPath();
-            ctx.arc(-headR * 0.35, eyeY + 1, 1.5, 0, Math.PI * 2);
-            ctx.arc(headR * 0.35, eyeY + 1, 1.5, 0, Math.PI * 2);
-            ctx.fill();
-        } else {
-            ctx.ellipse(-headR * 0.3, eyeY, 2.2, 3, 0, 0, Math.PI * 2);
-            ctx.ellipse(headR * 0.3, eyeY, 2.2, 3, 0, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
-        // Ağız ifadesi
-        if (isEating) {
-            ctx.fillStyle = '#7c2d12';
-            ctx.beginPath();
-            ctx.arc(0, headY + 4 + eatingHeadOffset, 2.4, 0, Math.PI * 2);
-            ctx.fill();
-        } else if (isBeatUpActive) {
-            // Korkmuş ağız — O şekli
-            ctx.strokeStyle = '#7c2d12';
-            ctx.lineWidth = 1.5;
-            ctx.beginPath();
-            ctx.arc(0, headY + 5, 3, 0, Math.PI * 2);
-            ctx.stroke();
-        } else {
-            ctx.strokeStyle = '#7c2d12';
-            ctx.lineWidth = 1.5;
-            ctx.lineCap = 'round';
-            ctx.beginPath();
-            ctx.arc(0, headY + 4, 3, 0.2, Math.PI - 0.2);
-            ctx.stroke();
-        }
-    } else {
-        ctx.fillStyle = 'rgba(0,0,0,0.1)';
-        ctx.beginPath();
-        ctx.arc(0, headY - 3, headR, Math.PI, Math.PI * 2);
-        ctx.fill();
+    // Beat-up efekti (yıldız)
+    if (beatUp) {
+        ctx.globalAlpha = Math.min(1, st.beatUpShake / 10);
+        ctx.font = '16px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('💫', hr + 4, headY - hr - 4);
+        ctx.globalAlpha = 1;
     }
 
     ctx.restore();
 
-    // Beat-up overlay: 😱 emoji kafanın üstünde (efekt aktifken)
-    if (isBeatUpActive) {
-        ctx.save();
-        ctx.globalAlpha = Math.min(1, state.beatUpShake / 15);
-        ctx.font = '20px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('😱', x + shakeX, y - 65);
-        ctx.restore();
-    }
+    // ── SİPARİŞ BALONU & SABIR ÇUBUĞU ──────────────────────────────────────
+    if (customer.isBeatUp || customer.isLeaving || !wants) return;
 
-    // ─── DİYALOG BALONU (Speech Bubble) ──────────────────────────────────────────
-    if (customer.currentDialog) {
-        ctx.save();
-        ctx.translate(customer.x, customer.y - 50); // İstek balonunun üstünde
+    const bar    = Math.max(0, patience / maxPatience);
+    const barClr = bar > 0.5 ? '#22c55e' : bar > 0.25 ? '#f59e0b' : '#ef4444';
+    const bx     = x + (isSeated ? 32 : 30);
+    const by     = facingUp ? y + 36 : y - 42;
+    const barY   = facingUp ? y - 30 : y + 26;
 
-        ctx.font = 'bold 11px Arial';
-        const textWidth = ctx.measureText(customer.currentDialog).width;
-        const bubbleW = Math.min(textWidth + 16, 260); // max genişlik
-        const bubbleH = 24;
+    // Balon gölgesi
+    ctx.fillStyle = 'rgba(0,0,0,0.12)';
+    ctx.beginPath(); ctx.roundRect(bx - 14, by - 13, 36, 28, 8); ctx.fill();
 
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-        ctx.beginPath();
-        ctx.roundRect(-bubbleW / 2, -bubbleH, bubbleW, bubbleH, 8);
-        ctx.fill();
+    // Balon
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.roundRect(bx - 16, by - 15, 36, 28, 8); ctx.fill();
+    ctx.strokeStyle = barClr; ctx.lineWidth = 2; ctx.stroke();
 
-        ctx.beginPath();
-        ctx.moveTo(-5, 0);
-        ctx.lineTo(5, 0);
-        ctx.lineTo(0, 6);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.strokeStyle = customer.personality === 'recep' ? '#ef4444' : customer.personality === 'rude' ? '#f59e0b' : '#3b82f6';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.roundRect(-bubbleW / 2, -bubbleH, bubbleW, bubbleH, 8);
-        ctx.stroke();
-
-        ctx.moveTo(-5, 0);
-        ctx.lineTo(5, 0);
-        ctx.lineTo(0, 6);
-        ctx.closePath();
-        ctx.stroke();
-
-        ctx.fillStyle = '#1e293b';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        // Uzun metinleri kırp
-        let displayText = customer.currentDialog;
-        if (textWidth > 244) {
-            displayText = customer.currentDialog.slice(0, 28) + '…';
-        }
-        ctx.fillText(displayText, 0, -bubbleH / 2);
-
-        ctx.restore();
-    }
-
-    if (isEating) {
-        const iconY = facingUp ? y + 30 + (1 - eatProgress) * 10 : y - 30 - (1 - eatProgress) * 10;
-        ctx.globalAlpha = eatProgress;
-        ctx.font = '22px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('🍽️', x, iconY);
-        ctx.globalAlpha = 1;
-    }
-
-    if (!isSeated) return;
-
-    if (isEating) {
-        const barY = facingUp ? y - 24 : y + 22;
-        ctx.fillStyle = 'rgba(226,232,240,0.72)';
-        ctx.beginPath();
-        ctx.roundRect(x - 20, barY, 40, 5, 3);
-        ctx.fill();
-        ctx.fillStyle = '#f97316';
-        ctx.beginPath();
-        ctx.roundRect(x - 20, barY, 40 * eatProgress, 5, 3);
-        ctx.fill();
-        return;
-    }
-
-    const patiencePct = Math.max(0, patience / maxPatience);
-    const barColor = patiencePct > 0.5 ? '#22c55e' : patiencePct > 0.25 ? '#f59e0b' : '#ef4444';
-    const bubbleX = x + 30;
-    const bubbleY = facingUp ? y + 40 : y - 40;
-    const patienceY = facingUp ? y - 28 : y + 24;
-
-    ctx.fillStyle = 'rgba(0,0,0,0.14)';
-    ctx.beginPath();
-    ctx.roundRect(bubbleX - 16, bubbleY - 14, 38, 28, 7);
-    ctx.fill();
-
-    ctx.fillStyle = 'white';
-    ctx.beginPath();
-    ctx.roundRect(bubbleX - 18, bubbleY - 16, 38, 28, 7);
-    ctx.fill();
-    ctx.strokeStyle = '#94a3b8';
-    ctx.lineWidth = 1.4;
-    ctx.stroke();
-
-    ctx.fillStyle = 'white';
+    // Ok ucu
+    ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     if (facingUp) {
-        ctx.moveTo(bubbleX - 8, bubbleY - 16);
-        ctx.lineTo(x + 14, y + 6);
-        ctx.lineTo(bubbleX + 4, bubbleY - 16);
+        ctx.moveTo(bx - 6, by - 15); ctx.lineTo(x + 14, y + 4); ctx.lineTo(bx + 4, by - 15);
     } else {
-        ctx.moveTo(bubbleX - 8, bubbleY + 12);
-        ctx.lineTo(x + 14, y - 6);
-        ctx.lineTo(bubbleX + 4, bubbleY + 12);
+        ctx.moveTo(bx - 6, by + 13); ctx.lineTo(x + 14, y - 4); ctx.lineTo(bx + 4, by + 13);
     }
     ctx.fill();
 
-    ctx.font = '20px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#0f172a';
-    ctx.fillText(wants || '?', bubbleX + 1, bubbleY - 2);
+    // Sipariş emojisi
+    ctx.font = '22px Arial';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(wants ?? '?', bx + 2, by - 1);
 
+    // Sabır çubuğu — arka plan
     ctx.fillStyle = '#e2e8f0';
-    ctx.beginPath();
-    ctx.roundRect(x - 20, patienceY, 40, 5, 3);
-    ctx.fill();
-    ctx.fillStyle = barColor;
-    ctx.beginPath();
-    ctx.roundRect(x - 20, patienceY, 40 * patiencePct, 5, 3);
-    ctx.fill();
+    ctx.beginPath(); ctx.roundRect(x - 22, barY, 44, 6, 3); ctx.fill();
+    // Sabır çubuğu — dolu
+    ctx.fillStyle = barClr;
+    ctx.beginPath(); ctx.roundRect(x - 22, barY, 44 * bar, 6, 3); ctx.fill();
+}
+
+function lighten(hex: string, amt: number) { return adj(hex, amt); }
+function darken(hex: string, amt: number)  { return adj(hex, -amt); }
+function adj(hex: string, amt: number): string {
+    try {
+        const c = hex.replace('#', '');
+        const full = c.length === 3 ? c.split('').map(x => x + x).join('') : c;
+        const n = parseInt(full, 16);
+        const r = Math.min(255, Math.max(0, (n >> 16) + amt));
+        const g = Math.min(255, Math.max(0, ((n >> 8) & 0xff) + amt));
+        const b = Math.min(255, Math.max(0, (n & 0xff) + amt));
+        return `rgb(${r},${g},${b})`;
+    } catch { return hex; }
 }
