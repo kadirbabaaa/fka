@@ -28,6 +28,7 @@ export default function App() {
   const [playerColor, setPlayerColor] = useState(CHARACTER_TYPES[0].bodyColor);
   const [playerHat, setPlayerHat] = useState('');
   const [roomId, setRoomId] = useState(() => Math.random().toString(36).substring(2, 6).toUpperCase());
+  const [isJoiningExistingRoom, setIsJoiningExistingRoom] = useState(false);
 
   const handleQuickStart = (name: string, quickRoomId: string) => {
     if (!socket) return;
@@ -61,7 +62,7 @@ export default function App() {
       hat: playerHat,
       charType,
       roomId: roomId.trim().toUpperCase() || 'TERRAMARKET',
-      marketName: marketName.trim() || MARKET_NAME,
+      marketName: isJoiningExistingRoom ? '' : (marketName.trim() || MARKET_NAME),
     });
 
     isJoinedRef.current = true;
@@ -71,8 +72,12 @@ export default function App() {
   const handleStartLobby = (targetRoomId?: string) => {
     if (targetRoomId) {
       setRoomId(targetRoomId);
+      setIsJoiningExistingRoom(true);
+      setPlayerName(''); // Katılırken oyuncu adı boş başlasın
     } else {
       setRoomId(Math.random().toString(36).substring(2, 6).toUpperCase());
+      setIsJoiningExistingRoom(false);
+      setPlayerName(''); // Yeni oda kurulurken de boş başlasın
     }
     setEntryScreen('lobby');
   };
@@ -98,6 +103,7 @@ export default function App() {
             onJoin={handleJoin}
             onBack={() => setEntryScreen('menu')}
             onOpenSettings={() => setShowSettings(true)}
+            isJoiningExistingRoom={isJoiningExistingRoom}
           />
         )}
 

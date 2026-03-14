@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { CHARACTER_TYPES } from '../types/game';
 import { MARKET_NAME } from '../constants';
 
@@ -19,6 +19,7 @@ interface CharacterSelectProps {
     onJoin: (e: React.FormEvent) => void;
     onBack: () => void;
     onOpenSettings: () => void;
+    isJoiningExistingRoom?: boolean;
 }
 
 function OutfitPreview({ bodyColor, accent }: { bodyColor: string; accent: string }) {
@@ -49,8 +50,23 @@ export const CharacterSelect: React.FC<CharacterSelectProps> = ({
     onJoin,
     onBack,
     onOpenSettings,
+    isJoiningExistingRoom = false,
 }) => {
     const selectedChar = CHARACTER_TYPES[charType] ?? CHARACTER_TYPES[0];
+    const [isFormValid, setIsFormValid] = useState(false);
+
+    // Form doğrulaması
+    useEffect(() => {
+        const isValid = playerName.trim().length > 0 && roomId.trim().length > 0 && isConnected;
+        setIsFormValid(isValid);
+    }, [playerName, roomId, isConnected]);
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (isFormValid) {
+            onJoin(e);
+        }
+    };
 
     return (
         <div className="menu-screen bg-[linear-gradient(180deg,#1c1917,#0c0a09)] safe-top safe-bottom">
@@ -66,6 +82,11 @@ export const CharacterSelect: React.FC<CharacterSelectProps> = ({
                     <div className="text-center">
                         <div className="text-[11px] font-black uppercase tracking-[0.24em] text-stone-500">Lobi</div>
                         <div className="mt-1 text-lg font-black uppercase text-stone-100">{MARKET_NAME}</div>
+                        {isJoiningExistingRoom && (
+                            <div className="mt-1 text-xs font-semibold text-blue-300">
+                                Oda: <span className="font-black text-blue-400">{roomId}</span>
+                            </div>
+                        )}
                     </div>
                     <button
                         type="button"
@@ -125,10 +146,12 @@ export const CharacterSelect: React.FC<CharacterSelectProps> = ({
                     </section>
 
                     <section className="rounded-[28px] border border-white/10 bg-stone-950/80 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.3)] md:p-6">
-                        <form onSubmit={onJoin} className="flex h-full flex-col gap-5">
+                        <form onSubmit={handleSubmit} className="flex h-full flex-col gap-5">
                             <div>
                                 <div className="text-xs font-black uppercase tracking-[0.24em] text-stone-500">Oturum kurulumu</div>
-                                <h2 className="mt-2 text-2xl font-black uppercase text-stone-50">Hazir ol</h2>
+                                <h2 className="mt-2 text-2xl font-black uppercase text-stone-50">
+                                    {isJoiningExistingRoom ? 'Hazır Ol' : 'Hazir ol'}
+                                </h2>
                             </div>
 
                             <div className="rounded-[24px] border border-white/8 bg-white/5 p-4">
@@ -164,31 +187,36 @@ export const CharacterSelect: React.FC<CharacterSelectProps> = ({
                                             onChange={(e) => setRoomId(e.target.value.toUpperCase())}
                                             maxLength={8}
                                             placeholder="Örn: AB12"
-                                            className="w-full rounded-2xl border border-white/10 bg-stone-900 px-4 py-3 text-base font-semibold uppercase text-stone-100 outline-none transition-colors placeholder:text-stone-500 focus:border-amber-300"
+                                            disabled={isJoiningExistingRoom}
+                                            className={`w-full rounded-2xl border border-white/10 bg-stone-900 px-4 py-3 text-base font-semibold uppercase text-stone-100 outline-none transition-colors placeholder:text-stone-500 focus:border-amber-300 ${isJoiningExistingRoom ? 'opacity-60 cursor-not-allowed' : ''}`}
                                             required
                                         />
-                                        <button
-                                            type="button"
-                                            onClick={() => setRoomId(Math.random().toString(36).substring(2, 6).toUpperCase())}
-                                            className="rounded-2xl border border-white/10 bg-stone-800 px-4 transition-colors hover:bg-stone-700"
-                                            title="Yeni Kod Üret"
-                                        >
-                                            🎲
-                                        </button>
+                                        {!isJoiningExistingRoom && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setRoomId(Math.random().toString(36).substring(2, 6).toUpperCase())}
+                                                className="rounded-2xl border border-white/10 bg-stone-800 px-4 transition-colors hover:bg-stone-700"
+                                                title="Yeni Kod Üret"
+                                            >
+                                                🎲
+                                            </button>
+                                        )}
                                     </div>
                                 </label>
 
-                                <label className="block">
-                                    <span className="mb-2 block text-xs font-black uppercase tracking-[0.22em] text-stone-400">Market adi <span className="text-stone-600">(isteğe bağlı)</span></span>
-                                    <input
-                                        type="text"
-                                        value={marketName}
-                                        onChange={(e) => setMarketName(e.target.value)}
-                                        maxLength={24}
-                                        placeholder="Orn: Aksam servisi"
-                                        className="w-full rounded-2xl border border-white/10 bg-stone-900 px-4 py-3 text-base font-semibold text-stone-100 outline-none transition-colors placeholder:text-stone-500 focus:border-amber-300"
-                                    />
-                                </label>
+                                {!isJoiningExistingRoom && (
+                                    <label className="block">
+                                        <span className="mb-2 block text-xs font-black uppercase tracking-[0.22em] text-stone-400">Market adi <span className="text-stone-600">(isteğe bağlı)</span></span>
+                                        <input
+                                            type="text"
+                                            value={marketName}
+                                            onChange={(e) => setMarketName(e.target.value)}
+                                            maxLength={24}
+                                            placeholder="Orn: Aksam servisi"
+                                            className="w-full rounded-2xl border border-white/10 bg-stone-900 px-4 py-3 text-base font-semibold text-stone-100 outline-none transition-colors placeholder:text-stone-500 focus:border-amber-300"
+                                        />
+                                    </label>
+                                )}
                             </div>
 
                             <div className="mt-auto grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
@@ -201,10 +229,11 @@ export const CharacterSelect: React.FC<CharacterSelectProps> = ({
                                 </button>
                                 <button
                                     type="submit"
-                                    className="rounded-2xl px-4 py-4 text-sm font-black uppercase tracking-[0.18em] text-stone-950 transition-transform hover:scale-[1.01] active:scale-[0.99]"
-                                    style={{ background: `linear-gradient(135deg, ${selectedChar.accent}, ${selectedChar.bodyColor})` }}
+                                    disabled={!isFormValid}
+                                    className={`rounded-2xl px-4 py-4 text-sm font-black uppercase tracking-[0.18em] text-stone-950 transition-transform ${isFormValid ? 'hover:scale-[1.01] active:scale-[0.99] cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
+                                    style={{ background: isFormValid ? `linear-gradient(135deg, ${selectedChar.accent}, ${selectedChar.bodyColor})` : '#666666' }}
                                 >
-                                    Dukkani ac
+                                    {isJoiningExistingRoom ? 'Odaya Katıl' : 'Dukkani ac'}
                                 </button>
                             </div>
                         </form>
