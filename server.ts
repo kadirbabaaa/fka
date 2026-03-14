@@ -606,9 +606,9 @@ async function startServer() {
       // Adam zaten dükkanı terk ediyorsa vurulmaz (ancak kaçarken de vurulabilir yapmak istersen bu satırı silebilirsin)
       if (c.isLeaving) return;
 
-      // Cooldown kontrolü — beatUpTimer>5 ise vuramazsın (art arda spam koruması)
+      // Cooldown kontrolü — beatUpTimer>3 ise vuramazsın (art arda spam koruması)
       // Daha kısa cooldown = daha hızlı vuruş imkanı
-      if (c.beatUpTimer && c.beatUpTimer > 5) return;
+      if (c.beatUpTimer && c.beatUpTimer > 3) return;
 
       if (c.personality === 'polite') {
         // Yanlış hedef — kibar müşteriye vurmak para cezası
@@ -617,8 +617,8 @@ async function startServer() {
         return;
       }
 
-      // Doğru hedef — rude / recep
-      c.beatUpTimer = 60; // 2 saniye sarsıntı
+      // Doğru hedef — rude / recep / thug
+      c.beatUpTimer = 30; // 1 saniye sarsıntı (eskiden 60'tı, çok uzundu)
       c.isBeatUp = true;
       c.punchCount = (c.punchCount || 0) + 1;
 
@@ -628,38 +628,40 @@ async function startServer() {
         // 4. vuruşta kaçar ve intikam yemini edebilir
         const revengeChance = c.personality === 'recep' ? 0.6 : 0.3;
         if (Math.random() < revengeChance) {
-          // 3 ile 4 dakika arası (30fps: 5400 - 7200 frame)
           const delay = 5400 + Math.floor(Math.random() * 1800);
           gs.revengeQueue.push(delay);
         }
 
         const leaveDialogs: Record<string, string[]> = {
           rude: ["YETER BE! Gidiyorum!", "Polisi arayacam lan!", "Mahvettiniz beni, lanet olsun!"],
-          recep: ["BÖHÖHÖYT! Anam babam öldüm bittim!", "Yeter vurma lan, gidiyom amk!", "Kırılmadık kemik bırakmadın be!"]
+          recep: ["BÖHÖHÖYT! Anam babam öldüm bittim!", "Yeter vurma lan, gidiyom amk!", "Kırılmadık kemik bırakmadın be!"],
+          thug: ["KAÇIN LAN!", "Görürsün sen!", "Ah kafam!"]
         };
         const dialogPool = leaveDialogs[c.personality] || leaveDialogs.rude;
         c.currentDialog = dialogPool[Math.floor(Math.random() * dialogPool.length)];
         c.dialogTimer = 60;
 
         c.isLeaving = true;
-        c.isSeated = false; // Ayağa kalk! Maskelenme bug'ını düzeltir.
-        c.beatUpTimer = 0;  // Titremeyi kes!
-        c.targetY = GAME_HEIGHT + 100; // Ekranın dışına (aşağıya) gönder
+        c.isSeated = false;
+        c.isEating = false; // Yemek yiyorsa durdur
+        c.beatUpTimer = 0;
+        c.targetY = GAME_HEIGHT + 120;
         
-        // Masayı hemen boşalt ki yeni müşteri gelebilsin
+        // Masayı hemen boşalt
         const tableIdx = gs.dirtyTables.findIndex(t => t.seatX === c.seatX && t.seatY === c.seatY);
         if (tableIdx !== -1) gs.dirtyTables.splice(tableIdx, 1);
         
         tryQueueSeat(gs, io, roomId!);
       } else {
-        // 1-3 vuruş arası sadece complain bekle
+        // 1-3 vuruş arası
         const hitDialogs: Record<string, string[]> = {
           rude: ["AH!", "Napiyorsun lan!", "Yavaş vur amk!"],
-          recep: ["Böhöyt!", "Anaaam!", "Vurma lan dümbelek!"]
+          recep: ["Böhöyt!", "Anaaam!", "Vurma lan dümbelek!"],
+          thug: ["Uyy!", "Vurma be!", "Kafam yarıldı!"]
         };
         const dialogPool = hitDialogs[c.personality] || hitDialogs.rude;
         c.currentDialog = dialogPool[Math.floor(Math.random() * dialogPool.length)];
-        c.dialogTimer = 30; // Kısa complains
+        c.dialogTimer = 30;
       }
 
       socket.emit("sound", "pickup"); // Vurma sesi
@@ -909,11 +911,13 @@ async function startServer() {
             c.beatUpTimer--;
             if (c.beatUpTimer <= 0) {
               c.beatUpTimer = 0;
+              c.isBeatUp = false; // KESİN DÜZELTME: isBeatUp bayrağını da indir
             }
           }
 
           if (c.isLeaving) {
-            c.y += 3; // Aşağı doğru yürü
+            // Kaçarken de yürümesini engelleme
+            c.y += 4; // Kaçış hızı biraz daha yüksek (3 -> 4)
             if (c.y >= GAME_HEIGHT + 60) {
               gs.customers.splice(i, 1);
             }
