@@ -33,6 +33,8 @@ export default function App() {
     if (!socket) return;
     if (audioCtxRef.current?.state === 'suspended') audioCtxRef.current.resume();
 
+    setRoomId(quickRoomId);
+    
     // Varsayılan değerlerle hızlı başlama
     const defaultChar = CHARACTER_TYPES[0];
     socket.emit('join', {
@@ -40,7 +42,7 @@ export default function App() {
       color: defaultChar.bodyColor,
       hat: defaultChar.hat,
       charType: 0,
-      roomId: quickRoomId || roomId,
+      roomId: quickRoomId,
       marketName: MARKET_NAME,
     });
 
@@ -66,12 +68,21 @@ export default function App() {
     setIsJoined(true);
   };
 
+  const handleStartLobby = (targetRoomId?: string) => {
+    if (targetRoomId) {
+      setRoomId(targetRoomId);
+    } else {
+      setRoomId(Math.random().toString(36).substring(2, 6).toUpperCase());
+    }
+    setEntryScreen('lobby');
+  };
+
   if (!isJoined) {
     return (
       <>
         {entryScreen === 'menu' ? (
           <WelcomeScreen
-            onPlay={() => setEntryScreen('lobby')}
+            onPlay={(rid) => handleStartLobby(rid)}
             onQuickStart={handleQuickStart}
             onSettings={() => setShowSettings(true)}
           />

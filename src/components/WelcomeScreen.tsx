@@ -2,19 +2,19 @@ import React from 'react';
 import { MARKET_NAME } from '../constants';
 
 interface WelcomeScreenProps {
-    onPlay: () => void;
+    onPlay: (roomId?: string) => void;
     onQuickStart: (playerName: string, roomId: string) => void;
     onSettings: () => void;
 }
 
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onPlay, onQuickStart, onSettings }) => {
     const [quickName, setQuickName] = React.useState('');
-    const [quickRoom, setQuickRoom] = React.useState(() => Math.random().toString(36).substring(2, 6).toUpperCase());
+    const [quickRoom, setQuickRoom] = React.useState('');
+    const [showJoinForm, setShowJoinForm] = React.useState(false);
     const [showQuickStart, setShowQuickStart] = React.useState(false);
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
     return (
-        <div className="menu-screen bg-[radial-gradient(circle_at_top,#fef3c7_0%,#fed7aa_28%,#7c2d12_70%,#1c1917_100%)] safe-top safe-bottom">
+        <div className="menu-screen bg-[radial-gradient(circle_at_top,#fef3c7_0%,#fed7aa_28%,#7c2d12_70%,#1c1917_100%)] safe-top safe-bottom overflow-y-auto">
             {/* Grid arka plan */}
             <div className="fixed inset-0 opacity-20 pointer-events-none [background-image:linear-gradient(to_right,transparent_0,transparent_47px,rgba(255,255,255,0.14)_48px),linear-gradient(to_bottom,transparent_0,transparent_47px,rgba(255,255,255,0.14)_48px)] [background-size:48px_48px]" />
 
@@ -50,39 +50,81 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onPlay, onQuickSta
                 {/* ── Aksiyon Butonları ──────────────────────────────────────────── */}
                 <div className="space-y-3 mt-2">
 
-                    {/* Mobil: Hızlı Başla */}
-                    {isMobile && !showQuickStart && (
-                        <button
-                            onClick={() => setShowQuickStart(true)}
-                            className="w-full rounded-2xl bg-[linear-gradient(135deg,#16a34a,#15803d)] px-6 py-4 text-base font-black uppercase tracking-[0.16em] text-white shadow-lg active:scale-[0.97] transition-transform"
-                        >
-                            ⚡ Hızlı Başla
-                        </button>
+                    {!showJoinForm && !showQuickStart && (
+                        <>
+                            <button
+                                onClick={() => onPlay()}
+                                className="w-full rounded-2xl bg-[linear-gradient(135deg,#f59e0b,#ea580c)] px-6 py-4 text-lg font-black uppercase tracking-[0.16em] text-stone-950 shadow-lg active:scale-[0.97] transition-transform"
+                            >
+                                🏠 Oda Kur
+                            </button>
+
+                            <button
+                                onClick={() => setShowJoinForm(true)}
+                                className="w-full rounded-2xl bg-[linear-gradient(135deg,#3b82f6,#2563eb)] px-6 py-4 text-lg font-black uppercase tracking-[0.16em] text-white shadow-lg active:scale-[0.97] transition-transform"
+                            >
+                                🤝 Odaya Katıl
+                            </button>
+
+                            <button
+                                onClick={() => setShowQuickStart(true)}
+                                className="w-full rounded-2xl bg-[linear-gradient(135deg,#16a34a,#15803d)] px-6 py-4 text-base font-black uppercase tracking-[0.16em] text-white shadow-lg active:scale-[0.97] transition-transform"
+                            >
+                                ⚡ Hızlı Başla
+                            </button>
+                        </>
                     )}
 
-                    {/* Hızlı başlama formu */}
-                    {isMobile && showQuickStart && (
-                        <div className="space-y-3 rounded-2xl border border-green-500/30 bg-green-500/10 p-4">
-                                <input
-                                    type="text"
-                                    value={quickName}
-                                    onChange={(e) => setQuickName(e.target.value)}
-                                    placeholder="Oyuncu adın"
-                                    maxLength={12}
-                                    className="w-full rounded-xl border border-green-500/30 bg-stone-900 px-4 py-3 text-base font-semibold text-stone-100 outline-none placeholder:text-stone-500 focus:border-green-400"
-                                />
-                                <input
-                                    type="text"
-                                    value={quickRoom}
-                                    onChange={(e) => setQuickRoom(e.target.value.toUpperCase())}
-                                    placeholder="Oda Kodu (örn: AB12)"
-                                    maxLength={8}
-                                    className="w-full rounded-xl border border-green-500/30 bg-stone-900 px-4 py-3 text-base font-semibold uppercase text-stone-100 outline-none placeholder:text-stone-500 focus:border-green-400"
-                                />
+                    {/* Odaya Katılma Formu */}
+                    {showJoinForm && (
+                        <div className="space-y-3 rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4 backdrop-blur-md">
+                            <div className="text-xs font-black uppercase tracking-[0.2em] text-blue-200 mb-2">Arkadaşının Odasına Katıl</div>
+                            <input
+                                type="text"
+                                value={quickRoom}
+                                onChange={(e) => setQuickRoom(e.target.value.toUpperCase())}
+                                placeholder="Oda Kodu (örn: AB12)"
+                                maxLength={8}
+                                className="w-full rounded-xl border border-blue-500/30 bg-stone-900 px-4 py-3 text-base font-semibold uppercase text-stone-100 outline-none placeholder:text-stone-500 focus:border-blue-400"
+                            />
                             <div className="flex gap-2">
                                 <button
-                                    onClick={() => quickName.trim() && quickRoom.trim() && onQuickStart(quickName.trim(), quickRoom.trim())}
-                                    disabled={!quickName.trim() || !quickRoom.trim()}
+                                    onClick={() => {
+                                        if (quickRoom.trim()) {
+                                            onPlay(quickRoom.trim());
+                                        }
+                                    }}
+                                    disabled={!quickRoom.trim()}
+                                    className="flex-1 rounded-xl bg-blue-600 px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-white active:bg-blue-500 disabled:bg-stone-700 disabled:text-stone-500"
+                                >
+                                    Devam Et
+                                </button>
+                                <button
+                                    onClick={() => setShowJoinForm(false)}
+                                    className="rounded-xl border border-stone-600 bg-stone-800 px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-stone-300"
+                                >
+                                    İptal
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Hızlı Başlama Formu */}
+                    {showQuickStart && (
+                        <div className="space-y-3 rounded-2xl border border-green-500/30 bg-green-500/10 p-4 backdrop-blur-md">
+                            <div className="text-xs font-black uppercase tracking-[0.2em] text-green-200 mb-2">Hızlıca Oyuna Gir</div>
+                            <input
+                                type="text"
+                                value={quickName}
+                                onChange={(e) => setQuickName(e.target.value)}
+                                placeholder="Oyuncu adın"
+                                maxLength={12}
+                                className="w-full rounded-xl border border-green-500/30 bg-stone-900 px-4 py-3 text-base font-semibold text-stone-100 outline-none placeholder:text-stone-500 focus:border-green-400"
+                            />
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => quickName.trim() && onQuickStart(quickName.trim(), Math.random().toString(36).substring(2, 6).toUpperCase())}
+                                    disabled={!quickName.trim()}
                                     className="flex-1 rounded-xl bg-green-600 px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-white active:bg-green-500 disabled:bg-stone-700 disabled:text-stone-500"
                                 >
                                     Başla
@@ -97,13 +139,6 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onPlay, onQuickSta
                         </div>
                     )}
 
-                    {/* Normal butonlar */}
-                    <button
-                        onClick={onPlay}
-                        className="w-full rounded-2xl bg-[linear-gradient(135deg,#f59e0b,#ea580c)] px-6 py-4 text-lg font-black uppercase tracking-[0.16em] text-stone-950 shadow-lg active:scale-[0.97] transition-transform"
-                    >
-                        🎮 {isMobile ? 'Karakter Seç' : 'Oyuna Gir'}
-                    </button>
                     <button
                         onClick={onSettings}
                         className="w-full rounded-2xl border border-white/18 bg-white/8 px-6 py-3 text-base font-black uppercase tracking-[0.16em] text-stone-100 active:bg-white/14 transition-colors"
@@ -124,7 +159,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onPlay, onQuickSta
                             <div className="mt-1">Joystick + buton</div>
                         </div>
                     </div>
-                    <p className="text-xs text-stone-500">v1.0 · Terracraft Deluxe</p>
+                    <p className="text-xs text-stone-500">v1.1 · Terracraft Deluxe</p>
                 </div>
             </div>
         </div>
