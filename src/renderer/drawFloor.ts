@@ -10,280 +10,294 @@ import {
   COUNTER_POSITIONS,
 } from "../types/game";
 
-/** Restoran zemini: mutfak tezgahlar + salon ahşap + duvar + kapılar */
+/** Restoran zemini — sıcak renkler, detaylı mutfak + salon */
 export function drawFloor(ctx: CanvasRenderingContext2D) {
-  // ── Yemek salonu — sıcak ahşap ────────────────────────────────────────────
-  ctx.fillStyle = "#f5e6d0";
-  ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-  // Ahşap çizgiler
-  ctx.strokeStyle = "#e8d4b8";
+  // ══════════════════════════════════════════════════════════════════
+  // SALON — sıcak ahşap parke
+  // ══════════════════════════════════════════════════════════════════
+  const salonGrad = ctx.createLinearGradient(0, WALL_Y1, 0, GAME_HEIGHT);
+  salonGrad.addColorStop(0, '#f7e8d0');
+  salonGrad.addColorStop(1, '#eedfc4');
+  ctx.fillStyle = salonGrad;
+  ctx.fillRect(0, WALL_Y1, GAME_WIDTH, GAME_HEIGHT - WALL_Y1);
+
+  // Parke tahta yatay çizgiler
+  const plankH = 38;
   ctx.lineWidth = 1;
-  for (let y = WALL_Y1 + 18; y < GAME_HEIGHT; y += 36) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(GAME_WIDTH, y);
-    ctx.stroke();
-  }
-  for (let x = 0; x < GAME_WIDTH; x += 100) {
-    for (let row = 0; row < (GAME_HEIGHT - WALL_Y1) / 36; row++) {
-      const off = row % 2 === 0 ? 0 : 50;
-      const ry = WALL_Y1 + 18 + row * 36;
-      ctx.beginPath();
-      ctx.moveTo(x + off, ry);
-      ctx.lineTo(x + off, ry + 36);
-      ctx.stroke();
+  for (let ry = 0; ry < Math.ceil((GAME_HEIGHT - WALL_Y1) / plankH); ry++) {
+    const py = WALL_Y1 + ry * plankH;
+    // Çizgi gölgesi
+    ctx.strokeStyle = 'rgba(160,110,60,0.15)';
+    ctx.beginPath(); ctx.moveTo(0, py); ctx.lineTo(GAME_WIDTH, py); ctx.stroke();
+    // Tahta dikey bölümleri (ofsetli)
+    const off = ry % 2 === 0 ? 0 : 60;
+    ctx.strokeStyle = 'rgba(160,110,60,0.08)';
+    for (let px = off; px < GAME_WIDTH; px += 120) {
+      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, py + plankH); ctx.stroke();
+    }
+    // Hafif koyu/açık tahta bantları
+    if (ry % 2 === 0) {
+      ctx.fillStyle = 'rgba(180,120,60,0.04)';
+      ctx.fillRect(0, py, GAME_WIDTH, plankH);
     }
   }
 
-  // ── Mutfak zemini — koyu karo ──────────────────────────────────────────────
-  ctx.fillStyle = "#d4cfc8";
+  // Salon kenarlık (duvar geçişi)
+  const borderGrad = ctx.createLinearGradient(0, WALL_Y1, 0, WALL_Y1 + 12);
+  borderGrad.addColorStop(0, 'rgba(80,40,10,0.25)');
+  borderGrad.addColorStop(1, 'rgba(80,40,10,0)');
+  ctx.fillStyle = borderGrad;
+  ctx.fillRect(0, WALL_Y1, GAME_WIDTH, 12);
+
+  // ══════════════════════════════════════════════════════════════════
+  // MUTFAK ZEMİNİ — açık krem karo
+  // ══════════════════════════════════════════════════════════════════
+  const kitGrad = ctx.createLinearGradient(0, 0, 0, WALL_Y1);
+  kitGrad.addColorStop(0, '#ece8e0');
+  kitGrad.addColorStop(1, '#e0dbd0');
+  ctx.fillStyle = kitGrad;
   ctx.fillRect(0, 0, GAME_WIDTH, WALL_Y1);
 
-  const tile = 32;
+  // Mutfak karoları — beyazlı krem, ince gri çizgi
+  const tile = 36;
   for (let ty = 0; ty < WALL_Y1; ty += tile) {
     for (let tx = 0; tx < GAME_WIDTH; tx += tile) {
-      if ((Math.floor(tx / tile) + Math.floor(ty / tile)) % 2 === 0) {
-        ctx.fillStyle = "rgba(0,0,0,0.05)";
-        ctx.fillRect(tx, ty, tile, tile);
-      }
-      ctx.strokeStyle = "rgba(0,0,0,0.06)";
-      ctx.lineWidth = 0.5;
-      ctx.strokeRect(tx, ty, tile, tile);
+      const even = (Math.floor(tx / tile) + Math.floor(ty / tile)) % 2 === 0;
+      // Karo arka plan
+      ctx.fillStyle = even ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.03)';
+      ctx.fillRect(tx + 0.5, ty + 0.5, tile - 1, tile - 1);
+      // Karo kenar
+      ctx.strokeStyle = 'rgba(150,140,130,0.20)';
+      ctx.lineWidth = 0.8;
+      ctx.strokeRect(tx + 0.5, ty + 0.5, tile - 1, tile - 1);
+      // Karo köşe (ince çapraz efekt)
+      ctx.fillStyle = 'rgba(180,170,155,0.08)';
+      ctx.fillRect(tx, ty, 3, 3);
     }
   }
 
-  // ── Arka duvar (mutfak üstü) ───────────────────────────────────────────────
-  ctx.fillStyle = "#a8a29e";
-  ctx.fillRect(0, 0, GAME_WIDTH, 8);
+  // Mutfak zemin hafif sis (derinlik için)
+  const fogGrad = ctx.createLinearGradient(0, 0, GAME_WIDTH, WALL_Y1);
+  fogGrad.addColorStop(0, 'rgba(240,230,210,0.12)');
+  fogGrad.addColorStop(0.5, 'rgba(255,255,255,0)');
+  fogGrad.addColorStop(1, 'rgba(210,200,180,0.10)');
+  ctx.fillStyle = fogGrad;
+  ctx.fillRect(0, 0, GAME_WIDTH, WALL_Y1);
 
-  // ── Tezgah — malzeme rafları (üst sıra) ────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════
+  // ARKA DUVAR (tepede) — çini bezeli
+  // ══════════════════════════════════════════════════════════════════
+  ctx.fillStyle = '#c8bfb0';
+  ctx.fillRect(0, 0, GAME_WIDTH, 10);
+  // İnce dekoratif çizgi
+  ctx.fillStyle = '#b0a898';
+  ctx.fillRect(0, 8, GAME_WIDTH, 2);
+  // Duvar-mutfak arası ince bant
+  ctx.fillStyle = '#a09888';
+  ctx.fillRect(0, 0, GAME_WIDTH, 3);
+
+  // ══════════════════════════════════════════════════════════════════
+  // ARA DUVAR (mutfak-salon arası)
+  // ══════════════════════════════════════════════════════════════════
+  // Kalın duvar bölgesi
+  ctx.fillStyle = '#b8b0a0';
+  ctx.fillRect(0, WALL_Y1 - 14, GAME_WIDTH, 14);
+
+  // Duvar üst gölge bandı
+  const wallTopGrad = ctx.createLinearGradient(0, WALL_Y1 - 14, 0, WALL_Y1);
+  wallTopGrad.addColorStop(0, 'rgba(60,40,20,0.08)');
+  wallTopGrad.addColorStop(1, 'rgba(60,40,20,0.22)');
+  ctx.fillStyle = wallTopGrad;
+  ctx.fillRect(0, WALL_Y1 - 14, GAME_WIDTH, 14);
+
+  // Duvar alt gölge (salon tarafı)
+  const wallBotGrad = ctx.createLinearGradient(0, WALL_Y1, 0, WALL_Y1 + 18);
+  wallBotGrad.addColorStop(0, 'rgba(40,20,5,0.18)');
+  wallBotGrad.addColorStop(1, 'rgba(40,20,5,0)');
+  ctx.fillStyle = wallBotGrad;
+  ctx.fillRect(0, WALL_Y1, GAME_WIDTH, 18);
+
+  // ── KAPILAR ────────────────────────────────────────────────────────────────
+  DOOR_RANGES.forEach(([x0, x1]: [number, number]) => {
+    const dw = x1 - x0;
+    // Kapı iç dolgu
+    const doorGrad = ctx.createLinearGradient(x0, WALL_Y1 - 14, x0, WALL_Y1 + 2);
+    doorGrad.addColorStop(0, '#8b6030');
+    doorGrad.addColorStop(1, '#6a4820');
+    ctx.fillStyle = doorGrad;
+    ctx.fillRect(x0, WALL_Y1 - 14, dw, 14);
+
+    // Kapı çerçevesi
+    ctx.strokeStyle = '#5a3818';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x0 + 1, WALL_Y1 - 13, dw - 2, 12);
+
+    // Kapı kolu
+    ctx.fillStyle = '#d4a830';
+    ctx.beginPath();
+    ctx.arc(x0 + dw - 8, WALL_Y1 - 7, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#b8922a';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Kapı sarkma gölgesi
+    const doorShadow = ctx.createLinearGradient(x0, WALL_Y1 - 14, x0 + dw, WALL_Y1 - 14);
+    doorShadow.addColorStop(0, 'rgba(0,0,0,0.12)');
+    doorShadow.addColorStop(0.3, 'rgba(0,0,0,0)');
+    doorShadow.addColorStop(0.7, 'rgba(0,0,0,0)');
+    doorShadow.addColorStop(1, 'rgba(0,0,0,0.12)');
+    ctx.fillStyle = doorShadow;
+    ctx.fillRect(x0, WALL_Y1 - 14, dw, 14);
+  });
+
+  // ══════════════════════════════════════════════════════════════════
+  // MALZEMELİK RAFLAR (üst sıra) — daha gösterişli
+  // ══════════════════════════════════════════════════════════════════
   INGREDIENTS.forEach((ing) => {
     const { x, y } = ing.pos;
-    ctx.fillStyle = "#d6cfc4";
-    ctx.beginPath();
-    ctx.roundRect(x - 38, y - 30, 76, 60, 8);
-    ctx.fill();
-    ctx.strokeStyle = "#a8a29e";
+
+    // Raf gölgesi
+    ctx.fillStyle = 'rgba(0,0,0,0.12)';
+    ctx.beginPath(); ctx.roundRect(x - 36, y - 28, 72, 56, 10); ctx.fill();
+
+    // Raf gövdesi
+    const rg = ctx.createLinearGradient(x - 36, y - 28, x + 36, y + 28);
+    rg.addColorStop(0, '#e8e0d0');
+    rg.addColorStop(1, '#d0c8b8');
+    ctx.fillStyle = rg;
+    ctx.beginPath(); ctx.roundRect(x - 36, y - 28, 72, 56, 10); ctx.fill();
+    ctx.strokeStyle = '#b8b0a0';
     ctx.lineWidth = 1.5;
     ctx.stroke();
-    // Üst parlama
-    ctx.fillStyle = "rgba(255,255,255,0.2)";
-    ctx.fillRect(x - 35, y - 27, 70, 8);
+
+    // Üst parlama şeridi
+    ctx.fillStyle = 'rgba(255,255,255,0.28)';
+    ctx.beginPath(); ctx.roundRect(x - 32, y - 26, 64, 10, [8, 8, 0, 0]); ctx.fill();
+
+    // Raf kenar çizgisi (alt)
+    ctx.fillStyle = '#a09888';
+    ctx.fillRect(x - 32, y + 24, 64, 2);
   });
 
-  // ── Fırın tezgahları artık dinamik çiziliyor (drawCookStation.ts'te) ──────
+  // ══════════════════════════════════════════════════════════════════
+  // LAVABO — daha detaylı
+  // ══════════════════════════════════════════════════════════════════
+  const sx = SINK_STATION.x, sy = SINK_STATION.y;
 
-  // ── Lavabo (dekoratif) ──────────────────────────────────────────────────────
-  const sx = SINK_STATION.x,
-    sy = SINK_STATION.y;
-  ctx.fillStyle = "#d6d3d1";
-  ctx.beginPath();
-  ctx.roundRect(sx - 42, sy - 33, 84, 66, 10);
-  ctx.fill();
-  ctx.strokeStyle = "#a8a29e";
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-  // Lavabo çukuru
-  ctx.fillStyle = "#94a3b8";
-  ctx.beginPath();
-  ctx.roundRect(sx - 24, sy - 16, 48, 30, 12);
-  ctx.fill();
-  // Su parlaması
-  ctx.fillStyle = "rgba(147,197,253,0.4)";
-  ctx.beginPath();
-  ctx.ellipse(sx, sy - 2, 14, 9, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Musluk
-  ctx.strokeStyle = "#71717a";
-  ctx.lineWidth = 3;
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(sx, sy - 16);
-  ctx.lineTo(sx, sy - 30);
-  ctx.lineTo(sx + 12, sy - 30);
-  ctx.stroke();
-  ctx.lineCap = "butt";
+  // Tezgah gölgesi
+  ctx.fillStyle = 'rgba(0,0,0,0.14)';
+  ctx.beginPath(); ctx.roundRect(sx - 44, sy - 32, 88, 64, 12); ctx.fill();
+
+  // Tezgah gövde
+  const sinkTezGrad = ctx.createLinearGradient(sx - 44, sy - 32, sx + 44, sy + 32);
+  sinkTezGrad.addColorStop(0, '#dbd6ce');
+  sinkTezGrad.addColorStop(1, '#c8c2b8');
+  ctx.fillStyle = sinkTezGrad;
+  ctx.beginPath(); ctx.roundRect(sx - 44, sy - 32, 88, 64, 12); ctx.fill();
+  ctx.strokeStyle = '#a8a098'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  // Çukur (lavabo iç)
+  const sinkInner = ctx.createRadialGradient(sx, sy, 2, sx, sy, 28);
+  sinkInner.addColorStop(0, '#7eb8d4');
+  sinkInner.addColorStop(0.6, '#5a9ab8');
+  sinkInner.addColorStop(1, '#3a7898');
+  ctx.fillStyle = sinkInner;
+  ctx.beginPath(); ctx.roundRect(sx - 26, sy - 18, 52, 32, 14); ctx.fill();
+  ctx.strokeStyle = '#2e607a'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  // Su yansıması
+  ctx.fillStyle = 'rgba(180,230,255,0.35)';
+  ctx.beginPath(); ctx.ellipse(sx - 6, sy - 5, 14, 8, -0.3, 0, Math.PI * 2); ctx.fill();
+
+  // Musluk gövde
+  ctx.strokeStyle = '#888'; ctx.lineWidth = 3.5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(sx, sy - 18); ctx.lineTo(sx, sy - 32); ctx.lineTo(sx + 14, sy - 32); ctx.stroke();
+  // Musluk başlık
+  ctx.fillStyle = '#aaa';
+  ctx.beginPath(); ctx.ellipse(sx + 14, sy - 32, 5, 3, 0, 0, Math.PI * 2); ctx.fill();
+
   // Etiket
-  ctx.fillStyle = "#64748b";
-  ctx.font = "bold 10px Arial";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "top";
-  ctx.fillText("🚿 Lavabo", sx, sy + 24);
+  ctx.fillStyle = '#64748b';
+  ctx.font = 'bold 10px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText('🚿 Lavabo', sx, sy + 20);
 
-  // ── Çöp kutusu tezgahı ──────────────────────────────────────────────────────
-  const tx = TRASH_STATION.x,
-    tty = TRASH_STATION.y;
-  ctx.fillStyle = "#d6d3d1";
-  ctx.beginPath();
-  ctx.roundRect(tx - 40, tty - 33, 80, 66, 10);
-  ctx.fill();
-  ctx.strokeStyle = "#a8a29e";
+  // ══════════════════════════════════════════════════════════════════
+  // ÇÖP KUTUSU — daha belirgin
+  // ══════════════════════════════════════════════════════════════════
+  const tx = TRASH_STATION.x, ty2 = TRASH_STATION.y;
+
+  ctx.fillStyle = 'rgba(0,0,0,0.14)';
+  ctx.beginPath(); ctx.roundRect(tx - 40, ty2 - 32, 80, 64, 12); ctx.fill();
+
+  const trashG = ctx.createLinearGradient(tx - 40, ty2 - 32, tx + 40, ty2 + 32);
+  trashG.addColorStop(0, '#808878');
+  trashG.addColorStop(1, '#606858');
+  ctx.fillStyle = trashG;
+  ctx.beginPath(); ctx.roundRect(tx - 40, ty2 - 32, 80, 64, 12); ctx.fill();
+  ctx.strokeStyle = '#505848'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  // Çöp kutu kapağı çizgisi
+  ctx.strokeStyle = 'rgba(0,0,0,0.2)';
   ctx.lineWidth = 1.5;
-  ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(tx - 36, ty2 - 12); ctx.lineTo(tx + 36, ty2 - 12); ctx.stroke();
 
-  // ── Tabak / Bekletme rafı dekoratif arka plan ──────────────────────────────
+  // Kapak kolu
+  ctx.strokeStyle = '#a0a890'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(tx - 8, ty2 - 16); ctx.lineTo(tx + 8, ty2 - 16); ctx.stroke();
+
+  ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillStyle = '#c8d0b8';
+  ctx.fillText('🗑️ Çöp', tx, ty2 + 22);
+
+  // ══════════════════════════════════════════════════════════════════
+  // TABAK BEKLETME RAFLARI
+  // ══════════════════════════════════════════════════════════════════
   const plates = HOLDING_STATION_POSITIONS;
   if (plates.length > 0) {
-    const firstP = plates[0];
-    const lastP = plates[plates.length - 1];
-    const pw = lastP.x - firstP.x + 100;
-    ctx.fillStyle = "#c8c4be";
-    ctx.beginPath();
-    ctx.roundRect(firstP.x - 50, firstP.y - 33, pw, 66, 8);
-    ctx.fill();
-    ctx.strokeStyle = "#a8a29e";
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
+    const fp = plates[0], lp = plates[plates.length - 1];
+    const pw = lp.x - fp.x + 100;
 
-    // Tabak rafı etiketi
-    ctx.fillStyle = "#78716c";
-    ctx.font = "bold 9px Arial";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "top";
-    ctx.fillText("Bekletme Rafı", (firstP.x + lastP.x) / 2, firstP.y + 28);
+    // Arka gölge
+    ctx.fillStyle = 'rgba(0,0,0,0.10)';
+    ctx.beginPath(); ctx.roundRect(fp.x - 52, fp.y - 30, pw + 4, 60, 10); ctx.fill();
+
+    // Raf gövde
+    const plateGrad = ctx.createLinearGradient(fp.x - 50, fp.y, lp.x + 50, fp.y);
+    plateGrad.addColorStop(0, '#cdc5b8');
+    plateGrad.addColorStop(0.5, '#d8d0c5');
+    plateGrad.addColorStop(1, '#cdc5b8');
+    ctx.fillStyle = plateGrad;
+    ctx.beginPath(); ctx.roundRect(fp.x - 50, fp.y - 28, pw, 56, 10); ctx.fill();
+    ctx.strokeStyle = '#a8a098'; ctx.lineWidth = 1.5; ctx.stroke();
+
+    // Üst parlama
+    ctx.fillStyle = 'rgba(255,255,255,0.20)';
+    ctx.beginPath(); ctx.roundRect(fp.x - 46, fp.y - 26, pw - 8, 10, [8, 8, 0, 0]); ctx.fill();
   }
 
-  // ── Ok işaretleri (malzeme → pişirme akışı) ────────────────────────────────
-  ctx.strokeStyle = "rgba(0,0,0,0.08)";
-  ctx.lineWidth = 2;
-  ctx.setLineDash([4, 4]);
-  INGREDIENTS.forEach((ing) => {
-    ctx.beginPath();
-    ctx.moveTo(ing.pos.x, ing.pos.y + 33);
-    ctx.lineTo(ing.pos.x, ing.pos.y + 58);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(ing.pos.x - 5, ing.pos.y + 53);
-    ctx.lineTo(ing.pos.x, ing.pos.y + 61);
-    ctx.lineTo(ing.pos.x + 5, ing.pos.y + 53);
-    ctx.stroke();
-  });
-  ctx.setLineDash([]);
+  // ══════════════════════════════════════════════════════════════════
+  // SERVİS TEZGAHI (counter)
+  // ══════════════════════════════════════════════════════════════════
+  if (COUNTER_POSITIONS && COUNTER_POSITIONS.length > 0) {
+    const cp0 = COUNTER_POSITIONS[0], cpN = COUNTER_POSITIONS[COUNTER_POSITIONS.length - 1];
+    const cw   = cpN.x - cp0.x + 90;
 
-  // ── Duvar (Tuğla Doku + Gradient) ──────────────────────────────────────────
-  // Ana duvar gradient'i (koyu kahverengi → açık kahverengi)
-  const wallGrad = ctx.createLinearGradient(0, WALL_Y1, 0, WALL_Y1 + 40);
-  wallGrad.addColorStop(0, '#5c3d2e');
-  wallGrad.addColorStop(0.3, '#6b5240');
-  wallGrad.addColorStop(0.7, '#6b5240');
-  wallGrad.addColorStop(1, '#4a3628');
-  ctx.fillStyle = wallGrad;
-  ctx.fillRect(0, WALL_Y1, GAME_WIDTH, 40);
+    ctx.fillStyle = 'rgba(0,0,0,0.12)';
+    ctx.beginPath(); ctx.roundRect(cp0.x - 46, cp0.y - 28, cw + 4, 56, 10); ctx.fill();
 
-  // Tuğla doku çizgileri (yatay harç)
-  ctx.strokeStyle = 'rgba(0,0,0,0.12)';
-  ctx.lineWidth = 1;
-  for (let wy = WALL_Y1 + 10; wy < WALL_Y1 + 40; wy += 10) {
-    ctx.beginPath();
-    ctx.moveTo(0, wy);
-    ctx.lineTo(GAME_WIDTH, wy);
-    ctx.stroke();
+    const counterGrad = ctx.createLinearGradient(cp0.x - 44, cp0.y - 26, cpN.x + 46, cp0.y + 28);
+    counterGrad.addColorStop(0, '#e0d8c8');
+    counterGrad.addColorStop(1, '#ccc4b4');
+    ctx.fillStyle = counterGrad;
+    ctx.beginPath(); ctx.roundRect(cp0.x - 44, cp0.y - 26, cw, 52, 10); ctx.fill();
+    ctx.strokeStyle = '#b0a898'; ctx.lineWidth = 1.5; ctx.stroke();
+
+    // Alt çizgi detay
+    ctx.fillStyle = '#a09888';
+    ctx.fillRect(cp0.x - 40, cp0.y + 24, cw - 8, 2);
   }
-  // Dikey harç çizgileri (tuğla efekti)
-  ctx.strokeStyle = 'rgba(0,0,0,0.08)';
-  for (let wx = 0; wx < GAME_WIDTH; wx += 40) {
-    const rowOffset = (Math.floor((wx / 40)) % 2 === 0) ? 0 : 20;
-    for (let wy = WALL_Y1; wy < WALL_Y1 + 40; wy += 10) {
-      ctx.beginPath();
-      ctx.moveTo(wx + rowOffset, wy);
-      ctx.lineTo(wx + rowOffset, wy + 10);
-      ctx.stroke();
-    }
-  }
-
-  // Üst süpürgelik (duvarın üstü — ince koyu çizgi)
-  ctx.fillStyle = '#4a3628';
-  ctx.fillRect(0, WALL_Y1, GAME_WIDTH, 4);
-
-  // Alt süpürgelik
-  ctx.fillStyle = '#4a3628';
-  ctx.fillRect(0, WALL_Y1 + 36, GAME_WIDTH, 4);
-
-  // Kapılar (Servis Pencereleri — ahşap çerçeveli)
-  DOOR_RANGES.forEach(([x1, x2]) => {
-    const w = x2 - x1;
-
-    // Kapı açıklığı (zemin rengi — geçit)
-    ctx.fillStyle = '#e8ddd0';
-    ctx.fillRect(x1, WALL_Y1, w, 40);
-
-    // Üst eşik (ahşap çerçeve)
-    const frameGrad = ctx.createLinearGradient(0, WALL_Y1, 0, WALL_Y1 + 6);
-    frameGrad.addColorStop(0, '#b8864e');
-    frameGrad.addColorStop(1, '#a07038');
-    ctx.fillStyle = frameGrad;
-    ctx.fillRect(x1 - 4, WALL_Y1, w + 8, 6);
-
-    // Alt eşik
-    ctx.fillStyle = '#a07038';
-    ctx.fillRect(x1 - 4, WALL_Y1 + 34, w + 8, 6);
-
-    // Sol dikey çerçeve
-    ctx.fillStyle = '#b8864e';
-    ctx.fillRect(x1 - 4, WALL_Y1, 6, 40);
-    // Sağ dikey çerçeve
-    ctx.fillRect(x2 - 2, WALL_Y1, 6, 40);
-
-    // Sarı ışık şeridi (hoş geldiniz hissi)
-    ctx.fillStyle = 'rgba(253,230,138,0.3)';
-    ctx.fillRect(x1 + 4, WALL_Y1 + 8, w - 8, 24);
-
-    // Kapı iç gölgesi (derinlik hissi)
-    ctx.fillStyle = 'rgba(0,0,0,0.06)';
-    ctx.fillRect(x1, WALL_Y1 + 6, w, 4);
-  });
-
-  // ── Servis Blokları (Ahşap masa renginde) ────────────────────────────────
-  COUNTER_POSITIONS.forEach(counter => {
-    const { x, y, width, height } = counter;
-
-    // Ahşap servis bloğu
-    const blockGrad = ctx.createLinearGradient(x - width / 2, y - height / 2, x + width / 2, y + height / 2);
-    blockGrad.addColorStop(0, '#c9a06c');
-    blockGrad.addColorStop(1, '#a07038');
-    ctx.fillStyle = blockGrad;
-    ctx.beginPath();
-    ctx.roundRect(x - width / 2, y - height / 2, width, height, 4);
-    ctx.fill();
-
-    // Kenar çizgisi
-    ctx.strokeStyle = '#8b6914';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-  });
-
-  // ── Dikey Duvar Kaldırıldı (lavabo alanı artık açık) ────────────────────────
-  // Lavabo ve çöp alanına serbest erişim
-
-  // ── Giriş kapısı (alt — ahşap çerçeveli) ────────────────────────────────────
-  // Alt duvar
-  const entranceGrad = ctx.createLinearGradient(0, GAME_HEIGHT - 30, 0, GAME_HEIGHT);
-  entranceGrad.addColorStop(0, '#5c3d2e');
-  entranceGrad.addColorStop(1, '#4a3628');
-  ctx.fillStyle = entranceGrad;
-  ctx.fillRect(0, GAME_HEIGHT - 30, GAME_WIDTH, 30);
-
-  // Giriş açıklığı
-  const entranceX = 570, entranceW = 140;
-  ctx.fillStyle = '#d4c4b0';
-  ctx.fillRect(entranceX, GAME_HEIGHT - 30, entranceW, 30);
-
-  // Giriş çerçevesi
-  ctx.fillStyle = '#b8864e';
-  ctx.fillRect(entranceX - 4, GAME_HEIGHT - 30, 6, 30);
-  ctx.fillRect(entranceX + entranceW - 2, GAME_HEIGHT - 30, 6, 30);
-  ctx.fillStyle = '#a07038';
-  ctx.fillRect(entranceX - 4, GAME_HEIGHT - 30, entranceW + 8, 5);
-
-  // Sıcak ışık efekti
-  ctx.fillStyle = 'rgba(253,230,138,0.2)';
-  ctx.fillRect(entranceX + 6, GAME_HEIGHT - 24, entranceW - 12, 18);
-
-  // GİRİŞ etiketi
-  ctx.fillStyle = "#fde68a";
-  ctx.font = "bold 12px Arial";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("GİRİŞ", 640, GAME_HEIGHT - 13);
 }
