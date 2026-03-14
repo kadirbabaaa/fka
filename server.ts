@@ -916,8 +916,12 @@ async function startServer() {
           }
 
           if (c.isLeaving) {
-            // Kaçarken de yürümesini engelleme
-            c.y += 4; // Kaçış hızı biraz daha yüksek (3 -> 4)
+            // Ayrılırken oturma durumunu kapat
+            c.isSeated = false;
+            c.isEating = false;
+            
+            // Kaçarken/Ayrılırken yürüme hızı
+            c.y += 4; 
             if (c.y >= GAME_HEIGHT + 60) {
               gs.customers.splice(i, 1);
             }
@@ -939,6 +943,7 @@ async function startServer() {
 
               // Mutlu çıkış
               c.isLeaving = true;
+              c.isSeated = false; // KESİN DÜZELTME: Masadan kalktı!
               c.targetY = GAME_HEIGHT + 60;
               if (Math.random() < 0.4) {
                 const list = DIALOGUES[c.personality].leaving_happy;
@@ -951,8 +956,11 @@ async function startServer() {
           }
 
           if (!c.isSeated) {
-            c.y = Math.max(c.targetY, c.y - 3);
-            if (c.y <= c.targetY) c.isSeated = true;
+            // Sadece geliyorsa yukarı yürü
+            if (c.y > c.targetY) {
+              c.y = Math.max(c.targetY, c.y - 3);
+              if (c.y <= c.targetY) c.isSeated = true;
+            }
           } else {
             // Wait/Seated random dialog
             if (!c.currentDialog && Math.random() < 0.001) {
@@ -988,12 +996,12 @@ async function startServer() {
 
                 // Sinirli çıkış
                 c.isLeaving = true;
+                c.isSeated = false; // KESİN DÜZELTME: Sinirlenip kalktı!
                 c.targetY = GAME_HEIGHT + 60;
                 const list = DIALOGUES[c.personality].leaving_angry;
                 c.currentDialog = list[Math.floor(Math.random() * list.length)];
                 c.dialogTimer = 90;
-
-                tryQueueSeat(gs, io, rid);
+                tryQueueSeat(gs, io, rid);;
               }
             }
           }
