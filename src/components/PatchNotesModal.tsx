@@ -12,7 +12,7 @@ export const PatchNotesModal: React.FC<Props> = ({ onClose }) => {
                 <div className="bg-stone-800 p-5 flex justify-between items-center border-b border-stone-700">
                     <div>
                         <h2 className="text-2xl font-black text-amber-400">Yama Notları & Rehber 📜</h2>
-                        <span className="text-xs text-stone-400 font-bold tracking-widest uppercase mt-1 block">TerraCraft Deluxe v1.0.0</span>
+                        <span className="text-xs text-stone-400 font-bold tracking-widest uppercase mt-1 block">TerraCraft Deluxe v1.1.0</span>
                     </div>
                     <button
                         onClick={onClose}
@@ -30,7 +30,7 @@ export const PatchNotesModal: React.FC<Props> = ({ onClose }) => {
                         <h3 className="text-xl font-black text-emerald-400 mb-3 uppercase tracking-wider border-b border-emerald-900 pb-2">🎮 Nasıl Oynanır?</h3>
                         <div className="space-y-2 text-sm text-stone-300">
                             <p><strong>Amaç:</strong> Gelen müşterileri bekletmeden siparişlerini servis et ve dükkanı iflastan kurtar.</p>
-                            <p><strong>PC Kontrolleri:</strong> <kbd className="bg-stone-700 px-1 rounded">W A S D</kbd> ile hareket, <kbd className="bg-stone-700 px-1 rounded">E</kbd> veya <kbd className="bg-stone-700 px-1 rounded">Boşluk</kbd> ile yemeği al/ver. <kbd className="bg-stone-700 px-1 rounded">F</kbd> veya <kbd className="bg-stone-700 px-1 rounded">Q</kbd> ile kavgaya gir.</p>
+                            <p><strong>PC Kontrolleri:</strong> <kbd className="bg-stone-700 px-1 rounded">W A S D</kbd> veya <kbd className="bg-stone-700 px-1 rounded">Ok Tuşları</kbd> ile hareket, <kbd className="bg-stone-700 px-1 rounded">E</kbd> veya <kbd className="bg-stone-700 px-1 rounded">Boşluk</kbd> ile yemeği al/ver. <kbd className="bg-stone-700 px-1 rounded">F</kbd> veya <kbd className="bg-stone-700 px-1 rounded">Q</kbd> ile kavgaya gir.</p>
                             <p><strong>Mobil Kontroller:</strong> Ekrondaki Joystick ile hareket, sağ alttaki renkli butonlarla eşya taşı ve kavga et.</p>
                             <p><strong>Can Sistemi:</strong> Sabrı biten (kırmızı bar) müşteri küfür ederek çıkar, 1 Kalbin 🖤 gider ve paran düşer. 3 Kalp biterse oyun biter.</p>
                             <p><strong>Gece Pazarı:</strong> Her günün sonunda (Gece) dükkanı büyütebilir, yeni fırınlar alabilir ve kaybettiğin kalbini (<span className="text-rose-400 font-bold">$75</span>) satın alabilirsin.</p>
@@ -39,34 +39,41 @@ export const PatchNotesModal: React.FC<Props> = ({ onClose }) => {
 
                     {/* Yeni Özellikler (Mevcut Güncelleme) */}
                     <section>
-                        <h3 className="text-xl font-black text-sky-400 mb-3 uppercase tracking-wider border-b border-sky-900 pb-2">🚀 Son Güncellemeler (Yeni)</h3>
+                        <h3 className="text-xl font-black text-sky-400 mb-3 uppercase tracking-wider border-b border-sky-900 pb-2">🚀 Son Güncellemeler (v1.1.0)</h3>
                         <ul className="space-y-3 text-sm">
                             <li className="flex gap-3">
-                                <span className="text-2xl">👊</span>
+                                <span className="text-2xl">🍜</span>
                                 <div>
-                                    <strong className="text-stone-100 flex items-center gap-2">Müşteri Dövme Sistemi</strong>
-                                    <p className="text-stone-400 mt-1">Kaba saba (Rude & Recep) müşterilere <kbd className="bg-stone-800 text-xs px-1 rounded">F</kbd> veya DÖV butonu ile vurabilirsiniz! Müşteri en fazla 4 yumruk yer. 4. vuruşta mekanı sinirle terk eder. Kibar insanlara vurmak <span className="text-rose-400">-$20</span> ceza yazdırır!</p>
+                                    <strong className="text-stone-100 flex items-center gap-2">Yeni Menü: Çorba & Dürüm</strong>
+                                    <p className="text-stone-400 mt-1">Restoran menüsü genişledi! Artık müşteriler 🍜 Çorba ve 🌯 Dürüm (Kebap) sipariş edebiliyor. Mutfaktaki yeni istasyonları kullanmayı unutma!</p>
                                 </div>
                             </li>
                             <li className="flex gap-3">
-                                <span className="text-2xl">🚔</span>
+                                <span className="text-2xl">🔥</span>
                                 <div>
-                                    <strong className="text-stone-100 flex items-center gap-2">İntikamcı Çeteler (Thug)</strong>
-                                    <p className="text-stone-400 mt-1">Belalı tipleri (Recep gibi) döverseniz veya kışkırtırsanız, ileriki saatlerde mekanı intikam için 3-4 koca yürekli "Thug" mafya üyesi basar!</p>
+                                    <strong className="text-stone-100 flex items-center gap-2">Gelişmiş Pişirme & Efektler</strong>
+                                    <p className="text-stone-400 mt-1">Fırınlar artık duman çıkarıyor! Pişme süreci dairesel % göstergesiyle takip ediliyor. Yemek piştikten sonra yanmaya başlarsa yanan bir 🔥 ikonu ve tehlike barı belirir.</p>
                                 </div>
                             </li>
                             <li className="flex gap-3">
-                                <span className="text-2xl">🗣️</span>
+                                <span className="text-2xl">🧺</span>
                                 <div>
-                                    <strong className="text-stone-100 flex items-center gap-2">Recep İvedik & Yeni Diyaloglar</strong>
-                                    <p className="text-stone-400 mt-1">Kızgın müşteriler, mekanı terk edenler ve yemek yerken konuşanlar için +300'den fazla yepyeni ve komik diyaloglar eklendi.</p>
+                                    <strong className="text-stone-100 flex items-center gap-2">PlateUp Tarzı Taşıma</strong>
+                                    <p className="text-stone-400 mt-1">Yemek taşıma animasyonları yenilendi! Karakter artık eşyaları iki eliyle önünde tutuyor ve yürürken yemekler dinamik olarak aşağı yukarı zıplıyor (bobbing).</p>
                                 </div>
                             </li>
                             <li className="flex gap-3">
-                                <span className="text-2xl">⚙️</span>
+                                <span className="text-2xl">🛒</span>
                                 <div>
-                                    <strong className="text-stone-100 flex items-center gap-2">UI & Yaşam Kalitesi</strong>
-                                    <p className="text-stone-400 mt-1">Kayıp kalpler artık siyah (🖤) görünüyor. Gece mağazasından $75'a ekstra can alabilme eklendi. Sesli sohbet düzeltildi.</p>
+                                    <strong className="text-stone-100 flex items-center gap-2">Yeni Upgrade Sistemi</strong>
+                                    <p className="text-stone-400 mt-1">Gece dükkanında artık ek fırınlar (toplam 4) satın alabilirsin. Upgrade maliyetleri ve müşteri sabrı daha dengeli hale getirildi.</p>
+                                </div>
+                            </li>
+                            <li className="flex gap-3">
+                                <span className="text-2xl">🔄</span>
+                                <div>
+                                    <strong className="text-stone-100 flex items-center gap-2">Gelişmiş Oyun Döngüsü</strong>
+                                    <p className="text-stone-400 mt-1">Game Over olduğunda skordan %20 ceza ile kaldığın günden devam edebilirsin. Gün geçişleri ve müşteri oturma yönleri (ön/arka koltuk) düzeltildi.</p>
                                 </div>
                             </li>
                         </ul>
