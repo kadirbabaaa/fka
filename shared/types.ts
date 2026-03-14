@@ -7,7 +7,7 @@
 import { Personality } from './dialogues';
 
 export type Item = string | null;
-export type StockKey = '🍞' | '🥩' | '🥬';
+export type StockKey = '🍞' | '🥩' | '🥬' | '🥘' | '🍢';
 export type UpgradeKey = 'patience' | 'earnings' | 'stockMax';
 export const CLEAN_PLATE = '__clean_plate__';
 export const DIRTY_PLATE = '__dirty_plate__';
@@ -201,6 +201,8 @@ export const INGREDIENTS = [
     { key: '🍞' as StockKey, pos: { x: 150, y: 65 }, label: 'Hamur', color: '#fde68a' },
     { key: '🥩' as StockKey, pos: { x: 300, y: 65 }, label: 'Et', color: '#fca5a5' },
     { key: '🥬' as StockKey, pos: { x: 450, y: 65 }, label: 'Sebze', color: '#bbf7d0' },
+    { key: '🥘' as StockKey, pos: { x: 1000, y: 65 }, label: 'Çorba', color: '#fbbf24' },
+    { key: '🍢' as StockKey, pos: { x: 1150, y: 65 }, label: 'Kebap', color: '#92400e' },
 ];
 
 // ─── Universal Fırın Sistemi ─────────────────────────────────────────────────
@@ -209,6 +211,8 @@ export const RECIPE_DEFS = {
     '🍞': { output: '🍕', time: 90, label: '🍕 Pizza' },
     '🥩': { output: '🍔', time: 60, label: '🍔 Burger' },
     '🥬': { output: '🥗', time: 30, label: '🥗 Salata' },
+    '🥘': { output: '🍜', time: 120, label: '🍜 Çorba' },
+    '🍢': { output: '🌯', time: 100, label: '🌯 Dürüm' },
 } as const;
 
 // Başlangıç fırın pozisyonları (sadece 1 fırın, malzemelerden farklı X)
@@ -238,7 +242,7 @@ export const SEAT_SLOTS: { x: number; y: number }[] = [
 ];
 
 // ─── Yemek Çıktıları (müşteri istekleri) ─────────────────────────────────────
-export const DISH_ITEMS = ['🍕', '🍔', '🥗'] as const;
+export const DISH_ITEMS = ['🍕', '🍔', '🥗', '🍜', '🌯'] as const;
 
 // ─── Upgrade Tanımları ───────────────────────────────────────────────────────
 export const UPGRADE_DEFS: Record<UpgradeKey, { costs: number[]; max: number }> = {
@@ -267,11 +271,11 @@ export function mkGameState(): GameState {
     ...COUNTER_POSITIONS.map(p => ({ id: p.id, items: [], type: p.type, maxItems: 1 })),
   ];
 
-  return {
+    return {
     players: {}, customers: [], waitList: [],
     holdingStations: allHoldingStations,
     dirtyTables: [],
-    score: 0, stock: { '🍞': 10, '🥩': 10, '🥬': 10 },
+    score: 0, stock: { '🍞': 10, '🥩': 10, '🥬': 10, '🥘': 5, '🍢': 5 },
     marketName: "TerraMarket", dayPhase: 'prep', dayTimer: DAY_TICKS,
     upgrades: { patience: 0, earnings: 0, stockMax: 0 }, day: 1, hasOrderedTonight: false,
     cookStations: initialOvens,

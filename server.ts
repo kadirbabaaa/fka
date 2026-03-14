@@ -117,9 +117,9 @@ export function setupHandlers(io: Server) {
             if (gs.dayTimer <= 0 && gs.customers.length === 0 && gs.waitList.length === 0 && gs.dirtyTables.length === 0) {
               gs.dayPhase = 'night'; gs.dayTimer = NIGHT_TICKS; gs.hasOrderedTonight = false;
               const c = cap(gs.upgrades.stockMax);
-              (['🍞', '🥩', '🥬'] as StockKey[]).forEach(k => {
-                gs.stock[k] = Math.min(c, gs.stock[k] + 5);
-              });
+            (['🍞', '🥩', '🥬', '🥘', '🍢'] as StockKey[]).forEach(k => {
+              gs.stock[k] = Math.min(c, gs.stock[k] + 5);
+            });
             }
           }
 
@@ -490,7 +490,7 @@ export function setupHandlers(io: Server) {
       const gs = RoomManager.getRoomState(roomId)!; if (gs.dayPhase !== 'night') return;
       if (gs.hasOrderedTonight) { socket.emit("sound", "fail"); return; }
       const c = cap(gs.upgrades.stockMax);
-      (['🍞', '🥩', '🥬'] as StockKey[]).forEach(k => { gs.stock[k] = c; });
+      (['🍞', '🥩', '🥬', '🥘', '🍢'] as StockKey[]).forEach(k => { gs.stock[k] = c; });
       gs.hasOrderedTonight = true; socket.emit("sound", "success");
     });
 

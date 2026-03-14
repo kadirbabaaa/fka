@@ -238,11 +238,11 @@ export function useGameLoop({
       let dx = 0;
       let dy = 0;
 
-      // Klavye
-      if (keysRef.current.w) dy -= 1;
-      if (keysRef.current.s) dy += 1;
-      if (keysRef.current.a) dx -= 1;
-      if (keysRef.current.d) dx += 1;
+      // Klavye (WASD + Ok Tuşları)
+      if (keysRef.current.w || (keysRef.current as any).ArrowUp) dy -= 1;
+      if (keysRef.current.s || (keysRef.current as any).ArrowDown) dy += 1;
+      if (keysRef.current.a || (keysRef.current as any).ArrowLeft) dx -= 1;
+      if (keysRef.current.d || (keysRef.current as any).ArrowRight) dx += 1;
 
       // Joystick (eğer klavye yoksa joystick'e bak)
       if (dx === 0 && dy === 0) {

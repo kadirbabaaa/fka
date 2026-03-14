@@ -52,11 +52,11 @@ export function useKeyboard({ isJoinedRef, socket, audioCtxRef, gameStateRef, lo
                     const gs = gameStateRef.current;
                     const lp = localPlayerRef.current;
 
-                    const PUNCH_RADIUS = 80;
-                    const PUNCH_COOLDOWN_MS = 800;
+                    const PUNCH_RADIUS = 120;
+                    const PUNCH_COOLDOWN_MS = 250;
                     if (now - lastPunchTime.current > PUNCH_COOLDOWN_MS) {
                         const punchTarget = gs.customers.find(c => {
-                            if (c.isLeaving || c.isBeatUp) return false;
+                            if (c.isLeaving) return false;
 
                             // Oturuyorsa y ekseni yukarıda kalıyor, vurma noktasını masaya hizalayalım
                             const visualY = c.isSeated ? c.seatY + 20 : c.y;

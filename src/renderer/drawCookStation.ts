@@ -1,8 +1,43 @@
 import { CookStation, RECIPE_DEFS, BURN_TICKS, BURNED_FOOD } from '../types/game';
 
-/**
- * Universal fırın çizer - hangi yemek pişiyorsa o görünür
- */
+// Duman parçacıkları için basit bir state
+const smokeParticles: { x: number; y: number; age: number; vx: number; vy: number; size: number }[] = [];
+
+function updateSmoke(ctx: CanvasRenderingContext2D, x: number, y: number, intensity: number) {
+    // Yeni parçacık ekle
+    if (Math.random() < intensity) {
+        smokeParticles.push({
+            x: x + (Math.random() - 0.5) * 20,
+            y: y - 10,
+            age: 0,
+            vx: (Math.random() - 0.5) * 0.5,
+            vy: -0.8 - Math.random() * 0.5,
+            size: 4 + Math.random() * 6
+        });
+    }
+
+    // Parçacıkları güncelle ve çiz
+    for (let i = smokeParticles.length - 1; i >= 0; i--) {
+        const p = smokeParticles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.age += 0.02;
+        p.size += 0.1;
+
+        if (p.age > 1) {
+            smokeParticles.splice(i, 1);
+            continue;
+        }
+
+        ctx.globalAlpha = (1 - p.age) * 0.4;
+        ctx.fillStyle = intensity > 0.5 ? '#333' : '#ddd'; // Yandığında koyu duman
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+}
+
 export function drawCookStation(
     ctx: CanvasRenderingContext2D,
     station: CookStation,
@@ -12,49 +47,45 @@ export function drawCookStation(
     const w = 76, h = 58;
 
     // ── 3D Fırın / İstasyon Görünümü ──────────────────────────────────────────
-
-    // 1. Gölge (Geniş elips)
     ctx.fillStyle = 'rgba(0,0,0,0.25)';
     ctx.beginPath();
     ctx.ellipse(x, y + h / 2 + 5, w * 0.55, 12, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Renk Tanımları
-    let frontColor = '#78716c'; // Normal gövde
-    let topColor = '#a8a29e';   // Üst tezgah
-    let winColor = '#292524';   // Fırın içi
-    let glowColor = '';         // Fırın ışıması
+    let frontColor = '#78716c';
+    let topColor = '#a8a29e';
+    let winColor = '#292524';
+    let glowColor = '';
 
     if (station.input) {
-        frontColor = '#ea580c'; // Pişiyor 
+        frontColor = '#ea580c';
         topColor = '#f97316';
         winColor = '#fdba74';
         glowColor = 'rgba(252, 211, 77, 0.4)';
+        updateSmoke(ctx, x, y - 20, 0.1); // Pişerken hafif duman
     } else if (station.isBurned) {
-        frontColor = '#1c1917'; // YANDI
+        frontColor = '#1c1917';
         topColor = '#292524';
         winColor = '#000000';
+        updateSmoke(ctx, x, y - 20, 0.6); // Yandığında yoğun siyah duman
     } else if (station.output) {
-        frontColor = '#16a34a'; // HAZIR
+        frontColor = '#16a34a';
         topColor = '#22c55e';
         glowColor = 'rgba(134, 239, 172, 0.3)';
     }
 
-    const topDepth = 22; // İzometrik/Üst derinlik
-    const boxY = y - h / 2 + 10; // Kutu y ofseti (Y eksenini ortaladık)
+    const topDepth = 22;
+    const boxY = y - h / 2 + 10;
 
-    // 2. Ana Gövde (Ön Yüz)
     ctx.fillStyle = frontColor;
     ctx.beginPath();
     ctx.roundRect(x - w / 2, boxY, w, h - 10, 8);
     ctx.fill();
 
-    // Ön Kenarlık
     ctx.strokeStyle = 'rgba(0,0,0,0.3)';
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    // 3. Üst Yüzey (Tezgah - Trapezoid)
     ctx.fillStyle = topColor;
     ctx.beginPath();
     ctx.moveTo(x - w / 2, boxY);
@@ -65,24 +96,15 @@ export function drawCookStation(
     ctx.fill();
     ctx.stroke();
 
-    // 4. Ocak Göstergeleri (Üst Tezgah Detayları)
-    ctx.fillStyle = 'rgba(0,0,0,0.15)';
-    ctx.beginPath();
-    ctx.ellipse(x - 16, boxY - 10, 8, 3, 0, 0, Math.PI * 2);
-    ctx.ellipse(x + 16, boxY - 10, 8, 3, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 5. Fırın Kapağı (Ön Yüzde Siyah/Turuncu Cam)
     const winW = w * 0.65;
     const winH = (h - 10) * 0.45;
-    const winY = boxY + 12; // Kapağın Y konumu
+    const winY = boxY + 12;
 
     ctx.fillStyle = winColor;
     ctx.beginPath();
     ctx.roundRect(x - winW / 2, winY, winW, winH, 4);
     ctx.fill();
 
-    // 6. Işıma (Glow) ve Cam Parlaması
     if (glowColor) {
         ctx.fillStyle = glowColor;
         ctx.beginPath();
@@ -90,7 +112,7 @@ export function drawCookStation(
         ctx.fill();
     }
 
-    // Cam ışıltı yansıması (Parlak beyaz/gri çapraz çizik)
+    // Cam parlaması
     ctx.fillStyle = 'rgba(255,255,255,0.12)';
     ctx.beginPath();
     ctx.moveTo(x - winW / 2, winY);
@@ -100,123 +122,94 @@ export function drawCookStation(
     ctx.closePath();
     ctx.fill();
 
-    // Fırın tutma kulbu (Kapağın üstünde yatay gri bar)
-    ctx.strokeStyle = '#d6d3d1';
-    ctx.lineWidth = 4;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(x - winW / 3, winY - 6);
-    ctx.lineTo(x + winW / 3, winY - 6);
-    ctx.stroke();
-
-    // 7. Fırın Düğmeleri (Öst Sağ veya Üst panele)
-    ctx.fillStyle = '#444';
-    ctx.beginPath();
-    ctx.arc(x - w / 2 + 12, boxY + 6, 3, 0, Math.PI * 2);
-    ctx.arc(x - w / 2 + 22, boxY + 6, 3, 0, Math.PI * 2);
-    ctx.arc(x + w / 2 - 22, boxY + 6, 3, 0, Math.PI * 2);
-    ctx.arc(x + w / 2 - 12, boxY + 6, 3, 0, Math.PI * 2);
-    ctx.fill();
-
-    // ── İçerik (Emojiler vs. Fırın Tezgahı Üzerine) ──────────────────────────
-    // İçeriği fırının üst (izometrik) tezgahına tam merkeze oturtalım
     const contentY = boxY - topDepth / 2;
 
     if (station.input && station.timer > 0) {
-        // Pişiyor — progress ring
         const recipe = RECIPE_DEFS[station.input as keyof typeof RECIPE_DEFS];
         if (!recipe) return;
         
         const progress = 1 - station.timer / recipe.time;
-        const radius = 14;
+        const radius = 16;
 
-        // Arka halka
-        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-        ctx.lineWidth = 4;
+        // Progress Ring (Geliştirilmiş)
+        ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+        ctx.lineWidth = 6;
         ctx.beginPath();
-        ctx.arc(x, contentY, radius, 0, Math.PI * 2);
+        ctx.arc(x, contentY - 30, radius, 0, Math.PI * 2);
         ctx.stroke();
 
-        // İlerleme halkası
-        ctx.strokeStyle = '#fbbf24';
+        const grad = ctx.createLinearGradient(x - radius, contentY - 30, x + radius, contentY - 30);
+        grad.addColorStop(0, '#fbbf24');
+        grad.addColorStop(1, '#f59e0b');
+        ctx.strokeStyle = grad;
         ctx.lineWidth = 4;
         ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.arc(x, contentY, radius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress);
+        ctx.arc(x, contentY - 30, radius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress);
         ctx.stroke();
-        ctx.lineCap = 'butt';
 
-        // Input emoji (ortada, küçük)
-        ctx.font = '14px Arial';
+        ctx.font = '16px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(station.input, x, contentY);
+        ctx.fillText(station.input, x, contentY - 30);
 
-        // Yüzde (Hemen altına)
+        // İlerleme yüzdesi
         ctx.fillStyle = 'white';
-        ctx.font = 'bold 10px Arial';
-        ctx.fillText(`${Math.round(progress * 100)}%`, x, contentY + 24);
+        ctx.font = 'bold 11px Arial';
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 2;
+        ctx.strokeText(`${Math.round(progress * 100)}%`, x, contentY - 10);
+        ctx.fillText(`${Math.round(progress * 100)}%`, x, contentY - 10);
 
     } else if (station.isBurned) {
-        // Yandı — Kömür efekti
-        ctx.font = '24px Arial';
+        ctx.font = '28px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(BURNED_FOOD, x, contentY);
+        ctx.fillText(BURNED_FOOD, x, contentY - 25);
 
         ctx.fillStyle = '#ef4444';
-        ctx.font = 'bold 10px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('YANDI!', x, contentY + 20);
+        ctx.font = 'bold 12px Arial';
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 2;
+        ctx.strokeText('YANDI!', x, contentY - 5);
+        ctx.fillText('YANDI!', x, contentY - 5);
 
     } else if (station.output) {
-        // Hazır — pulse efekti
-        const pulse = 1 + Math.sin(time / 200) * 0.1;
+        const pulse = 1 + Math.sin(time / 150) * 0.1;
         ctx.save();
-        ctx.translate(x, contentY);
+        ctx.translate(x, contentY - 30);
         ctx.scale(pulse, pulse);
-        ctx.font = '24px Arial';
+        ctx.font = '28px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(station.output, 0, 0);
         ctx.restore();
 
-        // Yanma Uyarı Barı & İkonu
         if (station.burnTimer !== undefined && station.burnTimer > 0) {
-            const burnPct = Math.max(0, 1 - station.burnTimer / BURN_TICKS); // 0 -> 1'e kadar dolar
+            const burnPct = Math.max(0, 1 - station.burnTimer / BURN_TICKS);
+            
+            // Tehlike Barı (Geliştirilmiş)
+            const barW = 40;
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            ctx.beginPath();
+            ctx.roundRect(x - barW / 2, contentY - 10, barW, 8, 4);
+            ctx.fill();
 
-            // Yanıp sönen uyarı ikonu (Sadece son demlerde hızlı yanar)
-            if (burnPct > 0.5 && Math.floor(Date.now() / (burnPct > 0.8 ? 100 : 300)) % 2 === 0) {
-                ctx.font = '18px Arial';
-                ctx.fillText('🔥', x + 14, contentY - 14);
+            const barColor = burnPct > 0.8 ? '#ef4444' : (burnPct > 0.5 ? '#f97316' : '#facc15');
+            ctx.fillStyle = barColor;
+            ctx.beginPath();
+            ctx.roundRect(x - barW / 2 + 1, contentY - 9, (barW - 2) * burnPct, 6, 3);
+            ctx.fill();
+
+            if (burnPct > 0.7 && Math.floor(time / 200) % 2 === 0) {
+                ctx.font = '16px Arial';
+                ctx.fillText('🔥', x + 25, contentY - 35);
             }
-
-            // Kırmızı/turuncu tehlike barı
-            const barW = 32;
-            ctx.fillStyle = 'rgba(0,0,0,0.5)';
-            ctx.fillRect(x - barW / 2, contentY + 16, barW, 6);
-            ctx.fillStyle = burnPct > 0.8 ? '#ef4444' : '#f97316';
-            ctx.fillRect(x - barW / 2, contentY + 16, barW * burnPct, 6);
-        } else {
-            // Normal hazır barı yoksa "HAZIR!" metni
-            ctx.fillStyle = '#fef9c3';
-            ctx.font = 'bold 10px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('HAZIR!', x, contentY + 18);
         }
-    } else {
-        // Boş — Universal fırın etiketi
-        ctx.font = '16px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = 'rgba(255,255,255,0.4)';
-        ctx.fillText('🔥', x, contentY);
     }
 
-    // ── Etiket (altta gövdenin hemen altında) ──────────────────────────────
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 11px Arial';
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.font = 'bold 10px Arial';
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
     ctx.fillText(`Fırın ${station.id.replace('oven', '')}`, x, y + h / 2 - 2);
 }
