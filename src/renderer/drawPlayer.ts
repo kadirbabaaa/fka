@@ -112,14 +112,23 @@ export function drawPlayer(
     ctx.fillStyle = 'rgba(255,255,255,0.18)';
     ctx.beginPath(); ctx.roundRect(-10, -2, 20, 7, 4); ctx.fill();
 
-    // ── KOLLAR (el yok, yuvarlak uçlu kısa kollar) ───────────────────────────
+    // ── KOLLAR + ELLER ────────────────────────────────────────────────────────
     const armSwing = st.isMoving ? Math.sin(st.walkTimer + Math.PI) * 5 : 0;
+    const skinTone = '#f5c090';
+
     // Arka kol (sol)
     ctx.beginPath(); ctx.roundRect(-23, -1 - armSwing, 8, 14, 4);
     ctx.fillStyle = adjustColor(bodyColor, -15); ctx.fill(); stk(ctx);
+    // Sol el (yuvarlak)
+    ctx.beginPath(); ctx.arc(-19, 14 - armSwing, 5, 0, Math.PI * 2);
+    ctx.fillStyle = skinTone; ctx.fill(); stk(ctx, '#c8845a', 2);
+
     // Ön kol (sağ)
     ctx.beginPath(); ctx.roundRect(15, -1 + armSwing, 8, 14, 4);
     ctx.fillStyle = bodyColor; ctx.fill(); stk(ctx);
+    // Sağ el (yuvarlak)
+    ctx.beginPath(); ctx.arc(19, 14 + armSwing, 5, 0, Math.PI * 2);
+    ctx.fillStyle = skinTone; ctx.fill(); stk(ctx, '#c8845a', 2);
 
     // ── BAŞ — daha küçük ──────────────────────────────────────────────────────
     const HR = 13; // Kafa yarıçapı (eskiden 20, şimdi 13)
