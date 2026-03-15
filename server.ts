@@ -39,7 +39,8 @@ app.get("*", (req, res) => {
 const LOGIC_STEP_MS = 33; // ~30 FPS
 const INTERACT_R = 75;    // Etkileşim yarıçapı
 const SERVE_R = 95;       // Servis yarıçapı
-const CLOSING_THRESHOLD = 300; // Kapanışa kaç tick kala spawn dursun
+const CLOSING_THRESHOLD = 300;  // Kapanışa kaç tick kala spawn dursun
+const SPAWN_GRACE_TICKS  = 240;  // Gün açılınca ilk 8 sn müşteri gelmesin
 
 const TABLE_X_SLOTS = [190, 390, 640, 890, 1090];
 const TABLE_Y = 500;
@@ -114,7 +115,13 @@ io.on("connection", (socket) => {
       const interval = setInterval(() => {
         const rid = roomId;
         const gs = RoomManager.getRoomState(rid);
-        if (!gs || gs.isGameOver) return;
+        if (!gs) return;
+
+        // Game over ise sadece state gönder, oyun mantığını durdur
+        if (gs.isGameOver) {
+          io.to(rid).emit("state", gs);
+          return;
+        }
 
         // Fırınları güncelle
         gs.cookStations.forEach(s => {
@@ -150,8 +157,8 @@ io.on("connection", (socket) => {
           if (gs.dayTimer > 0) gs.dayTimer--;
         }
 
-        // Spawn
-        if (gs.dayPhase === 'day' && gs.dayTimer > CLOSING_THRESHOLD) {
+        // Spawn — gün açılışından 8 saniye sonra ve kapanışa 10 saniye kala spawn yok
+        if (gs.dayPhase === 'day' && gs.dayTimer > CLOSING_THRESHOLD && gs.dayTimer < (DAY_TICKS - SPAWN_GRACE_TICKS)) {
           const baseRate = 0.001 + Math.min(gs.day * 0.0005, 0.005);
           const dayProgress = 1 - gs.dayTimer / DAY_TICKS;
           const playerCount = Object.keys(gs.players).length || 1;
