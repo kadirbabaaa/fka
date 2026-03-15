@@ -9,7 +9,8 @@ import {
   DISH_ITEMS, SEAT_SLOTS, INGREDIENTS, RECIPE_DEFS,
   INITIAL_OVEN_POSITIONS, ADDITIONAL_OVEN_POSITIONS, OVEN_UPGRADE_COSTS,
   HOLDING_STATION_POSITIONS, COUNTER_POSITIONS,
-  CLEAN_PLATE, DIRTY_PLATE, BURNED_FOOD, EAT_TICKS,
+  CLEAN_PLATE, DIRTY_PLATE, BURNED_FOOD, EAT_TICKS, BURN_TICKS,
+  UPGRADE_DEFS,
   MAX_TRAY_CAPACITY, isTray, getTrayItems, createTray,
   SINK_STATION,
   mkGameState,
@@ -27,6 +28,14 @@ const io = new Server(server, {
 });
 
 const PORT = process.env.PORT || 3000;
+
+// ─── Beklenmedik hatalarda sunucuyu koru ──────────────────────────────────────
+process.on('uncaughtException', (err) => {
+  console.error('[Server] Yakalanmayan hata:', err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[Server] Yakalanmayan Promise reddi:', reason);
+});
 
 // Statik dosyaları sun (Vite build sonrası dist klasörü)
 app.use(express.static(path.join(__dirname, "dist")));
@@ -113,6 +122,7 @@ io.on("connection", (socket) => {
       const gs = RoomManager.getRoomState(roomId)!;
 
       const interval = setInterval(() => {
+        try {
         const rid = roomId;
         const gs = RoomManager.getRoomState(rid);
         if (!gs) return;
@@ -331,6 +341,9 @@ io.on("connection", (socket) => {
           }
         }
         io.to(rid).emit("state", gs);
+        } catch (err) {
+          console.error('[GameLoop] Hata yakalandı, oyun devam ediyor:', err);
+        }
       }, LOGIC_STEP_MS);
       RoomManager.setInterval(roomId, interval);
     }
