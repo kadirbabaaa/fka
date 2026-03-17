@@ -156,10 +156,7 @@ io.on("connection", (socket) => {
           if (gs.dayTimer > 0) gs.dayTimer--;
           if (gs.dayTimer <= 0 && gs.customers.length === 0 && gs.waitList.length === 0 && gs.dirtyTables.length === 0) {
             gs.dayPhase = 'night'; gs.dayTimer = NIGHT_TICKS; gs.hasOrderedTonight = false;
-            const c = cap(gs.upgrades.stockMax);
-            (['🍞', '🥩', '🥬', '🥘', '🍢'] as StockKey[]).forEach(k => {
-              gs.stock[k] = Math.min(c, gs.stock[k] + 5);
-            });
+            // Gece geçişinde stok yenileme kaldırıldı (Sonsuz Stok)
           }
         }
 
@@ -531,14 +528,8 @@ io.on("connection", (socket) => {
   });
 
   socket.on("order", () => {
-    if (!roomId || !RoomManager.getRoomState(roomId)) return;
-    const gs = RoomManager.getRoomState(roomId)!; if (gs.dayPhase !== 'night') return;
-    if (gs.hasOrderedTonight) { socket.emit("sound", "fail"); return; }
-    const c = cap(gs.upgrades.stockMax);
-    (['🍞', '🥩', '🥬', '🥘', '🍢'] as StockKey[]).forEach(k => { gs.stock[k] = c; });
-    gs.hasOrderedTonight = true; 
-    io.to(roomId).emit("state", gs);
-    socket.emit("sound", "success");
+    // Sipariş verme (stok yenileme) devre dışı bırakıldı (Sonsuz Stok)
+    socket.emit("sound", "fail");
   });
 
   socket.on("buyOven", () => {
