@@ -515,14 +515,14 @@ io.on("connection", (socket) => {
 
     // Malzeme al
     for (const s of INGREDIENTS) {
-      if (Math.hypot(px - s.pos.x, py - s.pos.y) < INTERACT_R && gs.stock[s.key] > 0) {
+      if (Math.hypot(px - s.pos.x, py - s.pos.y) < INTERACT_R) { // Stok kontrolü kaldırıldı (Sonsuz Stok)
         if (p.holding === CLEAN_PLATE || isDish(p.holding)) {
           socket.emit("sound", "fail");
           return;
         }
         if (!p.holding) {
           p.holding = s.key;
-          gs.stock[s.key]--;
+          // gs.stock[s.key]--; // Stok azaltma kaldırıldı
           socket.emit("sound", "pickup");
           return;
         }

@@ -70,9 +70,9 @@ export function drawStation(
         ctx.stroke();
 
         ctx.fillStyle = 'white';
-        ctx.font = 'bold 9px Arial';
+        ctx.font = 'bold 12px Arial'; // Sonsuzluk simgesi için biraz daha büyük font
         ctx.textBaseline = 'middle';
-        ctx.fillText(String(stock), badgeX, badgeY);
+        ctx.fillText('∞', badgeX, badgeY); // Stok yerine sonsuzluk simgesi (Sonsuz Stok)
     }
 
     ctx.restore();
