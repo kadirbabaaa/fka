@@ -1,29 +1,31 @@
 import React from 'react';
 import { Upgrades, UpgradeKey, UPGRADE_DEFS as SHARED_UPGRADES, OVEN_UPGRADE_COSTS, INITIAL_OVEN_POSITIONS, ADDITIONAL_OVEN_POSITIONS } from '../types/game';
 
-// UI bilgileri — costs/max değerleri shared'dan gelir (tek kaynak)
 const UPGRADE_UI: { id: UpgradeKey; icon: string; name: string; desc: string }[] = [
     { id: 'patience', icon: '⏳', name: 'Müşteri Sabrı', desc: 'Müşteriler daha uzun bekler' },
     { id: 'earnings', icon: '💰', name: 'Servis Kazancı', desc: 'Her servisten +5 ekstra puan' },
-    // { id: 'stockMax', icon: '📦', name: 'Depo Kapasitesi', desc: 'Siparişte daha fazla stok gelir' }, // Sonsuz stok nedeniyle kaldırıldı
 ];
+
+const DISH_NAMES: Record<string, string> = {
+    '🍕': 'Pizza', '🍔': 'Burger', '🥗': 'Salata', '🍜': 'Çorba', '🌯': 'Dürüm',
+};
 
 interface Props {
     score: number;
     upgrades: Upgrades;
     day: number;
     lives: number;
-    ovenCount: number; // Mevcut fırın sayısı
+    ovenCount: number;
+    unlockedDishes: string[];
     onUpgrade: (id: keyof Upgrades) => void;
-    onBuyOven: () => void; // Fırın satın alma
-    onBuyLife: () => void; // Can satın alma
+    onBuyOven: () => void;
+    onBuyLife: () => void;
     onOrder: () => void;
     onNextDay: () => void;
 }
 
-/** Gece ekranı: upgrade shop + sipariş + yeni gün */
 export const UpgradeShop: React.FC<Props> = ({
-    score, upgrades, day, lives, ovenCount, onUpgrade, onBuyOven, onBuyLife, onOrder, onNextDay,
+    score, upgrades, day, lives, ovenCount, unlockedDishes, onUpgrade, onBuyOven, onBuyLife, onOrder, onNextDay,
 }) => {
     const maxOvens = INITIAL_OVEN_POSITIONS.length + ADDITIONAL_OVEN_POSITIONS.length;
     const canBuyOven = ovenCount < maxOvens;
@@ -42,9 +44,22 @@ export const UpgradeShop: React.FC<Props> = ({
                 </p>
             </div>
 
-            {/* Upgrade kartları + Fırın */}
+            {/* Mevcut Menü */}
+            <div className="bg-stone-800/80 rounded-xl px-4 py-2 border border-stone-600 flex items-center gap-3">
+                <span className="text-stone-300 text-xs font-bold">Menün:</span>
+                <div className="flex gap-2">
+                    {unlockedDishes.map(d => (
+                        <div key={d} className="flex flex-col items-center gap-0.5">
+                            <span className="text-xl">{d}</span>
+                            <span className="text-[9px] text-stone-400">{DISH_NAMES[d]}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Upgrade kartları */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 w-full max-w-4xl">
-                {/* Fırın Satın Alma */}
+                {/* Fırın */}
                 <div className="bg-stone-800/90 rounded-xl p-3 border border-stone-600 flex flex-col gap-2">
                     <div className="flex items-start gap-2">
                         <span className="text-2xl">🔥</span>
@@ -53,11 +68,7 @@ export const UpgradeShop: React.FC<Props> = ({
                             <div className="text-stone-400 text-xs">Daha hızlı pişirme</div>
                         </div>
                     </div>
-
-                    <div className="text-stone-300 text-xs">
-                        Mevcut: {ovenCount}/{maxOvens}
-                    </div>
-
+                    <div className="text-stone-300 text-xs">Mevcut: {ovenCount}/{maxOvens}</div>
                     <button
                         onClick={() => canBuyOven && score >= ovenCost && onBuyOven()}
                         disabled={!canBuyOven || score < ovenCost}
@@ -66,11 +77,11 @@ export const UpgradeShop: React.FC<Props> = ({
                                 'bg-stone-700 text-stone-500 cursor-not-allowed'
                             }`}
                     >
-                        {!canBuyOven ? 'MAX ✓' : `${ovenCost} Satın Al`}
+                        {!canBuyOven ? 'MAX ✓' : `$${ovenCost} Satın Al`}
                     </button>
                 </div>
 
-                {/* Can (Kalp) Satın Alma */}
+                {/* Can */}
                 <div className="bg-stone-800/90 rounded-xl p-3 border border-stone-600 flex flex-col gap-2">
                     <div className="flex items-start gap-2">
                         <span className="text-2xl">❤️</span>
@@ -79,11 +90,9 @@ export const UpgradeShop: React.FC<Props> = ({
                             <div className="text-stone-400 text-xs">+1 kalp, max 3</div>
                         </div>
                     </div>
-
                     <div className="text-stone-300 text-xs">
                         Mevcut: {'❤️'.repeat(lives)}{'🖤'.repeat(Math.max(0, 3 - lives))}
                     </div>
-
                     <button
                         onClick={() => lives < 3 && score >= 75 && onBuyLife()}
                         disabled={lives >= 3 || score < 75}
@@ -96,7 +105,7 @@ export const UpgradeShop: React.FC<Props> = ({
                     </button>
                 </div>
 
-                {/* Mevcut Upgrade'ler */}
+                {/* Upgrades */}
                 {UPGRADE_UI.map(u => {
                     const def = SHARED_UPGRADES[u.id];
                     const level = upgrades[u.id];
@@ -105,10 +114,7 @@ export const UpgradeShop: React.FC<Props> = ({
                     const canBuy = !maxed && score >= cost;
 
                     return (
-                        <div
-                            key={u.id}
-                            className="bg-stone-800/90 rounded-xl p-3 border border-stone-600 flex flex-col gap-2"
-                        >
+                        <div key={u.id} className="bg-stone-800/90 rounded-xl p-3 border border-stone-600 flex flex-col gap-2">
                             <div className="flex items-start gap-2">
                                 <span className="text-2xl">{u.icon}</span>
                                 <div>
@@ -116,17 +122,11 @@ export const UpgradeShop: React.FC<Props> = ({
                                     <div className="text-stone-400 text-xs">{u.desc}</div>
                                 </div>
                             </div>
-
-                            {/* Seviye barları */}
                             <div className="flex gap-1">
                                 {Array.from({ length: def.max }, (_, i) => (
-                                    <div
-                                        key={i}
-                                        className={`h-2 flex-1 rounded-full ${i < level ? 'bg-purple-500' : 'bg-stone-600'}`}
-                                    />
+                                    <div key={i} className={`h-2 flex-1 rounded-full ${i < level ? 'bg-purple-500' : 'bg-stone-600'}`} />
                                 ))}
                             </div>
-
                             <button
                                 onClick={() => canBuy && onUpgrade(u.id)}
                                 disabled={maxed || !canBuy}
@@ -142,9 +142,8 @@ export const UpgradeShop: React.FC<Props> = ({
                 })}
             </div>
 
-            {/* Alt butonlar */}
+            {/* Alt buton */}
             <div className="flex flex-col sm:flex-row gap-3 w-full max-w-lg">
-                {/* Stok siparişi butonu sonsuz stok nedeniyle kaldırıldı */}
                 <button
                     onClick={onNextDay}
                     className="flex-1 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white rounded-xl font-black text-base border-2 border-amber-300 transition-all active:scale-95"

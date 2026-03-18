@@ -14,6 +14,24 @@ import { useVoiceChat } from '../hooks/useVoiceChat';
 
 const MUSIC_URL = 'https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@main/Light%20Hearted%20-%20Jeremy%20Blake.mp3';
 
+// Yemek isim haritası
+const DISH_NAMES: Record<string, string> = {
+    '🍕': 'Pizza',
+    '🍔': 'Burger',
+    '🥗': 'Salata',
+    '🍜': 'Çorba',
+    '🌯': 'Dürüm',
+};
+
+// Yemek → malzeme haritası (Menü seçiminde göstermek için)
+const DISH_INFO: Record<string, { ingredient: string; time: string; color: string }> = {
+    '🍕': { ingredient: '🍞 Hamur', time: '3 sn', color: 'from-orange-600 to-red-600' },
+    '🍔': { ingredient: '🥩 Et',    time: '2 sn', color: 'from-amber-600 to-yellow-600' },
+    '🥗': { ingredient: '🥬 Sebze', time: '1 sn', color: 'from-green-600 to-emerald-600' },
+    '🍜': { ingredient: '🥘 Çorba', time: '4 sn', color: 'from-yellow-600 to-amber-600' },
+    '🌯': { ingredient: '🍢 Kebap', time: '3.5 sn', color: 'from-stone-600 to-amber-800' },
+};
+
 interface Props {
     canvasRef: React.RefObject<HTMLCanvasElement>;
     isJoined: boolean;
@@ -48,10 +66,11 @@ export const GameScreen: React.FC<Props> = ({
     const [queueLen, setQueueLen] = useState(0);
     const [lives, setLives] = useState(3);
     const [isGameOver, setIsGameOver] = useState(false);
+    const [menuChoices, setMenuChoices] = useState<string[] | null>(null);
+    const [unlockedDishes, setUnlockedDishes] = useState<string[]>(['🥗', '🍔']);
 
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
-    // --- Voice Chat ---
     const [voiceActive, setVoiceActive] = useState(false);
     const [showVoiceSettings, setShowVoiceSettings] = useState(false);
     const [globalVoiceVol, setGlobalVoiceVol] = useState(1.0);
@@ -72,14 +91,13 @@ export const GameScreen: React.FC<Props> = ({
                 const audio = new Audio();
                 audio.srcObject = stream;
                 audio.autoplay = true;
-                audio.volume = 0; // ilk aşamada 0 verilir, game loop'ta mesafe bazlı hesaplanır
+                audio.volume = 0;
                 audioElementsRef.current[id] = audio;
             } else if (audioElementsRef.current[id].srcObject !== stream) {
                 audioElementsRef.current[id].srcObject = stream;
             }
         });
 
-        // Kopan / silinen streamleri temizle
         Object.keys(audioElementsRef.current).forEach(id => {
             if (!audioStreams[id]) {
                 audioElementsRef.current[id].pause();
@@ -89,7 +107,6 @@ export const GameScreen: React.FC<Props> = ({
         });
     }, [audioStreams]);
 
-    // Oyun döngüsü
     useGameLoop({
         canvasRef, isJoined, myId, socket, gameStateRef, localPlayerRef, keysRef, joystickVectorRef,
         audioElementsRef, globalVolume: globalVoiceVol
@@ -108,6 +125,8 @@ export const GameScreen: React.FC<Props> = ({
             setOvenCount(s.cookStations?.length ?? 1);
             setLives(s.lives ?? 3);
             setIsGameOver(s.isGameOver ?? false);
+            setMenuChoices(s.menuChoices ?? null);
+            setUnlockedDishes(s.unlockedDishes ?? ['🥗', '🍔']);
         }, 200);
         return () => clearInterval(id);
     }, []);
@@ -158,10 +177,7 @@ export const GameScreen: React.FC<Props> = ({
                         </h1>
                     </div>
                     <button 
-                        onClick={() => {
-                            navigator.clipboard.writeText(roomId);
-                            // Optik feedback yapılabilir buraya, ama mobilde basit tutalım
-                        }}
+                        onClick={() => { navigator.clipboard.writeText(roomId); }}
                         className="bg-stone-800 hover:bg-stone-700 active:bg-green-700 text-stone-300 font-mono text-[10px] font-bold px-2 py-1 rounded transition-colors"
                         title="Oda kodunu kopyala"
                     >
@@ -197,14 +213,13 @@ export const GameScreen: React.FC<Props> = ({
                     <button onClick={() => setShowCosmetics(true)}
                         className="w-8 h-8 bg-stone-700 hover:bg-sky-700 text-emerald-400 rounded-lg flex items-center justify-center text-sm shadow-[0_0_10px_rgba(52,211,153,0.2)] transition-colors"
                     >👕</button>
-
                     <button onClick={() => setShowSettings(true)}
                         className="w-8 h-8 bg-stone-700 hover:bg-stone-600 text-stone-300 rounded-lg flex items-center justify-center text-sm"
                     >⚙️</button>
                 </div>
             </div>
 
-            {/* ── Canvas — tam ekran, siyah bar yok ────────────────────────────── */}
+            {/* ── Canvas ────────────────────────────────────────────────────────── */}
             <div className="flex-1 min-h-0 relative">
                 <canvas
                     ref={canvasRef}
@@ -234,29 +249,21 @@ export const GameScreen: React.FC<Props> = ({
                         onPointerDown={(e) => {
                             e.preventDefault();
                             const now = Date.now();
-                            const PUNCH_RADIUS = 120; // Vuruş mesafesini artırdım (80 -> 120)
-                            const PUNCH_COOLDOWN_MS = 250; // Cooldown'u daha da indirdim (300 -> 250)
-                            
-                            // Cooldown kontrolü — çok hızlı art arda vurmayı engelle
-                            if (now - lastPunchTimeRef.current < PUNCH_COOLDOWN_MS) {
-                                return; // Cooldown içindeyse işlem yapma
-                            }
-                            
+                            const PUNCH_RADIUS = 120;
+                            const PUNCH_COOLDOWN_MS = 250;
+                            if (now - lastPunchTimeRef.current < PUNCH_COOLDOWN_MS) return;
                             lastPunchTimeRef.current = now;
                             const gs = gameStateRef.current;
                             const lp = localPlayerRef.current;
 
                             const punchTarget = gs.customers.find(c => {
-                                // isBeatUp kontrolünü kaldırdım: sarsıntı halindeyken de vurulabilir
                                 if (c.isLeaving) return false;
                                 const visualY = c.isSeated ? c.seatY + 20 : c.y;
                                 const dist = Math.hypot(c.x - lp.x, visualY - lp.y);
                                 return dist <= PUNCH_RADIUS && (c.personality === 'rude' || c.personality === 'recep' || c.personality === 'thug');
                             });
 
-                            if (punchTarget) {
-                                socket?.emit('punchCustomer', punchTarget.id);
-                            }
+                            if (punchTarget) socket?.emit('punchCustomer', punchTarget.id);
                         }}
                         style={{ width: settings.punchButtonSize, height: settings.punchButtonSize, touchAction: 'none' }}
                         className="bg-red-500 active:bg-red-700 text-white rounded-full shadow-xl font-black text-sm border-4 border-red-300 flex items-center justify-center active:scale-95"
@@ -265,7 +272,7 @@ export const GameScreen: React.FC<Props> = ({
                     </button>
                     <button
                         onPointerDown={(e) => {
-                            e.preventDefault(); // Varsayılan dokunmatik gecikmeyi (300ms) engelle
+                            e.preventDefault();
                             emit('interact');
                         }}
                         style={{ width: bs, height: bs, touchAction: 'none' }}
@@ -280,17 +287,16 @@ export const GameScreen: React.FC<Props> = ({
                     >{musicOn ? '🎵' : '🔇'}</button>
                 </div>
 
-                {/* Hazırlık: Dükkanı Aç */}
+                {/* ── Hazırlık: Küçük yüzen buton (ekranı KAPLAMAZ) ── */}
                 {dayPhase === 'prep' && (
-                    <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 bg-black/40">
+                    <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 bg-stone-900/90 backdrop-blur-sm px-4 py-2 rounded-2xl border border-purple-700/60 shadow-xl">
                         <div className="text-center">
-                            <div className="text-5xl mb-2">🔧</div>
-                            <h2 className="text-white font-black text-2xl">Gün {day} — Hazırlık</h2>
-                            <p className="text-stone-300 text-sm mt-1">Malzemeleri hazırla, fırınları yak!</p>
+                            <span className="text-white font-bold text-sm">🔧 Gün {day} — Hazırlık</span>
+                            <p className="text-stone-400 text-[10px] leading-none mt-0.5">Malzemeleri hazırla!</p>
                         </div>
                         <button
                             onClick={() => emit('openShop')}
-                            className="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white rounded-2xl font-black text-xl border-2 border-green-300 transition-all active:scale-95 shadow-2xl animate-pulse"
+                            className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white rounded-xl font-black text-sm border border-green-300 transition-all active:scale-95 shadow-lg animate-pulse whitespace-nowrap"
                         >
                             ☀️ DÜKKANI AÇ
                         </button>
@@ -322,12 +328,55 @@ export const GameScreen: React.FC<Props> = ({
                     </div>
                 )}
 
-                {/* Gece: Upgrade Shop */}
-                {dayPhase === 'night' && !isGameOver && (
+                {/* ── Gece: Yeni Yemek Seçimi (Plate Up tarzı) ── */}
+                {dayPhase === 'night' && !isGameOver && menuChoices && menuChoices.length > 0 && (
+                    <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-6 bg-indigo-950/85 backdrop-blur-sm p-4">
+                        <div className="text-center">
+                            <div className="text-5xl mb-2">⭐</div>
+                            <h2 className="text-white font-black text-2xl">Yeni Yemek Seç!</h2>
+                            <p className="text-indigo-200 text-sm mt-1">
+                                Menüye eklemek için bir yemek seç. Gün {day + 1}'den itibaren müşteriler bu yemeği sipariş edebilecek.
+                            </p>
+                            <div className="mt-2 flex flex-wrap justify-center gap-2">
+                                <span className="text-indigo-300 text-xs">Mevcut menün:</span>
+                                {unlockedDishes.map(d => (
+                                    <span key={d} className="text-base" title={DISH_NAMES[d]}>{d}</span>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-4 w-full max-w-lg">
+                            {menuChoices.map(dish => {
+                                const info = DISH_INFO[dish];
+                                return (
+                                    <button
+                                        key={dish}
+                                        onClick={() => emit('selectMenu', dish)}
+                                        className={`flex-1 bg-gradient-to-b ${info?.color ?? 'from-stone-600 to-stone-700'} hover:brightness-110 active:scale-95 text-white rounded-2xl p-5 border-2 border-white/20 transition-all shadow-xl flex flex-col items-center gap-2`}
+                                    >
+                                        <span className="text-5xl">{dish}</span>
+                                        <span className="font-black text-xl">{DISH_NAMES[dish] ?? dish}</span>
+                                        {info && (
+                                            <div className="text-white/80 text-xs text-center space-y-0.5">
+                                                <div>Malzeme: {info.ingredient}</div>
+                                                <div>Pişirme: ~{info.time}</div>
+                                            </div>
+                                        )}
+                                        <span className="mt-1 px-3 py-1 bg-white/20 rounded-full text-sm font-bold">Seç →</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                {/* Gece: Upgrade Shop (menü seçimi yoksa veya bittiyse) */}
+                {dayPhase === 'night' && !isGameOver && (!menuChoices || menuChoices.length === 0) && (
                     <UpgradeShop
                         score={score} upgrades={upgrades} day={day}
                         lives={lives}
                         ovenCount={ovenCount}
+                        unlockedDishes={unlockedDishes}
                         onUpgrade={id => emit('upgrade', id)}
                         onBuyOven={() => emit('buyOven')}
                         onBuyLife={() => emit('buyLife')}
@@ -337,7 +386,7 @@ export const GameScreen: React.FC<Props> = ({
                 )}
             </div>
 
-            {/* PC İpuçları (Sadece Dokunmatik OLMAYAN cihazlarda) */}
+            {/* PC İpuçları */}
             {!isTouchDevice && (
                 <div className="flex-none h-6 hidden md:flex items-center justify-center gap-4 text-stone-500 text-[11px] font-medium bg-stone-950">
                     <span>Hareket: <kbd className="bg-stone-800 text-stone-300 px-1 rounded">WASD</kbd></span>
@@ -369,9 +418,7 @@ export const GameScreen: React.FC<Props> = ({
                     setGlobalVolume={setGlobalVoiceVol}
                     isMuted={isMuted}
                     toggleMute={toggleMute}
-                    startVoiceChat={() => {
-                        setVoiceActive(true);
-                    }}
+                    startVoiceChat={() => { setVoiceActive(true); }}
                     isVoiceActive={voiceActive}
                 />
             )}

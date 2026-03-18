@@ -31,6 +31,8 @@ const DEFAULT_STATE: GameState = {
     lives: 3,
     isGameOver: false,
     revengeQueue: [],
+    unlockedDishes: ['🥗', '🍔'],
+    menuChoices: null,
 };
 
 /**

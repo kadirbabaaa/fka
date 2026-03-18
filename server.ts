@@ -6,7 +6,7 @@ import { fileURLToPath } from "url";
 import { 
   GameState, Player, Customer, Item, StockKey, UpgradeKey, Personality,
   GAME_WIDTH, GAME_HEIGHT, DAY_TICKS, NIGHT_TICKS, 
-  DISH_ITEMS, SEAT_SLOTS, INGREDIENTS, RECIPE_DEFS,
+  DISH_ITEMS, SEAT_SLOTS, INGREDIENTS, RECIPE_DEFS, DISH_UNLOCK_POOL,
   INITIAL_OVEN_POSITIONS, ADDITIONAL_OVEN_POSITIONS, OVEN_UPGRADE_COSTS,
   HOLDING_STATION_POSITIONS, COUNTER_POSITIONS,
   CLEAN_PLATE, DIRTY_PLATE, BURNED_FOOD, EAT_TICKS, BURN_TICKS,
@@ -29,7 +29,6 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3000;
 
-// ─── Beklenmedik hatalarda sunucuyu koru ──────────────────────────────────────
 process.on('uncaughtException', (err) => {
   console.error('[Server] Yakalanmayan hata:', err);
 });
@@ -37,7 +36,6 @@ process.on('unhandledRejection', (reason) => {
   console.error('[Server] Yakalanmayan Promise reddi:', reason);
 });
 
-// Statik dosyaları sun (Vite build sonrası dist klasörü)
 app.use(express.static(path.join(__dirname, "dist")));
 
 app.get("*", (req, res) => {
@@ -45,11 +43,11 @@ app.get("*", (req, res) => {
 });
 
 // ─── Sabitler ────────────────────────────────────────────────────────────────
-const LOGIC_STEP_MS = 33; // ~30 FPS
-const INTERACT_R = 75;    // Etkileşim yarıçapı
-const SERVE_R = 95;       // Servis yarıçapı
-const CLOSING_THRESHOLD = 300;  // Kapanışa kaç tick kala spawn dursun
-const SPAWN_GRACE_TICKS  = 240;  // Gün açılınca ilk 8 sn müşteri gelmesin
+const LOGIC_STEP_MS = 33;
+const INTERACT_R = 75;
+const SERVE_R = 95;
+const CLOSING_THRESHOLD = 300;
+const SPAWN_GRACE_TICKS  = 240;
 
 const TABLE_X_SLOTS = [190, 390, 640, 890, 1090];
 const TABLE_Y = 500;
@@ -59,6 +57,18 @@ function patLimit(lv: number) { return 1200 + 300 * lv; }
 function earn(lv: number) { return 10 + 5 * lv; }
 function isDish(item: Item): item is string { return !!item && DISH_ITEMS.includes(item as any); }
 function cap(lv: number) { return 15 + 5 * lv; }
+
+// Gece geçişinde menü seçenekleri oluştur
+function generateMenuChoices(gs: GameState): void {
+  const locked = [...DISH_UNLOCK_POOL].filter(d => !gs.unlockedDishes.includes(d));
+  if (locked.length === 0) {
+    gs.menuChoices = null;
+    return;
+  }
+  // En fazla 2 seçenek sun, karıştır
+  const shuffled = locked.sort(() => Math.random() - 0.5);
+  gs.menuChoices = shuffled.slice(0, Math.min(2, locked.length));
+}
 
 function tryQueueSeat(gs: GameState, io: Server, rid: string) {
   if (gs.dayPhase !== "day") return;
@@ -127,22 +137,22 @@ io.on("connection", (socket) => {
         const gs = RoomManager.getRoomState(rid);
         if (!gs) return;
 
-        // Game over ise sadece state gönder, oyun mantığını durdur
         if (gs.isGameOver) {
           io.to(rid).emit("state", gs);
           return;
         }
 
-        // Fırınları güncelle
+        // ─── Fırınları güncelle (DÜZELTME: output = recipe.output, input değil) ───
         gs.cookStations.forEach(s => {
           if (s.input && s.timer > 0) {
             s.timer--;
             if (s.timer <= 0) {
-              s.output = s.input;
+              const recipe = RECIPE_DEFS[s.input as keyof typeof RECIPE_DEFS];
+              s.output = recipe ? recipe.output : s.input;
               s.input = null;
               s.burnTimer = BURN_TICKS;
             }
-          } else if (s.output && s.burnTimer > 0) {
+          } else if (s.output && s.burnTimer !== undefined && s.burnTimer > 0) {
             s.burnTimer--;
             if (s.burnTimer <= 0) {
               s.isBurned = true;
@@ -155,8 +165,11 @@ io.on("connection", (socket) => {
         if (gs.dayPhase === 'day') {
           if (gs.dayTimer > 0) gs.dayTimer--;
           if (gs.dayTimer <= 0 && gs.customers.length === 0 && gs.waitList.length === 0 && gs.dirtyTables.length === 0) {
-            gs.dayPhase = 'night'; gs.dayTimer = NIGHT_TICKS; gs.hasOrderedTonight = false;
-            // Gece geçişinde stok yenileme kaldırıldı (Sonsuz Stok)
+            gs.dayPhase = 'night';
+            gs.dayTimer = NIGHT_TICKS;
+            gs.hasOrderedTonight = false;
+            // Gece geçişinde menü seçenekleri oluştur
+            generateMenuChoices(gs);
           }
         }
 
@@ -164,7 +177,7 @@ io.on("connection", (socket) => {
           if (gs.dayTimer > 0) gs.dayTimer--;
         }
 
-        // Spawn — gün açılışından 8 saniye sonra ve kapanışa 10 saniye kala spawn yok
+        // Spawn — sadece açık yemekler sipariş edilir
         if (gs.dayPhase === 'day' && gs.dayTimer > CLOSING_THRESHOLD && gs.dayTimer < (DAY_TICKS - SPAWN_GRACE_TICKS)) {
           const baseRate = 0.001 + Math.min(gs.day * 0.0005, 0.005);
           const dayProgress = 1 - gs.dayTimer / DAY_TICKS;
@@ -172,6 +185,11 @@ io.on("connection", (socket) => {
           const spawnMultiplier = 1 + (playerCount - 1) * 0.6;
           const queueLimit = 10 + (playerCount - 1) * 3;
           const currentRate = (baseRate + (dayProgress * 0.001)) * spawnMultiplier;
+
+          // Sadece kilidi açılmış yemekleri sipariş ettir
+          const availableDishes = gs.unlockedDishes.length > 0
+            ? gs.unlockedDishes
+            : [...DISH_ITEMS];
 
           if (Math.random() < currentRate && gs.customers.length + gs.waitList.length < queueLimit) {
             const personalities: Personality[] = ['polite', 'rude', 'recep'];
@@ -198,7 +216,7 @@ io.on("connection", (socket) => {
 
             gs.waitList.push({
               id: Math.random().toString(36).slice(2, 9),
-              wants: DISH_ITEMS[Math.floor(Math.random() * DISH_ITEMS.length)],
+              wants: availableDishes[Math.floor(Math.random() * availableDishes.length)],
               personality: pers,
               currentDialog: dialog,
               dialogTimer: timer,
@@ -222,7 +240,7 @@ io.on("connection", (socket) => {
                 const dialog = list[Math.floor(Math.random() * list.length)];
                 gs.waitList.push({
                   id: Math.random().toString(36).slice(2, 9),
-                  wants: DISH_ITEMS[Math.floor(Math.random() * DISH_ITEMS.length)],
+                  wants: availableDishes[Math.floor(Math.random() * availableDishes.length)],
                   personality: 'thug',
                   currentDialog: dialog,
                   dialogTimer: 150,
@@ -236,7 +254,6 @@ io.on("connection", (socket) => {
         }
         tryQueueSeat(gs, io, rid);
 
-        // WaitList dialog timer
         gs.waitList.forEach(guest => {
           if (guest.dialogTimer && guest.dialogTimer > 0) {
             guest.dialogTimer--;
@@ -244,7 +261,6 @@ io.on("connection", (socket) => {
           }
         });
 
-        // Müşteri güncelle
         for (let i = gs.customers.length - 1; i >= 0; i--) {
           const c = gs.customers[i];
 
@@ -348,9 +364,8 @@ io.on("connection", (socket) => {
     const gs = RoomManager.getRoomState(roomId)!;
     gs.players[socket.id] = {
       id: socket.id, name, color, hat, charType,
-      x: 640, y: 350, holding: null, score: 0
+      x: 640, y: 350, holding: null
     };
-    // İstemciye kendi ID'sini ve oyuncunun eklendiği güncel state'i gönder
     socket.emit("init", { id: socket.id, state: gs });
     io.to(roomId).emit("state", gs);
   });
@@ -512,14 +527,13 @@ io.on("connection", (socket) => {
 
     // Malzeme al
     for (const s of INGREDIENTS) {
-      if (Math.hypot(px - s.pos.x, py - s.pos.y) < INTERACT_R) { // Stok kontrolü kaldırıldı (Sonsuz Stok)
+      if (Math.hypot(px - s.pos.x, py - s.pos.y) < INTERACT_R) {
         if (p.holding === CLEAN_PLATE || isDish(p.holding)) {
           socket.emit("sound", "fail");
           return;
         }
         if (!p.holding) {
           p.holding = s.key;
-          // gs.stock[s.key]--; // Stok azaltma kaldırıldı
           socket.emit("sound", "pickup");
           return;
         }
@@ -528,8 +542,20 @@ io.on("connection", (socket) => {
   });
 
   socket.on("order", () => {
-    // Sipariş verme (stok yenileme) devre dışı bırakıldı (Sonsuz Stok)
     socket.emit("sound", "fail");
+  });
+
+  // ─── Yeni Yemek Seç (Plate Up tarzı gece menüsü) ─────────────────────────
+  socket.on("selectMenu", (dish: string) => {
+    if (!roomId || !RoomManager.getRoomState(roomId)) return;
+    const gs = RoomManager.getRoomState(roomId)!;
+    if (gs.dayPhase !== 'night') return;
+    if (!gs.menuChoices || !gs.menuChoices.includes(dish)) return;
+
+    gs.unlockedDishes.push(dish);
+    gs.menuChoices = null;
+    io.to(roomId).emit("state", gs);
+    socket.emit("sound", "success");
   });
 
   socket.on("buyOven", () => {
@@ -573,7 +599,8 @@ io.on("connection", (socket) => {
   socket.on("nextDay", () => {
     if (!roomId || !RoomManager.getRoomState(roomId)) return;
     const gs = RoomManager.getRoomState(roomId)!;
-    if (gs.dayPhase === 'night') {
+    // menuChoices hâlâ varsa seçim yapılmadan geçilmesin
+    if (gs.dayPhase === 'night' && !gs.menuChoices) {
       gs.day++; gs.dayPhase = 'prep'; gs.dayTimer = DAY_TICKS;
       io.to(roomId).emit("state", gs);
       socket.emit("sound", "success");
@@ -615,7 +642,6 @@ io.on("connection", (socket) => {
     const gs = RoomManager.getRoomState(roomId)!;
     if (!gs.isGameOver) return;
 
-    // Oyunu sıfırla ama skoru ve upgradeleri koru (veya ceza kes)
     gs.isGameOver = false;
     gs.lives = 3;
     gs.customers = [];
@@ -623,7 +649,6 @@ io.on("connection", (socket) => {
     gs.dirtyTables = [];
     gs.dayPhase = 'prep';
     gs.dayTimer = DAY_TICKS;
-    // Ceza: Skoru %20 düşür
     gs.score = Math.floor(gs.score * 0.8);
     io.to(roomId).emit("state", gs);
     socket.emit("sound", "success");
