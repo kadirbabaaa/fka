@@ -11,8 +11,32 @@ import {
   RECIPE_DEFS,
 } from "../types/game";
 
+/** Metalik tezgah tabanı — gölge + gradient gövde + üst parlama */
+function drawWorkstationBase(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number,
+  hw: number, hh: number,
+  radius = 10,
+  shadowAlpha = 0.30,
+) {
+  // Gölge
+  ctx.fillStyle = `rgba(0,0,0,${shadowAlpha})`;
+  ctx.beginPath(); ctx.roundRect(x - hw - 1, y - hh - 1, (hw + 1) * 2, (hh + 1) * 2, radius + 2); ctx.fill();
+
+  // Metalik gövde
+  const g = ctx.createLinearGradient(x - hw, y - hh, x + hw, y + hh);
+  g.addColorStop(0, '#565656'); g.addColorStop(0.5, '#484848'); g.addColorStop(1, '#3a3a3a');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.roundRect(x - hw, y - hh, hw * 2, hh * 2, radius); ctx.fill();
+  ctx.strokeStyle = '#282828'; ctx.lineWidth = 1.8; ctx.stroke();
+
+  // Üst parlama
+  ctx.fillStyle = 'rgba(255,255,255,0.11)';
+  ctx.beginPath(); ctx.roundRect(x - hw + 4, y - hh + 2, (hw - 4) * 2, 10, [radius, radius, 0, 0]); ctx.fill();
+}
+
 /** Restoran zemini — PlateUp tarzı koyu mutfak + sıcak ahşap salon */
-export function drawFloor(ctx: CanvasRenderingContext2D, unlockedDishes: string[] = []) {
+export function drawFloor(ctx: CanvasRenderingContext2D, unlockedDishes: string[] = [], ingredientPositions?: Record<string, { x: number; y: number }>) {
 
   // ══════════════════════════════════════════════════════════════════
   // SALON — sıcak açık ahşap parke (PlateUp dining room tonu)
@@ -144,24 +168,10 @@ export function drawFloor(ctx: CanvasRenderingContext2D, unlockedDishes: string[
       return;
     }
 
-    const { x, y } = ing.pos;
+    const pos = ingredientPositions?.[ing.key] ?? ing.pos;
+    const { x, y } = pos;
 
-    // Tezgah gölgesi
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.beginPath(); ctx.roundRect(x - 37, y - 27, 74, 54, 10); ctx.fill();
-
-    // Tezgah gövdesi (metalik koyu ton)
-    const rg = ctx.createLinearGradient(x - 36, y - 26, x + 36, y + 26);
-    rg.addColorStop(0, '#5a5a5a');
-    rg.addColorStop(0.5, '#484848');
-    rg.addColorStop(1, '#3a3a3a');
-    ctx.fillStyle = rg;
-    ctx.beginPath(); ctx.roundRect(x - 36, y - 26, 72, 52, 10); ctx.fill();
-    ctx.strokeStyle = '#282828'; ctx.lineWidth = 2; ctx.stroke();
-
-    // Üst metal parlama
-    ctx.fillStyle = 'rgba(255,255,255,0.12)';
-    ctx.beginPath(); ctx.roundRect(x - 32, y - 24, 64, 10, [8, 8, 0, 0]); ctx.fill();
+    drawWorkstationBase(ctx, x, y, 36, 26, 10, 0.35);
 
     // Alt gölge çizgisi
     ctx.fillStyle = '#222';
@@ -173,14 +183,7 @@ export function drawFloor(ctx: CanvasRenderingContext2D, unlockedDishes: string[
   // ══════════════════════════════════════════════════════════════════
   const sx = SINK_STATION.x, sy = SINK_STATION.y;
 
-  ctx.fillStyle = 'rgba(0,0,0,0.30)';
-  ctx.beginPath(); ctx.roundRect(sx - 45, sy - 33, 90, 66, 12); ctx.fill();
-
-  const stg = ctx.createLinearGradient(sx - 44, sy - 32, sx + 44, sy + 32);
-  stg.addColorStop(0, '#525252'); stg.addColorStop(1, '#3c3c3c');
-  ctx.fillStyle = stg;
-  ctx.beginPath(); ctx.roundRect(sx - 44, sy - 32, 88, 64, 12); ctx.fill();
-  ctx.strokeStyle = '#242424'; ctx.lineWidth = 2; ctx.stroke();
+  drawWorkstationBase(ctx, sx, sy, 44, 32, 12, 0.30);
 
   const si = ctx.createRadialGradient(sx, sy, 2, sx, sy, 26);
   si.addColorStop(0, '#6aaccc'); si.addColorStop(0.6, '#4888aa'); si.addColorStop(1, '#2c6888');
@@ -255,23 +258,7 @@ export function drawFloor(ctx: CanvasRenderingContext2D, unlockedDishes: string[
   // ══════════════════════════════════════════════════════════════════
   if (PLATE_STACK_POS) {
     const { x, y } = PLATE_STACK_POS;
-    
-    // Masa Gövdesi Gölge
-    ctx.fillStyle = 'rgba(0,0,0,0.28)';
-    ctx.beginPath(); ctx.roundRect(x - 44, y - 30, 88, 60, 10); ctx.fill();
-
-    // Metalik Masa
-    const pg = ctx.createLinearGradient(x - 42, y - 28, x - 42, y + 28);
-    pg.addColorStop(0, '#565656'); pg.addColorStop(1, '#3e3e3e');
-    ctx.fillStyle = pg;
-    ctx.beginPath(); ctx.roundRect(x - 42, y - 28, 84, 56, 10); ctx.fill();
-    ctx.strokeStyle = '#282828'; ctx.lineWidth = 1.8; ctx.stroke();
-
-    // Parlama
-    ctx.fillStyle = 'rgba(255,255,255,0.10)';
-    ctx.beginPath(); ctx.roundRect(x - 38, y - 26, 76, 10, [8, 8, 0, 0]); ctx.fill();
-    
-    // Zemin Etiketi
+    drawWorkstationBase(ctx, x, y, 42, 28, 10, 0.28);
     ctx.fillStyle = '#171717';
     ctx.font = 'bold 9px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText('TABAKLAR', x, y + 20);
@@ -283,15 +270,10 @@ export function drawFloor(ctx: CanvasRenderingContext2D, unlockedDishes: string[
   if (COUNTER_POSITIONS && COUNTER_POSITIONS.length > 0) {
     const cp0 = COUNTER_POSITIONS[0], cpN = COUNTER_POSITIONS[COUNTER_POSITIONS.length - 1];
     const cw = cpN.x - cp0.x + 90;
+    const cx = cp0.x - 44 + cw / 2;
+    const cy = cp0.y;
 
-    ctx.fillStyle = 'rgba(0,0,0,0.28)';
-    ctx.beginPath(); ctx.roundRect(cp0.x - 46, cp0.y - 28, cw + 4, 56, 10); ctx.fill();
-
-    const cg = ctx.createLinearGradient(cp0.x - 44, cp0.y - 26, cp0.x - 44, cp0.y + 26);
-    cg.addColorStop(0, '#585858'); cg.addColorStop(1, '#404040');
-    ctx.fillStyle = cg;
-    ctx.beginPath(); ctx.roundRect(cp0.x - 44, cp0.y - 26, cw, 52, 10); ctx.fill();
-    ctx.strokeStyle = '#282828'; ctx.lineWidth = 1.8; ctx.stroke();
+    drawWorkstationBase(ctx, cx, cy, cw / 2 + 2, 26, 10, 0.28);
 
     ctx.fillStyle = '#303030';
     ctx.fillRect(cp0.x - 40, cp0.y + 24, cw - 8, 2);

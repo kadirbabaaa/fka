@@ -3,23 +3,14 @@ import { Socket } from "socket.io-client";
 import {
   GameState,
   Player,
-  WaitingGuest,
   GAME_WIDTH,
   GAME_HEIGHT,
-  PLAYER_SPEED,
   DIRTY_TRAY_POS,
   TRAY_STATION,
   TABLE_X_SLOTS,
   TABLE_Y,
-  WALL_Y1,
-  WALL_Y2,
-  isInDoor,
-  ENTRANCE,
-  OUTSIDE_QUEUE_Y,
   INGREDIENTS,
   PLATE_STACK_POS,
-  TABLE_HALF_W,
-  TABLE_HALF_H,
   RECIPE_DEFS,
 } from "../types/game";
 
@@ -31,6 +22,13 @@ import { drawPlayer } from "../renderer/drawPlayer";
 import { drawCookStation } from "../renderer/drawCookStation";
 import { drawHoldingStation } from "../renderer/drawHoldingStation";
 import { drawCounters } from "../renderer/drawCounter";
+import { movePlayer } from "./usePlayerMovement";
+import { setupGameEffects, renderFloatingTexts, renderPunchParticles } from "./useGameEffects";
+import { updateProximityAudio } from "./useProximityAudio";
+import { drawLayoutPreview, LayoutEditorState } from '../renderer/drawLayoutEditor';
+import { drawDirtyTrayBasket } from '../renderer/drawDirtyTrayBasket';
+import { drawWaitList } from '../renderer/drawWaitList';
+import { drawDirtyTable } from '../renderer/drawDirtyTable';
 
 interface UseGameLoopProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
@@ -39,141 +37,42 @@ interface UseGameLoopProps {
   socket: Socket | null;
   gameStateRef: React.MutableRefObject<GameState>;
   localPlayerRef: React.MutableRefObject<{ x: number; y: number }>;
-  keysRef: React.MutableRefObject<{
-    w: boolean;
-    a: boolean;
-    s: boolean;
-    d: boolean;
-  }>;
+  keysRef: React.MutableRefObject<{ w: boolean; a: boolean; s: boolean; d: boolean }>;
   joystickVectorRef: React.MutableRefObject<{ x: number; y: number }>;
   audioElementsRef?: React.MutableRefObject<Record<string, HTMLAudioElement>>;
   globalVolume?: number;
+  editorStateRef?: React.MutableRefObject<LayoutEditorState>;
 }
 
-// ─── Dışarıda bekleyenler (giriş kapısının önünde) ───────────────────────────
-function drawWaitList(ctx: CanvasRenderingContext2D, list: WaitingGuest[]) {
-  if (list.length === 0) return;
-
-  const cx = ENTRANCE.x;
-  const y = OUTSIDE_QUEUE_Y;
-
-  // Arka plan — "Dışarı" pankartı
-  ctx.fillStyle = "rgba(120, 53, 15, 0.85)";
-  ctx.beginPath();
-  ctx.roundRect(cx - 100, y - 18, 200, 20, 6);
-  ctx.fill();
-  ctx.fillStyle = "#fde68a";
-  ctx.font = "bold 11px Arial";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(`👥 Kapıda Bekleyen: ${list.length}`, cx, y - 8);
-
-  // Müşteri figürleri sıralı
-  list.forEach((g, i) => {
-    const gx = cx - (list.length - 1) * 16 + i * 32;
-    const gy = y + 8;
-
-    // Küçük gövde
-    ctx.fillStyle = "#64748b";
-    ctx.beginPath();
-    ctx.arc(gx, gy, 10, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Yüz
-    ctx.fillStyle = "#fbbf24";
-    ctx.beginPath();
-    ctx.arc(gx, gy - 2, 7, 0, Math.PI * 2);
-    ctx.fill();
-
-    // İstek balonu (mini)
-    ctx.fillStyle = "white";
-    ctx.beginPath();
-    ctx.arc(gx + 10, gy - 14, 8, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#000";
-    ctx.font = "9px Arial";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(g.wants || "?", gx + 10, gy - 14);
-  });
-}
-
-function drawDirtyTable(ctx: CanvasRenderingContext2D, seatX: number, seatY: number) {
-  // Masanın merkezi TABLE_Y = 500. Tabak masanın kenarında dursun.
-  const isTopSeat = seatY < TABLE_Y;
-  const plateY = isTopSeat ? TABLE_Y - 20 : TABLE_Y + 20;
-
-  ctx.fillStyle = "rgba(0,0,0,0.12)";
-  ctx.beginPath();
-  ctx.ellipse(seatX + 1, plateY + 3, 18, 7, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = "#f8fafc";
-  ctx.beginPath();
-  ctx.ellipse(seatX, plateY, 18, 8, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "#94a3b8";
-  ctx.lineWidth = 1.2;
-  ctx.beginPath();
-  ctx.ellipse(seatX, plateY, 18, 8, 0, 0, Math.PI * 2);
-  ctx.stroke();
-
-  ctx.fillStyle = "#92400e";
-  ctx.beginPath();
-  ctx.arc(seatX - 4, plateY - 1, 2.5, 0, Math.PI * 2);
-  ctx.arc(seatX + 3, plateY + 1, 2, 0, Math.PI * 2);
-  ctx.arc(seatX + 8, plateY - 2, 1.5, 0, Math.PI * 2);
-  ctx.fill();
-}
-
-// ─── drawFloor cache — sadece 1 kez çiz, sonra bitmapten kopyala ────────────
-// Cache version - değiştirince cache yenilenir
-const FLOOR_CACHE_VERSION = 9; // Duvar tuğla doku + kapı çerçeve eklendi
+const FLOOR_CACHE_VERSION = 9;
 let floorCache: OffscreenCanvas | HTMLCanvasElement | null = null;
 let floorCacheVersion = 0;
 let cachedUnlockedDishes = "";
 
-function drawFloorCached(ctx: CanvasRenderingContext2D, unlockedDishes: string[] = []) {
+function drawFloorCached(ctx: CanvasRenderingContext2D, unlockedDishes: string[] = [], forceRedraw = false, ingredientPositions?: Record<string, { x: number; y: number }>) {
   const currentDishesStr = [...unlockedDishes].sort().join(',');
-
-  // Cache versiyonu değiştiyse veya açılan yemekler değiştiyse yeniden oluştur
-  if (floorCacheVersion !== FLOOR_CACHE_VERSION || cachedUnlockedDishes !== currentDishesStr) {
-    floorCache = null;
-    floorCacheVersion = FLOOR_CACHE_VERSION;
-    cachedUnlockedDishes = currentDishesStr;
+  const ingPosStr = ingredientPositions
+    ? Object.entries(ingredientPositions).map(([k, v]) => `${k}:${v.x},${v.y}`).join(';')
+    : '';
+  if (forceRedraw || floorCacheVersion !== FLOOR_CACHE_VERSION || cachedUnlockedDishes !== currentDishesStr + ingPosStr) {
+    floorCache = null; floorCacheVersion = FLOOR_CACHE_VERSION; cachedUnlockedDishes = currentDishesStr + ingPosStr;
   }
-
   if (!floorCache) {
-    if (typeof OffscreenCanvas !== "undefined") {
-      floorCache = new OffscreenCanvas(GAME_WIDTH, GAME_HEIGHT);
-    } else {
-      const canvas = document.createElement("canvas");
-      canvas.width = GAME_WIDTH;
-      canvas.height = GAME_HEIGHT;
-      floorCache = canvas;
-    }
+    floorCache = typeof OffscreenCanvas !== "undefined"
+      ? new OffscreenCanvas(GAME_WIDTH, GAME_HEIGHT)
+      : Object.assign(document.createElement("canvas"), { width: GAME_WIDTH, height: GAME_HEIGHT });
     const offCtx = floorCache.getContext("2d");
     if (offCtx) {
-      drawFloor(offCtx as unknown as CanvasRenderingContext2D, unlockedDishes);
-      TABLE_X_SLOTS.forEach((tx) =>
-        drawTable(offCtx as unknown as CanvasRenderingContext2D, tx, TABLE_Y),
-      );
+      drawFloor(offCtx as unknown as CanvasRenderingContext2D, unlockedDishes, ingredientPositions);
+      TABLE_X_SLOTS.forEach((tx) => drawTable(offCtx as unknown as CanvasRenderingContext2D, tx, TABLE_Y));
     }
   }
   ctx.drawImage(floorCache, 0, 0);
 }
 
 export function useGameLoop({
-  canvasRef,
-  isJoined,
-  myId,
-  socket,
-  gameStateRef,
-  localPlayerRef,
-  keysRef,
-  joystickVectorRef,
-  audioElementsRef,
-  globalVolume = 1.0,
+  canvasRef, isJoined, myId, socket, gameStateRef,
+  localPlayerRef, keysRef, joystickVectorRef, audioElementsRef, globalVolume = 1.0, editorStateRef,
 }: UseGameLoopProps) {
   useEffect(() => {
     if (!isJoined) return;
@@ -182,55 +81,11 @@ export function useGameLoop({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Floor cache invalidate on mount
     floorCache = null;
-
     let frameId = 0;
-    let lastEmit = 0;
     let lastFrameTime = 0;
-
-    // Yüzen yazılar (bahşiş toplama efektleri vb.)
-    const floatingTexts: { x: number; y: number; text: string; life: number; startY: number }[] = [];
-    
-    // Vuruş efektleri (yıldızlar)
-    interface PunchParticle {
-      x: number;
-      y: number;
-      vx: number;
-      vy: number;
-      life: number;
-      maxLife: number;
-    }
-    const punchParticles: PunchParticle[] = [];
-
-    // Socket tipCollector event dinleyicisi
-    const handleTipCollected = (data: { x: number; y: number; amount: number }) => {
-      floatingTexts.push({
-        x: data.x,
-        y: data.y - 20,
-        text: `+$${data.amount}`,
-        life: 60, // 60 frame boyunca yaşasın (yaklaşık 1 sn)
-        startY: data.y - 20
-      });
-    };
-    if (socket) socket.on("tipCollected", handleTipCollected);
-    
-    // Vuruş efekti event dinleyicisi
-    const handlePunchEffect = (data: { x: number; y: number; count: number }) => {
-      for (let i = 0; i < 8; i++) {
-        const angle = (i / 8) * Math.PI * 2;
-        const speed = 3 + Math.random() * 2;
-        punchParticles.push({
-          x: data.x,
-          y: data.y,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed,
-          life: 30,
-          maxLife: 30
-        });
-      }
-    };
-    if (socket) socket.on("punchEffect", handlePunchEffect);
+    const lastEmitRef = { current: 0 };
+    const { floatingTexts, punchParticles, cleanup: cleanupEffects } = setupGameEffects(socket);
 
     const render = (time: number) => {
       const state = gameStateRef.current;
@@ -238,342 +93,106 @@ export function useGameLoop({
       lastFrameTime = time;
       const frameScale = deltaMs / (1000 / 60);
 
-      // ── 1. Hareket (WASD + Joystick) + client-side duvar çarpışması ─────
-      let dx = 0;
-      let dy = 0;
+      movePlayer(time, lastEmitRef, frameScale, { socket, gameStateRef, localPlayerRef, keysRef, joystickVectorRef });
 
-      // Klavye (WASD + Ok Tuşları)
-      if (keysRef.current.w || (keysRef.current as any).ArrowUp) dy -= 1;
-      if (keysRef.current.s || (keysRef.current as any).ArrowDown) dy += 1;
-      if (keysRef.current.a || (keysRef.current as any).ArrowLeft) dx -= 1;
-      if (keysRef.current.d || (keysRef.current as any).ArrowRight) dx += 1;
-
-      // Joystick (eğer klavye yoksa joystick'e bak)
-      if (dx === 0 && dy === 0) {
-        dx = joystickVectorRef.current.x;
-        dy = joystickVectorRef.current.y;
-      }
-
-      // Hız Normalizasyonu (Çapraz giderken hızlanmayı engelle)
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist > 0.1) {
-        // Dist > 1 ise (örneğin W+D basılınca sqrt(2) olur), 1'e sabitle
-        // Joystick zaten max 1 veriyor ama güvenliğe alalım.
-        const speedMultiplier = dist > 1 ? 1 / dist : 1;
-        dx = dx * speedMultiplier * PLAYER_SPEED * frameScale;
-        dy = dy * speedMultiplier * PLAYER_SPEED * frameScale;
-      }
-
-      if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
-        const lp = localPlayerRef.current;
-        let nx = Math.max(20, Math.min(GAME_WIDTH - 20, lp.x + dx));
-        let ny = Math.max(20, Math.min(GAME_HEIGHT - 20, lp.y + dy));
-
-        // Client-side yatay duvar çarpışması
-        const wasAbove = lp.y < WALL_Y1;
-        const wasBelow = lp.y > WALL_Y2;
-        const goingThrough =
-          (wasAbove && ny >= WALL_Y1) || (wasBelow && ny <= WALL_Y2);
-        if (goingThrough && !isInDoor(nx)) {
-          ny = wasAbove ? WALL_Y1 - 1 : WALL_Y2 + 1;
-        }
-
-        // Masa çarpışması (Server ile aynı mantık - AABB)
-        const PR = 16;
-        for (const tx of TABLE_X_SLOTS) {
-          const left = tx - TABLE_HALF_W, right = tx + TABLE_HALF_W;
-          const top = TABLE_Y - TABLE_HALF_H, bottom = TABLE_Y + TABLE_HALF_H;
-          if (nx + PR > left && nx - PR < right && ny + PR > top && ny - PR < bottom) {
-            const overlapL = (nx + PR) - left;
-            const overlapR = right - (nx - PR);
-            const overlapT = (ny + PR) - top;
-            const overlapB = bottom - (ny - PR);
-            const minOverlap = Math.min(overlapL, overlapR, overlapT, overlapB);
-            if (minOverlap === overlapL) nx = left - PR;
-            else if (minOverlap === overlapR) nx = right + PR;
-            else if (minOverlap === overlapT) ny = top - PR;
-            else ny = bottom + PR;
+      const isEditing = !!(editorStateRef?.current?.isMoving);
+      // stationLayout'tan ingredient pozisyonlarını çıkar
+      const ingPositions: Record<string, { x: number; y: number }> = {};
+      if (state.stationLayout) {
+        for (const [id, pos] of Object.entries(state.stationLayout) as [string, { x: number; y: number }][]) {
+          if (id.startsWith('ingredient_')) {
+            ingPositions[id.replace('ingredient_', '')] = { x: pos.x, y: pos.y };
           }
         }
-
-        lp.x = nx;
-        lp.y = ny;
-
-        if (time - lastEmit > 50 && socket) {
-          socket.emit("move", { x: nx, y: ny });
-          lastEmit = time;
-        }
       }
+      drawFloorCached(ctx, state.unlockedDishes, isEditing, ingPositions);
 
-      // ── 2. Çizim ────────────────────────────────────────────────────────
-      // Zemin (cached — FPS boost)
-      drawFloorCached(ctx, state.unlockedDishes);
-
-      // Masalar
-
-      // Malzeme istasyonları (server ile uyumlu: hamur / et / sebze)
       const stock = state.stock ?? { "🍞": 0, "🥩": 0, "🥬": 0 };
-
-      // Ayrıca RECIPE_DEFS'i almak için (zaten shared/types.ts'den import etmeliyiz if not)
-      // Yukarıda import edildiğini varsayıyoruz, yoksa import bölgesini de güncelleyeceğiz.
+      const movingId = editorStateRef?.current?.movingStationId;
       INGREDIENTS.forEach((ing) => {
-        // Bu malzemenin hangi yemeği ürettiğine bak
         const recipe = RECIPE_DEFS[ing.key as keyof typeof RECIPE_DEFS];
-        // Eğer yemeğin çıktısı (örn: Pizza) açılan yemekler arasında YOKSA, hiç çizme!
-        if (recipe && !state.unlockedDishes.includes(recipe.output)) {
-            return;
-        }
-
-        drawStation(
-          ctx,
-          ing.pos.x,
-          ing.pos.y,
-          ing.color,
-          ing.key,
-          ing.label,
-          stock[ing.key] ?? 0,
-        );
+        if (recipe && !state.unlockedDishes.includes(recipe.output)) return;
+        if (movingId === `ingredient_${ing.key}`) return; // taşınıyor, preview çizer
+        // stationLayout'tan dinamik koordinat al, yoksa sabit koordinata düş
+        const dynPos = state.stationLayout?.[`ingredient_${ing.key}`];
+        const px = dynPos?.x ?? ing.pos.x;
+        const py = dynPos?.y ?? ing.pos.y;
+        drawStation(ctx, px, py, ing.color, ing.key, ing.label, stock[ing.key] ?? 0);
       });
 
-      // Tepsi İstasyonu
-      drawStation(ctx, TRAY_STATION.x, TRAY_STATION.y, "#8b5a2b", "🍽️", "Tepsi");
+      // Tepsi
+      const trayPos = state.stationLayout?.['tray'] ?? TRAY_STATION;
+      if (movingId !== 'tray') drawStation(ctx, trayPos.x, trayPos.y, "#8b5a2b", "🍽️", "Tepsi");
 
-      // Kirli Sepeti (Tabak yığını)
-      const tcx = DIRTY_TRAY_POS.x;
-      const tcy = DIRTY_TRAY_POS.y;
+      // Kirli tepsi sepeti
+      const dirtyTrayLayout = state.stationLayout?.['dirty_tray'] ?? DIRTY_TRAY_POS;
+      if (movingId !== 'dirty_tray') {
+        drawDirtyTrayBasket(ctx, state.dirtyTrayCount || 0, dirtyTrayLayout);
+      } // end dirty_tray guard
 
-      // Tepsi arka planı
-      ctx.fillStyle = "#475569";
-      ctx.beginPath();
-      ctx.roundRect(tcx - 22, tcy - 16, 44, 32, 4);
-      ctx.fill();
-      ctx.strokeStyle = "#334155";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // İçindeki tabaklar (max 5-6 tane üst üste görünsün ki çok taşıp çirkin durmasın)
-      const displayCount = Math.min(6, state.dirtyTrayCount || 0);
-      for (let i = 0; i < displayCount; i++) {
-        const py = tcy + 4 - i * 4;
-        ctx.fillStyle = "rgba(0,0,0,0.12)";
-        ctx.beginPath();
-        ctx.ellipse(tcx + 1, py + 3, 18, 7, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = "#f8fafc";
-        ctx.beginPath();
-        ctx.ellipse(tcx, py, 18, 8, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = "#94a3b8";
-        ctx.lineWidth = 1.2;
-        ctx.stroke();
-
-        ctx.fillStyle = "#92400e";
-        ctx.beginPath();
-        ctx.arc(tcx - 4, py - 1, 2.5, 0, Math.PI * 2);
-        ctx.arc(tcx + 3, py + 1, 2, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      // Üstünde kaç tane olduğunu yazan sayı
-      if ((state.dirtyTrayCount || 0) > 0) {
-        ctx.fillStyle = "white";
-        ctx.font = "bold 14px Arial";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(String(state.dirtyTrayCount), tcx, tcy + 22);
-      } else {
-        ctx.fillStyle = "#94a3b8";
-        ctx.font = "10px Arial";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText("SEPET", tcx, tcy);
-      }
-
-      // Bekletme İstasyonları (Prep Counters / Tabaklar)
       const hs = state.holdingStations;
       if (hs) {
-      // Tabaklar (PLATE STACK)
-      if (state.plateStack && PLATE_STACK_POS) {
-        const sx = PLATE_STACK_POS.x;
-        const sy = PLATE_STACK_POS.y;
-        
-        ctx.fillStyle = "rgba(0,0,0,0.15)";
-        ctx.beginPath();
-        ctx.ellipse(sx, sy + 4, 25, 12, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        for (let i = 0; i < state.plateStack.count; i++) {
-          const oy = sy - i * 4; // her tabak 4 piksel yukarı
-          const rimGrad = ctx.createRadialGradient(sx, oy, 12, sx, oy, 24);
-          rimGrad.addColorStop(0, "#f1f5f9");
-          rimGrad.addColorStop(1, "#e2e8f0");
-          ctx.fillStyle = rimGrad;
-          ctx.beginPath();
-          ctx.ellipse(sx, oy, 23, 11, 0, 0, Math.PI * 2);
-          ctx.fill();
-
-          ctx.fillStyle = "#fefefe";
-          ctx.beginPath();
-          ctx.ellipse(sx, oy + 1, 16, 8, 0, 0, Math.PI * 2);
-          ctx.fill();
-
-          ctx.strokeStyle = "#cbd5e1";
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.ellipse(sx, oy + 1, 16, 8, 0, 0, Math.PI * 2);
-          ctx.stroke();
-
-          ctx.strokeStyle = "#94a3b8";
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.ellipse(sx, oy, 23, 11, 0, 0, Math.PI * 2);
-          ctx.stroke();
+        if (state.plateStack && PLATE_STACK_POS) {
+          const sx = PLATE_STACK_POS.x, sy = PLATE_STACK_POS.y;
+          ctx.fillStyle = "rgba(0,0,0,0.15)";
+          ctx.beginPath(); ctx.ellipse(sx, sy + 4, 25, 12, 0, 0, Math.PI * 2); ctx.fill();
+          for (let i = 0; i < state.plateStack.count; i++) {
+            const oy = sy - i * 4;
+            const rimGrad = ctx.createRadialGradient(sx, oy, 12, sx, oy, 24);
+            rimGrad.addColorStop(0, "#f1f5f9"); rimGrad.addColorStop(1, "#e2e8f0");
+            ctx.fillStyle = rimGrad;
+            ctx.beginPath(); ctx.ellipse(sx, oy, 23, 11, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = "#fefefe";
+            ctx.beginPath(); ctx.ellipse(sx, oy + 1, 16, 8, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = "#cbd5e1"; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.ellipse(sx, oy + 1, 16, 8, 0, 0, Math.PI * 2); ctx.stroke();
+            ctx.strokeStyle = "#94a3b8"; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.ellipse(sx, oy, 23, 11, 0, 0, Math.PI * 2); ctx.stroke();
+          }
+          ctx.fillStyle = "white"; ctx.font = "bold 13px Arial";
+          ctx.textAlign = "center"; ctx.textBaseline = "middle";
+          ctx.shadowColor = "rgba(0,0,0,0.8)"; ctx.shadowBlur = 4;
+          ctx.fillText(`${state.plateStack.count}/${state.plateStack.maxCount}`, sx, sy - state.plateStack.count * 4 - 15);
+          ctx.shadowBlur = 0;
         }
-
-        // Kapasite metni
-        ctx.fillStyle = "white";
-        ctx.font = "bold 13px Arial";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.shadowColor = "rgba(0,0,0,0.8)";
-        ctx.shadowBlur = 4;
-        ctx.fillText(`${state.plateStack.count}/${state.plateStack.maxCount}`, sx, sy - state.plateStack.count * 4 - 15);
-        ctx.shadowBlur = 0;
-      }
-
-        // Servis masaları (duvarda)
         drawCounters(ctx, hs);
       }
 
-      // Pişirme istasyonları
-      // Universal fırınlar
-      const cookStations = state.cookStations;
-      if (cookStations) {
-        for (const station of cookStations) {
-          drawCookStation(ctx, station, time);
-        }
+      if (state.cookStations) {
+        for (const station of state.cookStations) drawCookStation(ctx, station, time);
       }
 
-      // Müşteriler
       state.customers.forEach((c) => drawCustomer(ctx, c));
       (state.dirtyTables ?? []).forEach((t) => drawDirtyTable(ctx, t.seatX, t.seatY));
-
-      // Kapıda bekleyenler
       drawWaitList(ctx, state.waitList ?? []);
+
+      // Layout editor önizlemesi — oyunculardan ÖNCE çizilir (oyuncu üstte kalır)
+      if (editorStateRef?.current?.isMoving && state.stationLayout) {
+        drawLayoutPreview(ctx, editorStateRef.current, state.stationLayout);
+      }
 
       const sp = state.players;
       if (sp) {
         Object.values(sp).forEach((p: Player) => {
           const isMe = p.id === myId;
-          drawPlayer(
-            ctx,
-            isMe ? localPlayerRef.current.x : p.x,
-            isMe ? localPlayerRef.current.y : p.y,
-            p,
-            isMe,
-          );
+          drawPlayer(ctx, isMe ? localPlayerRef.current.x : p.x, isMe ? localPlayerRef.current.y : p.y, p, isMe);
         });
+        if (audioElementsRef?.current) {
+          updateProximityAudio(audioElementsRef, localPlayerRef, sp, myId, globalVolume);
+        }
       }
 
-      // Proximity Audio (Mesafe bazlı ses)
-      if (audioElementsRef && audioElementsRef.current && myId && sp[myId]) {
-        const lp = localPlayerRef.current;
-        Object.entries(audioElementsRef.current).forEach(([socketId, el]) => {
-          const audioEl = el as HTMLAudioElement;
-          const otherPlayer = sp[socketId];
-          if (!otherPlayer) {
-            audioEl.volume = 0;
-            return;
-          }
-          const dist = Math.hypot(lp.x - otherPlayer.x, lp.y - otherPlayer.y);
-          const MAX_HEAR_DIST = 350; // 350 piksel öteyi duyamazsın
-          let vol = 1 - (dist / MAX_HEAR_DIST);
-          if (vol < 0) vol = 0;
-          if (vol > 1) vol = 1;
+      renderFloatingTexts(ctx, floatingTexts);
+      renderPunchParticles(ctx, punchParticles);
 
-          audioEl.volume = vol * globalVolume;
-        });
-      }
-
-      // Yüzen yazılar (floating texts) render
-      for (let i = floatingTexts.length - 1; i >= 0; i--) {
-        const ft = floatingTexts[i];
-
-        ctx.save();
-        ctx.globalAlpha = ft.life / 60; // Giderek soluklaş
-        ctx.translate(ft.x, ft.y);
-
-        // Zıplama/Yukarı kayma animasyonu
-        const progress = 1 - (ft.life / 60);
-        ctx.translate(0, -progress * 30);
-
-        // Yazı stili
-        ctx.fillStyle = "#22c55e"; // emerald-500
-        ctx.font = "bold 20px Arial";
-        ctx.textAlign = "center";
-
-        // Gölge (outline)
-        ctx.strokeStyle = "white";
-        ctx.lineWidth = 3;
-        ctx.strokeText(ft.text, 0, 0);
-        ctx.fillText(ft.text, 0, 0);
-
-        ctx.restore();
-
-        ft.life--;
-        if (ft.life <= 0) floatingTexts.splice(i, 1);
-      }
-
-      // Vuruş efektleri render
-      for (let i = punchParticles.length - 1; i >= 0; i--) {
-        const p = punchParticles[i];
-        
-        ctx.save();
-        ctx.globalAlpha = p.life / p.maxLife;
-        ctx.translate(p.x, p.y);
-        
-        // Yıldız çiz
-        ctx.fillStyle = "#fbbf24"; // amber-400
-        ctx.font = "bold 24px Arial";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText("⭐", 0, 0);
-        
-        ctx.restore();
-        
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vy += 0.2; // Yerçekimi
-        p.life--;
-        
-        if (p.life <= 0) punchParticles.splice(i, 1);
-      }
-
-      // Gece overlay
       if (state.dayPhase === "night") {
         ctx.fillStyle = "rgba(5,10,60,0.45)";
         ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
         ctx.fillStyle = "rgba(255,255,255,0.6)";
-        [
-          [80, 25],
-          [200, 55],
-          [420, 18],
-          [660, 42],
-          [870, 22],
-          [1100, 48],
-          [1220, 70],
-          [320, 35],
-          [740, 60],
-          [950, 30],
-        ].forEach(([sx, sy]) => {
-          ctx.beginPath();
-          ctx.arc(sx, sy, 1.5, 0, Math.PI * 2);
-          ctx.fill();
+        [[80,25],[200,55],[420,18],[660,42],[870,22],[1100,48],[1220,70],[320,35],[740,60],[950,30]].forEach(([sx, sy]) => {
+          ctx.beginPath(); ctx.arc(sx, sy, 1.5, 0, Math.PI * 2); ctx.fill();
         });
-        ctx.font = "32px Arial";
-        ctx.textAlign = "right";
-        ctx.textBaseline = "top";
+        ctx.font = "32px Arial"; ctx.textAlign = "right"; ctx.textBaseline = "top";
         ctx.fillText("🌙", GAME_WIDTH - 16, 14);
       }
 
@@ -581,12 +200,6 @@ export function useGameLoop({
     };
 
     frameId = requestAnimationFrame(render);
-    return () => {
-      cancelAnimationFrame(frameId);
-      if (socket) {
-        socket.off("tipCollected", handleTipCollected);
-        socket.off("punchEffect", handlePunchEffect);
-      }
-    };
+    return () => { cancelAnimationFrame(frameId); cleanupEffects(); };
   }, [isJoined, myId, socket]);
 }

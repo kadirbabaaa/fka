@@ -1,4 +1,5 @@
 import { Customer, TABLE_Y, EAT_TICKS } from '../types/game';
+import { stk, adjustColor, lighten, darken, drawShadowEllipse } from './rendererUtils';
 
 type CRS = {
     lastX: number; lastY: number;
@@ -28,32 +29,14 @@ function bodyProps(shape: 1 | 2 | 3 | 4) {
     }
 }
 
-function stk(ctx: CanvasRenderingContext2D, color = '#1a0a0a', w = 3) {
-    ctx.strokeStyle = color; ctx.lineWidth = w; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
-}
-
 const HAIR_COLORS = ['#2d1b0e','#1a1a1a','#5c3317','#8b4513','#2c2c54','#1a3a1a'];
 function hairColor(id: string): string {
     const hash = id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
     return HAIR_COLORS[hash % HAIR_COLORS.length];
 }
 
-function adj(hex: string, amt: number): string {
-    try {
-        const c = hex.replace('#', '');
-        const full = c.length === 3 ? c.split('').map(x => x + x).join('') : c;
-        const n = parseInt(full, 16);
-        const r = Math.min(255, Math.max(0, (n >> 16) + amt));
-        const g = Math.min(255, Math.max(0, ((n >> 8) & 0xff) + amt));
-        const b = Math.min(255, Math.max(0, (n & 0xff) + amt));
-        return `rgb(${r},${g},${b})`;
-    } catch { return hex; }
-}
-const lighten = (h: string, a: number) => adj(h, a);
-const darken  = (h: string, a: number) => adj(h, -a);
-
 // Dialog balonu çizme yardımcı fonksiyonu
-function drawDialogBubble(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, bgColor: string, borderColor: string, textColor: string) {
+function drawDialogBubble(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, bgColor: string, borderColor: string, textColor: string, yOffset: number = 0) {
     const maxWidth = 180;
     const padding = 10;
     const lineHeight = 15;
@@ -74,7 +57,7 @@ function drawDialogBubble(ctx: CanvasRenderingContext2D, text: string, x: number
     const bubbleW = Math.min(maxWidth, Math.max(...lines.map(l => ctx.measureText(l).width)) + padding * 2);
     const bubbleH = lines.length * lineHeight + padding * 2;
     const dbx = x - bubbleW / 2;
-    const dby = y - 80 - bubbleH;
+    const dby = y - 80 - yOffset - bubbleH;
 
     // Gölge
     ctx.fillStyle = 'rgba(0,0,0,0.15)';
@@ -147,8 +130,7 @@ export function drawCustomer(ctx: CanvasRenderingContext2D, customer: Customer) 
 
     // ── Zemin gölgesi (ayakta) ────────────────────────────────────────────────
     if (!isSeated) {
-        ctx.fillStyle = 'rgba(0,0,0,0.18)';
-        ctx.beginPath(); ctx.ellipse(0, 18, 17, 7, 0, 0, Math.PI * 2); ctx.fill();
+        drawShadowEllipse(ctx, 0, 18, 17, 7, 0.18);
     }
 
     ctx.translate(0, -bobY + eatBob);
@@ -328,10 +310,17 @@ export function drawCustomer(ctx: CanvasRenderingContext2D, customer: Customer) 
     // ── SİPARİŞ BALONU & SABIR ÇUBUĞU ──────────────────────────────────────
     // isLeaving ise sadece dialog balonu göster, sipariş balonu ve sabrı gösterme
     if (customer.isLeaving) {
-        if (currentDialog) {
-            drawDialogBubble(ctx, currentDialog, x, y, '#fef2f2', '#ef4444', '#7f1d1d');
-        }
+        if (currentDialog) drawDialogBubble(ctx, currentDialog, x, y, '#fef2f2', '#ef4444', '#7f1d1d');
         return;
+    }
+
+    // ── DIALOG BALONU ──────────────────────────────────────────────────────────
+    if (currentDialog) {
+        // Eğer müşteri hem sipariş istiyor hem de dayak yememişse, sipariş balonu çıkacaktır.
+        // O zaman dialog balonunu yOffset ile yukarı itelim ki çakışmasın.
+        const showOrderBalloon = !customer.isBeatUp && !!wants;
+        const yOffset = showOrderBalloon ? (isSeated ? 45 : 30) : 0;
+        drawDialogBubble(ctx, currentDialog, x, y, '#fffbeb', '#f59e0b', '#1c1917', yOffset);
     }
 
     if (customer.isBeatUp || !wants) return;
@@ -339,10 +328,10 @@ export function drawCustomer(ctx: CanvasRenderingContext2D, customer: Customer) 
     const bar    = Math.max(0, patience / maxPatience);
     const barClr = bar > 0.5 ? '#22c55e' : bar > 0.25 ? '#f59e0b' : '#ef4444';
 
-    // Balon pozisyonu
+    // Balon pozisyonu (Her zaman kafanın üst köşesinde)
     const bx   = x + (isSeated ? 38 : 36);
-    const by   = y + (isSeated ? (facingBack ? -70 : 18) : -52);
-    const barY = y + (isSeated ? (facingBack ? -78 : 52) : 20);
+    const by   = y + (isSeated ? -70 : -52);
+    const barY = y + (isSeated ? -78 : 20);
 
     // Balon rengi — sabır azaldıkça kırmızıya kayar
     const bubbleBg = bar > 0.5 ? '#ffffff'
@@ -367,8 +356,8 @@ export function drawCustomer(ctx: CanvasRenderingContext2D, customer: Customer) 
     // Ok ucu (balon → karakter)
     const tailX = bx - BW / 2;
     const tipX  = x + 14;
-    const tipY  = isSeated && !facingBack ? y + 6 : y - 6;
-    const tailTop = by + (isSeated && !facingBack ? -BH / 2 + 4 : BH / 2 - 4);
+    const tipY  = y - 6;
+    const tailTop = by + BH / 2 - 4;
 
     ctx.fillStyle = bubbleBg;
     ctx.beginPath();
@@ -399,8 +388,4 @@ export function drawCustomer(ctx: CanvasRenderingContext2D, customer: Customer) 
     ctx.fillStyle = barClr;
     ctx.beginPath(); ctx.roundRect(x - 24, barY, 48 * bar, 7, 3); ctx.fill();
 
-    // ── DIALOG BALONU ──────────────────────────────────────────────────────────
-    if (currentDialog) {
-        drawDialogBubble(ctx, currentDialog, x, y, '#fffbeb', '#f59e0b', '#1c1917');
-    }
 }

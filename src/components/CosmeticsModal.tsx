@@ -1,6 +1,6 @@
 import React from 'react';
 import { CHARACTER_TYPES } from '../../shared/types';
-import { useGameLoop } from '../hooks/useGameLoop';
+import { BaseModal } from './BaseModal';
 
 interface Props {
     onClose: () => void;
@@ -17,25 +17,23 @@ export const CosmeticsModal: React.FC<Props> = ({ onClose, socket, myCharType })
     };
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <div className="w-full max-w-2xl max-h-[90vh] bg-stone-900 border border-stone-700 rounded-3xl shadow-2xl flex flex-col overflow-hidden text-stone-200">
-
-                {/* Header */}
-                <div className="bg-stone-800 p-5 flex justify-between items-center border-b border-stone-700">
-                    <div>
-                        <h2 className="text-2xl font-black text-amber-400">Kostüm Mağazası 👕</h2>
-                        <span className="text-xs text-stone-400 font-bold tracking-widest uppercase mt-1 block">Tüm Kostümler ÜCRETSİZ Giyilebilir</span>
-                    </div>
-                    <button
-                        onClick={onClose}
-                        className="w-10 h-10 bg-stone-700 hover:bg-stone-600 rounded-full flex items-center justify-center text-xl font-bold transition-transform active:scale-95"
-                    >
-                        ✕
-                    </button>
+        <BaseModal onClose={onClose} zIndex="z-[60]">
+            {/* Header */}
+            <div className="bg-stone-800 p-5 flex justify-between items-center border-b border-stone-700">
+                <div>
+                    <h2 className="text-2xl font-black text-amber-400">Kostüm Mağazası 👕</h2>
+                    <span className="text-xs text-stone-400 font-bold tracking-widest uppercase mt-1 block">Tüm Kostümler ÜCRETSİZ Giyilebilir</span>
                 </div>
+                <button
+                    onClick={onClose}
+                    className="w-10 h-10 bg-stone-700 hover:bg-stone-600 rounded-full flex items-center justify-center text-xl font-bold transition-transform active:scale-95"
+                >
+                    ✕
+                </button>
+            </div>
 
-                {/* İçerik Gövdesi */}
-                <div className="p-6 overflow-y-auto no-scrollbar pb-10">
+            {/* İçerik Gövdesi */}
+            <div className="p-6 overflow-y-auto no-scrollbar pb-10">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {CHARACTER_TYPES.map((char) => {
                             const isSelected = char.id === myCharType;
@@ -80,7 +78,6 @@ export const CosmeticsModal: React.FC<Props> = ({ onClose, socket, myCharType })
                         })}
                     </div>
                 </div>
-            </div>
-        </div>
+        </BaseModal>
     );
 };

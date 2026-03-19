@@ -1,4 +1,5 @@
 import { Player, CHARACTER_TYPES, CLEAN_PLATE, DIRTY_PLATE, isTray, getTrayItems } from '../types/game';
+import { stk, adjustColor, drawShadowEllipse } from './rendererUtils';
 
 const playerRenderState = new Map<string, {
     lastX: number; lastY: number;
@@ -6,23 +7,6 @@ const playerRenderState = new Map<string, {
     walkTimer: number;
     isMoving: boolean;
 }>();
-
-function stk(ctx: CanvasRenderingContext2D, color = '#1a0f0f', w = 3) {
-    ctx.strokeStyle = color; ctx.lineWidth = w;
-    ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
-}
-
-function adjustColor(hex: string, amt: number): string {
-    try {
-        const c = hex.replace('#', '');
-        const full = c.length === 3 ? c.split('').map(x => x + x).join('') : c;
-        const n = parseInt(full, 16);
-        const r = Math.min(255, Math.max(0, (n >> 16) + amt));
-        const g = Math.min(255, Math.max(0, ((n >> 8) & 0xff) + amt));
-        const b = Math.min(255, Math.max(0, (n & 0xff) + amt));
-        return `rgb(${r},${g},${b})`;
-    } catch { return hex; }
-}
 
 export function drawPlayer(
     ctx: CanvasRenderingContext2D,
@@ -74,10 +58,7 @@ export function drawPlayer(
 
     // ── Zemin gölgesi — ayakların tam altında, bobY'den bağımsız ─────────────
     const shSc = 1 - bobY / 30;
-    ctx.fillStyle = 'rgba(0,0,0,0.22)';
-    ctx.beginPath();
-    ctx.ellipse(0, 30, 18 * shSc, 6 * shSc, 0, 0, Math.PI * 2);
-    ctx.fill();
+    drawShadowEllipse(ctx, 0, 30, 18 * shSc, 6 * shSc);
 
     // ── Karakter zıplama + eğilme başlıyor ──────────────────────────────────
     ctx.translate(0, -bobY);

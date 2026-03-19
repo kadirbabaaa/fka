@@ -1,4 +1,5 @@
 import React from 'react';
+import { BaseModal } from './BaseModal';
 
 interface SettingsModalProps {
     onClose: () => void;
@@ -12,11 +13,8 @@ interface SettingsModalProps {
 
 export function SettingsModal({ onClose, globalVolume, setGlobalVolume, isMuted, toggleMute, startVoiceChat, isVoiceActive }: SettingsModalProps) {
     return (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onClose}>
-            <div
-                className="bg-[#2A2D34] rounded-2xl p-6 w-full max-w-sm border border-white/10 shadow-2xl space-y-6"
-                onClick={e => e.stopPropagation()}
-            >
+        <BaseModal onClose={onClose} maxWidth="max-w-sm">
+            <div className="p-6 space-y-6">
                 <div className="flex justify-between items-center">
                     <h2 className="text-2xl font-bold text-white">⚙️ Ayarlar</h2>
                     <button onClick={onClose} className="text-white/50 hover:text-white text-2xl">×</button>
@@ -76,6 +74,6 @@ export function SettingsModal({ onClose, globalVolume, setGlobalVolume, isMuted,
                     Kapat
                 </button>
             </div>
-        </div>
+        </BaseModal>
     );
 }

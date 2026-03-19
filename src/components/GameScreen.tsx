@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Socket } from 'socket.io-client';
-import { GameState, GAME_WIDTH, GAME_HEIGHT, DAY_TICKS, NIGHT_TICKS, Upgrades } from '../types/game';
+import { GameState, GAME_WIDTH, GAME_HEIGHT, NIGHT_TICKS, DAY_TICKS } from '../types/game';
 import { Joystick } from './Joystick';
 import { UpgradeShop } from './UpgradeShop';
 import { SettingsPanel } from './SettingsPanel';
@@ -11,6 +11,9 @@ import { MARKET_NAME } from '../constants';
 import { useGameLoop } from '../hooks/useGameLoop';
 import { Settings } from '../hooks/useSettings';
 import { useVoiceChat } from '../hooks/useVoiceChat';
+import { useGameState } from '../hooks/useGameState';
+import { useDevMode } from '../hooks/useDevMode';
+import { useLayoutEditor } from '../hooks/useLayoutEditor';
 
 const MUSIC_URL = 'https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@main/Light%20Hearted%20-%20Jeremy%20Blake.mp3';
 
@@ -45,11 +48,13 @@ interface Props {
     updateSettings: (patch: Partial<Settings>) => void;
     roomId: string;
     onLeaveGame?: () => void;
+    interactOverrideRef?: React.MutableRefObject<(() => void) | null>;
 }
 
 export const GameScreen: React.FC<Props> = ({
     canvasRef, isJoined, myId, socket,
-    gameStateRef, localPlayerRef, keysRef, audioCtxRef, settings, updateSettings, roomId, onLeaveGame
+    gameStateRef, localPlayerRef, keysRef, audioCtxRef, settings, updateSettings, roomId, onLeaveGame,
+    interactOverrideRef
 }) => {
     const joystickVectorRef = useRef({ x: 0, y: 0 });
     const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -57,50 +62,47 @@ export const GameScreen: React.FC<Props> = ({
 
     const [musicOn, setMusicOn] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
-    const [score, setScore] = useState(0);
-    const [dayPhase, setDayPhase] = useState<'prep' | 'day' | 'night'>('prep');
-    const [dayTimer, setDayTimer] = useState(DAY_TICKS);
-    const [upgrades, setUpgrades] = useState<Upgrades>({ patience: 0, earnings: 0, stockMax: 0 });
-    const [day, setDay] = useState(1);
-    const [ovenCount, setOvenCount] = useState(1);
-    const [queueLen, setQueueLen] = useState(0);
-    const [lives, setLives] = useState(3);
-    const [isGameOver, setIsGameOver] = useState(false);
-    const [menuChoices, setMenuChoices] = useState<string[] | null>(null);
-    const [unlockedDishes, setUnlockedDishes] = useState<string[]>(['🥗', '🍔']);
-
-    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-
+    const [showCosmetics, setShowCosmetics] = useState(false);
     const [voiceActive, setVoiceActive] = useState(false);
     const [showVoiceSettings, setShowVoiceSettings] = useState(false);
     const [globalVoiceVol, setGlobalVoiceVol] = useState(1.0);
-
-    const [showCosmetics, setShowCosmetics] = useState(false);
+    const [devClickCount, setDevClickCount] = useState(0);
     const audioElementsRef = useRef<Record<string, HTMLAudioElement>>({});
+
+    const { score, dayPhase, dayTimer, upgrades, day, ovenCount, queueLen, lives, isGameOver, menuChoices, unlockedDishes } = useGameState(gameStateRef);
+    const { isDevMode, activateDevMode } = useDevMode();
+
+    const { editorState, editorStateRef, handleInteract, handleCancel } = useLayoutEditor({
+        socket,
+        gameStateRef,
+        localPlayerRef,
+        dayPhase,
+    });
+
+    // E/Boşluk tuşunu prep fazında layout editor'a yönlendir
+    useEffect(() => {
+        if (!interactOverrideRef) return;
+        interactOverrideRef.current = dayPhase === 'prep'
+            ? handleInteract
+            : () => { socket?.emit('interact'); };
+    }, [dayPhase, handleInteract, socket, interactOverrideRef]);
+
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+    // Escape → taşıma modunu iptal et
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && editorStateRef.current.isMoving) handleCancel();
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [handleCancel, editorStateRef]);
 
     const { isMuted, toggleMute, audioStreams } = useVoiceChat({
         isJoined: voiceActive && isJoined,
         myId,
         socket
     });
-
-    const [isDevMode, setIsDevMode] = useState(false);
-    const [devClickCount, setDevClickCount] = useState(0);
-    const keySequenceRef = useRef<string>('');
-
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            keySequenceRef.current += e.key;
-            if (keySequenceRef.current.length > 10) {
-                keySequenceRef.current = keySequenceRef.current.slice(-10);
-            }
-            if (keySequenceRef.current.toLowerCase().includes('admin')) {
-                setIsDevMode(true);
-            }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
 
     useEffect(() => {
         Object.entries(audioStreams).forEach(([id, s]) => {
@@ -127,27 +129,8 @@ export const GameScreen: React.FC<Props> = ({
 
     useGameLoop({
         canvasRef, isJoined, myId, socket, gameStateRef, localPlayerRef, keysRef, joystickVectorRef,
-        audioElementsRef, globalVolume: globalVoiceVol
+        audioElementsRef, globalVolume: globalVoiceVol, editorStateRef
     });
-
-    // State poll
-    useEffect(() => {
-        const id = setInterval(() => {
-            const s = gameStateRef.current;
-            setScore(s.score);
-            setDayPhase(s.dayPhase);
-            setDayTimer(s.dayTimer);
-            setUpgrades({ ...s.upgrades });
-            setDay(s.day);
-            setQueueLen(s.waitList?.length ?? 0);
-            setOvenCount(s.cookStations?.length ?? 1);
-            setLives(s.lives ?? 3);
-            setIsGameOver(s.isGameOver ?? false);
-            setMenuChoices(s.menuChoices ?? null);
-            setUnlockedDishes(s.unlockedDishes ?? ['🥗', '🍔']);
-        }, 200);
-        return () => clearInterval(id);
-    }, []);
 
     // Müzik
     useEffect(() => {
@@ -194,10 +177,9 @@ export const GameScreen: React.FC<Props> = ({
                         onClick={() => {
                             setDevClickCount(prev => {
                                 const next = prev + 1;
-                                if (next >= 4) setIsDevMode(true);
+                                if (next >= 4) activateDevMode();
                                 return next;
                             });
-                            // Reset counter after 2 seconds
                             setTimeout(() => setDevClickCount(0), 2000);
                         }}
                     >
@@ -322,7 +304,11 @@ export const GameScreen: React.FC<Props> = ({
                     <button
                         onPointerDown={(e) => {
                             e.preventDefault();
-                            emit('interact');
+                            if (dayPhase === 'prep') {
+                                handleInteract();
+                            } else {
+                                emit('interact');
+                            }
                         }}
                         style={{ width: bs, height: bs, touchAction: 'none' }}
                         className="bg-blue-500 active:bg-blue-700 text-white rounded-full shadow-xl font-black text-sm border-4 border-blue-300 flex items-center justify-center active:scale-95"
@@ -337,17 +323,34 @@ export const GameScreen: React.FC<Props> = ({
                 </div>
 
                 {/* ── Hazırlık: Küçük yüzen buton (ekranı KAPLAMAZ) ── */}
-                {dayPhase === 'prep' && (
+                {dayPhase === 'prep' && !editorState.isMoving && (
                     <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 bg-stone-900/90 backdrop-blur-sm px-4 py-2 rounded-2xl border border-purple-700/60 shadow-xl">
                         <div className="text-center">
                             <span className="text-white font-bold text-sm">🔧 Gün {day} — Hazırlık</span>
-                            <p className="text-stone-400 text-[10px] leading-none mt-0.5">Malzemeleri hazırla!</p>
+                            <p className="text-stone-400 text-[10px] leading-none mt-0.5">
+                                {isTouchDevice ? 'AL/VER: İstasyon taşı' : 'E: İstasyon taşı'}
+                            </p>
                         </div>
                         <button
                             onClick={() => emit('openShop')}
                             className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white rounded-xl font-black text-sm border border-green-300 transition-all active:scale-95 shadow-lg animate-pulse whitespace-nowrap"
                         >
                             ☀️ DÜKKANI AÇ
+                        </button>
+                    </div>
+                )}
+
+                {/* ── Taşıma Modu: İptal butonu ── */}
+                {dayPhase === 'prep' && editorState.isMoving && (
+                    <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 bg-stone-900/90 backdrop-blur-sm px-4 py-2 rounded-2xl border border-yellow-600/60 shadow-xl">
+                        <span className="text-yellow-300 font-bold text-sm">
+                            {isTouchDevice ? '📦 Yeni konuma git → AL/VER' : '📦 Yeni konuma git → E | İptal: Esc'}
+                        </span>
+                        <button
+                            onClick={handleCancel}
+                            className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-black text-sm border border-red-400 transition-all active:scale-95"
+                        >
+                            ✕ İptal
                         </button>
                     </div>
                 )}
@@ -443,7 +446,10 @@ export const GameScreen: React.FC<Props> = ({
                     <span>Etkileşim: <kbd className="bg-stone-800 text-stone-300 px-1 rounded">E</kbd> / <kbd className="bg-stone-800 text-stone-300 px-1 rounded">BOŞLUK</kbd></span>
                     <span>·</span>
                     <span className={dayPhase === 'night' ? 'text-indigo-400 font-bold' : dayPhase === 'prep' ? 'text-purple-400 font-bold' : ''}>
-                        {dayPhase === 'prep' ? '🔧 Hazırlık — Dükkanı aç!' : dayPhase === 'night' ? '🌙 Upgrade al!' : '☀️ Müşterilere servis yap'}
+                        {dayPhase === 'prep'
+                            ? (editorState.isMoving ? '📦 Yeni konuma git → E | İptal: Esc' : '🔧 Hazırlık — E: İstasyon taşı | Dükkanı aç!')
+                            : dayPhase === 'night' ? '🌙 Upgrade al!'
+                            : '☀️ Müşterilere servis yap'}
                     </span>
                 </div>
             )}

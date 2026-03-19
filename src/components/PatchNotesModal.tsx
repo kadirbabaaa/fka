@@ -1,4 +1,5 @@
 import React from 'react';
+import { BaseModal } from './BaseModal';
 
 interface Props {
     onClose: () => void;
@@ -6,10 +7,9 @@ interface Props {
 
 export const PatchNotesModal: React.FC<Props> = ({ onClose }) => {
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
-            <div className="w-full max-w-2xl max-h-[85vh] bg-stone-900 border border-stone-700 rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden text-stone-200">
-                {/* Header */}
-                <div className="bg-stone-800/50 p-6 flex justify-between items-center border-b border-stone-700/50">
+        <BaseModal onClose={onClose} zIndex="z-[100]" maxWidth="max-w-2xl">
+            {/* Header */}
+            <div className="bg-stone-800/50 p-6 flex justify-between items-center border-b border-stone-700/50">
                     <div>
                         <h2 className="text-3xl font-black text-amber-400 tracking-tight">Yama Notları 📜</h2>
                         <div className="flex items-center gap-2 mt-1">
@@ -127,7 +127,6 @@ export const PatchNotesModal: React.FC<Props> = ({ onClose }) => {
                         Anladım, Devam Et!
                     </button>
                 </div>
-            </div>
-        </div>
+        </BaseModal>
     );
 };

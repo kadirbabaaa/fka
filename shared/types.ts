@@ -153,11 +153,27 @@ export interface GameState {
 
     // ─── Geliştirici Araçları ────────────────────────────────────────────────
     isImmortal?: boolean;           // Ölümsüzlük (Can gitmez)
+
+    // ─── Station Layout Editor ───────────────────────────────────────────────
+    stationLayout: Record<string, StationPosition>;
+    lockedStations: Record<string, string>; // stationId → socketId
 }
 
 // ─── Boyut ───────────────────────────────────────────────────────────────────
 export const GAME_WIDTH = 1280;
 export const GAME_HEIGHT = 720;
+
+// ─── Grid Sabitleri ───────────────────────────────────────────────────────────
+export const GRID_CELL_SIZE = 40;
+export const GRID_COLS = Math.floor(GAME_WIDTH / GRID_CELL_SIZE);   // 32
+export const GRID_ROWS = Math.floor(GAME_HEIGHT / GRID_CELL_SIZE);  // 18
+
+// ─── İstasyon Layout ─────────────────────────────────────────────────────────
+export interface StationPosition {
+  id: string;
+  x: number;
+  y: number;
+}
 
 // ─── Gün / Gece ──────────────────────────────────────────────────────────────
 export const DAY_TICKS = 3000;
@@ -294,5 +310,20 @@ export function mkGameState(): GameState {
     // Başlangıçta sadece Salata + Burger açık (en hızlı yemekler)
     unlockedDishes: ['🥗', '🍔'],
     menuChoices: null,
+    // ─── Station Layout ───────────────────────────────────────────────────
+    stationLayout: {
+      'ingredient_🍞': { id: 'ingredient_🍞', x: 100, y: 65 },
+      'ingredient_🥩': { id: 'ingredient_🥩', x: 190, y: 65 },
+      'ingredient_🥬': { id: 'ingredient_🥬', x: 280, y: 65 },
+      'ingredient_🥘': { id: 'ingredient_🥘', x: 370, y: 65 },
+      'ingredient_🍢': { id: 'ingredient_🍢', x: 460, y: 65 },
+      'oven1':         { id: 'oven1',         x: 200, y: 170 },
+      'tray':          { id: 'tray',          x: 80,  y: 170 },
+      'sink':          { id: 'sink',          x: 1180, y: 90 },
+      'trash':         { id: 'trash',         x: 1200, y: 190 },
+      'dirty_tray':    { id: 'dirty_tray',    x: 1050, y: 90 },
+      // Counter'lar kasıtlı olarak buraya dahil edilmedi — duvara sabit, taşınamaz
+    },
+    lockedStations: {},
   };
 }

@@ -8,6 +8,7 @@ interface UseKeyboardProps {
     audioCtxRef: React.MutableRefObject<AudioContext | null>;
     gameStateRef: React.MutableRefObject<GameState>;
     localPlayerRef: React.MutableRefObject<{ x: number; y: number }>;
+    onInteract?: () => void; // Prep fazında layout editor'a yönlendirmek için
 }
 
 /**
@@ -15,7 +16,7 @@ interface UseKeyboardProps {
  * Rude/Recep müşteri yakınsa ve aktif diyaloğu varsa daha önce punchCustomer emit edilir.
  * keys ref'ini döndürür — game loop bunu her frame okur.
  */
-export function useKeyboard({ isJoinedRef, socket, audioCtxRef, gameStateRef, localPlayerRef }: UseKeyboardProps) {
+export function useKeyboard({ isJoinedRef, socket, audioCtxRef, gameStateRef, localPlayerRef, onInteract }: UseKeyboardProps) {
     const keys = useRef({ w: false, a: false, s: false, d: false });
     const lastPunchTime = useRef(0);
 
@@ -35,13 +36,14 @@ export function useKeyboard({ isJoinedRef, socket, audioCtxRef, gameStateRef, lo
                 case 'd': case 'D': case 'ArrowRight': keys.current.d = true; break;
                 case ' ': case 'e': case 'E': {
                     e.preventDefault();
-
-                    // AudioContext'i burada da sağlama alalım
                     if (audioCtxRef.current?.state === 'suspended') {
                         audioCtxRef.current.resume();
                     }
-
-                    socket?.emit('interact');
+                    if (onInteract) {
+                        onInteract();
+                    } else {
+                        socket?.emit('interact');
+                    }
                     break;
                 }
 

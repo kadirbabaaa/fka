@@ -13,9 +13,19 @@ export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const localPlayerRef = useRef({ x: 400, y: 300 });
   const isJoinedRef = useRef(false);
+  const interactOverrideRef = useRef<(() => void) | null>(null);
 
   const { socket, isConnected, myId, gameStateRef, audioCtxRef } = useSocket(localPlayerRef);
-  const keysRef = useKeyboard({ isJoinedRef, socket, audioCtxRef, gameStateRef, localPlayerRef });
+  const keysRef = useKeyboard({
+    isJoinedRef, socket, audioCtxRef, gameStateRef, localPlayerRef,
+    onInteract: () => {
+      if (interactOverrideRef.current) {
+        interactOverrideRef.current();
+      } else {
+        socket?.emit('interact');
+      }
+    },
+  });
   const { settings, update: updateSettings } = useSettings();
 
   const [isJoined, setIsJoined] = useState(false);
@@ -140,6 +150,7 @@ export default function App() {
       updateSettings={updateSettings}
       roomId={roomId}
       onLeaveGame={handleLeaveGame}
+      interactOverrideRef={interactOverrideRef}
     />
   );
 }
