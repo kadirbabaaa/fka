@@ -23,11 +23,12 @@ const DEFAULT_STATE: GameState = {
     marketName: '',
     dayPhase: 'prep',
     dayTimer: 1800,
-    upgrades: { patience: 0, earnings: 0, stockMax: 0 },
+    upgrades: { patience: 0, earnings: 0, plateStackMax: 0 },
     day: 1,
     hasOrderedTonight: false,
     cookStations: [],
     dirtyTrayCount: 0,
+    plateStack: { count: 4, maxCount: 4 },
     lives: 3,
     isGameOver: false,
     revengeQueue: [],
@@ -60,15 +61,12 @@ export function useSocket(
 
     useEffect(() => {
         // Socket.IO konfigürasyonu: mobil uyumluluk için optimize edilmiş
-        const newSocket = io({
+        const newSocket = io(undefined, {
             transports: ['websocket', 'polling'], // Fallback olarak polling
             reconnection: true,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
             reconnectionAttempts: maxReconnectAttempts,
-            // Arka planda bağlantıyı canlı tutmak için
-            pingInterval: 25000, // 25 saniye
-            pingTimeout: 60000, // 60 saniye timeout
             // Mobil tarayıcıların sekmeyi uyutmasını engelleme
             forceNew: false,
         });

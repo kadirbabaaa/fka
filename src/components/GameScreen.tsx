@@ -84,6 +84,24 @@ export const GameScreen: React.FC<Props> = ({
         socket
     });
 
+    const [isDevMode, setIsDevMode] = useState(false);
+    const [devClickCount, setDevClickCount] = useState(0);
+    const keySequenceRef = useRef<string>('');
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            keySequenceRef.current += e.key;
+            if (keySequenceRef.current.length > 10) {
+                keySequenceRef.current = keySequenceRef.current.slice(-10);
+            }
+            if (keySequenceRef.current.toLowerCase().includes('admin')) {
+                setIsDevMode(true);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
     useEffect(() => {
         Object.entries(audioStreams).forEach(([id, s]) => {
             const stream = s as MediaStream;
@@ -171,8 +189,19 @@ export const GameScreen: React.FC<Props> = ({
             {/* ── Üst Bar ──────────────────────────────────────────────────────── */}
             <div className="flex-none h-12 px-2 flex items-center justify-between gap-2 bg-stone-950/90 border-b border-stone-800">
                 <div className="flex items-center gap-2 flex-shrink-0">
-                    <div className="bg-white/95 px-2 py-0.5 rounded-lg border border-white/40">
-                        <h1 className="text-sm font-black text-stone-800 leading-none">
+                    <div 
+                        className="bg-white/95 px-2 py-0.5 rounded-lg border border-white/40 cursor-pointer"
+                        onClick={() => {
+                            setDevClickCount(prev => {
+                                const next = prev + 1;
+                                if (next >= 4) setIsDevMode(true);
+                                return next;
+                            });
+                            // Reset counter after 2 seconds
+                            setTimeout(() => setDevClickCount(0), 2000);
+                        }}
+                    >
+                        <h1 className="text-sm font-black text-stone-800 leading-none select-none">
                             {gameStateRef.current.marketName || MARKET_NAME} 🏪
                         </h1>
                     </div>
@@ -221,6 +250,26 @@ export const GameScreen: React.FC<Props> = ({
 
             {/* ── Canvas ────────────────────────────────────────────────────────── */}
             <div className="flex-1 min-h-0 relative">
+
+                {/* ── Geliştirici Araçları (DEV) ── */}
+                {(dayPhase === 'prep' || dayPhase === 'day') && isDevMode && (
+                    <div className="absolute top-2 left-2 z-20 flex flex-col gap-2">
+                        <div className="text-[9px] font-black text-stone-500 uppercase tracking-widest pl-1">🛠️ Dev Tools</div>
+                        <button
+                            onClick={() => emit('dev:makeNight')}
+                            className="px-3 py-1.5 bg-purple-900/80 hover:bg-purple-800 text-purple-100 text-[11px] font-bold rounded-lg border border-purple-500/50 backdrop-blur-sm shadow-lg text-left transition-colors"
+                        >
+                            ⏭️ Hemen Gece Yap
+                        </button>
+                        <button
+                            onClick={() => emit('dev:toggleImmortality')}
+                            className="px-3 py-1.5 bg-red-900/80 hover:bg-red-800 text-red-100 text-[11px] font-bold rounded-lg border border-red-500/50 backdrop-blur-sm shadow-lg text-left transition-colors"
+                        >
+                            🛡️ Ölümsüzlüğü Aç/Kapat
+                        </button>
+                    </div>
+                )}
+
                 <canvas
                     ref={canvasRef}
                     width={GAME_WIDTH}

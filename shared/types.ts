@@ -9,7 +9,7 @@ export type { Personality };
 
 export type Item = string | null;
 export type StockKey = '🍞' | '🥩' | '🥬' | '🥘' | '🍢';
-export type UpgradeKey = 'patience' | 'earnings' | 'stockMax';
+export type UpgradeKey = 'patience' | 'earnings' | 'plateStackMax';
 export const CLEAN_PLATE = '__clean_plate__';
 export const DIRTY_PLATE = '__dirty_plate__';
 
@@ -65,7 +65,7 @@ export interface WaitingGuest {
 }
 
 export interface Upgrades {
-    patience: number; earnings: number; stockMax: number;
+    patience: number; earnings: number; plateStackMax: number;
 }
 
 export interface CookStation {
@@ -84,6 +84,12 @@ export interface HoldingStation {
     items: string[];
     type: 'plate' | 'counter';
     maxItems: number;
+}
+
+// ─── Tabak Yığını ─────────────────────────────────────────────────────────────
+export interface PlateStack {
+    count: number;   // Şu an mevcut temiz tabak sayısı
+    maxCount: number; // Maks tabak kapasitesi
 }
 
 // ─── Tepsi Fonksiyonları ───────────────────────────────────────────────────
@@ -118,7 +124,7 @@ export interface GameState {
     players: Record<string, Player>;
     customers: Customer[];
     waitList: WaitingGuest[];
-    holdingStations: HoldingStation[];
+    holdingStations: HoldingStation[];  // Servis tezgahları (counter)
     dirtyTables: DirtyTable[];
     score: number;
     stock: Record<StockKey, number>;
@@ -131,6 +137,9 @@ export interface GameState {
     cookStations: CookStation[];
     dirtyTrayCount: number;
 
+    // ─── Tabak Yığını (Tek Nokta) ──────────────────────────────────────────
+    plateStack: PlateStack;
+
     // Game Over & Penalty
     lives: number;
     isGameOver: boolean;
@@ -141,6 +150,9 @@ export interface GameState {
     // ─── Yemek Kilidi Sistemi (Plate Up tarzı) ─────────────────────────────
     unlockedDishes: string[];       // Müşterilerin sipariş edebileceği yemekler
     menuChoices: string[] | null;   // Gece ekranında seçim için sunulan kilitli yemekler
+
+    // ─── Geliştirici Araçları ────────────────────────────────────────────────
+    isImmortal?: boolean;           // Ölümsüzlük (Can gitmez)
 }
 
 // ─── Boyut ───────────────────────────────────────────────────────────────────
@@ -155,13 +167,13 @@ export const BURN_TICKS = 300;
 export const EAT_TICKS = 240;
 export const BURNED_FOOD = '⬛';
 
-// ─── Bekletme İstasyonları ──────────────────────────────────────────────────
-export const HOLDING_STATION_POSITIONS = [
-    { id: 'plate0', x: 560, y: 65, radius: 35, type: 'plate' as const },
-    { id: 'plate1', x: 620, y: 65, radius: 35, type: 'plate' as const },
-    { id: 'plate2', x: 680, y: 65, radius: 35, type: 'plate' as const },
-    { id: 'plate3', x: 740, y: 65, radius: 35, type: 'plate' as const },
-];
+// ─── Tabak Yığını İstasyonu (tek nokta, üst üste tabaklar) ─────────────────
+export const PLATE_STACK_POS = { x: 650, y: 65, radius: 55 };
+export const PLATE_STACK_BASE = 4;   // Başlangıç tabak kapasitesi
+export const PLATE_STACK_PER_UPGRADE = 2; // Her upgrade başına +2 tabak
+
+// Geriye uyum için (counter istasyonları hâlâ kullanılıyor)
+export const HOLDING_STATION_POSITIONS: { id: string; x: number; y: number; radius: number; type: 'plate' }[] = [];
 
 // ─── Servis Masaları ─────────────────────────────────────────────────────────
 export const COUNTER_POSITIONS = [
@@ -245,7 +257,7 @@ export const DISH_ITEMS = ['🍕', '🍔', '🥗', '🍜', '🌯'] as const;
 export const UPGRADE_DEFS: Record<UpgradeKey, { costs: number[]; max: number }> = {
     patience: { costs: [50, 100, 200], max: 3 },
     earnings: { costs: [100, 250], max: 2 },
-    stockMax: { costs: [75, 150, 300], max: 3 },
+    plateStackMax: { costs: [60, 120, 200], max: 3 }, // Her biri +2 tabak = 4→6→8→10
 };
 
 export const OVEN_UPGRADE_COSTS = [80, 120, 180];
@@ -260,9 +272,9 @@ export function mkGameState(): GameState {
     mkCook(`oven${i + 1}`, pos.x, pos.y)
   );
 
+  // Artık sadece counter istasyonları
   const allHoldingStations = [
-    ...HOLDING_STATION_POSITIONS.map(p => ({ id: p.id, items: [CLEAN_PLATE], type: p.type, maxItems: 1 })),
-    ...COUNTER_POSITIONS.map(p => ({ id: p.id, items: [], type: p.type, maxItems: 1 })),
+    ...COUNTER_POSITIONS.map(p => ({ id: p.id, items: [], type: p.type as 'counter', maxItems: 1 })),
   ];
 
   return {
@@ -271,9 +283,11 @@ export function mkGameState(): GameState {
     dirtyTables: [],
     score: 0, stock: { '🍞': 10, '🥩': 10, '🥬': 10, '🥘': 5, '🍢': 5 },
     marketName: "TerraMarket", dayPhase: 'prep', dayTimer: DAY_TICKS,
-    upgrades: { patience: 0, earnings: 0, stockMax: 0 }, day: 1, hasOrderedTonight: false,
+    upgrades: { patience: 0, earnings: 0, plateStackMax: 0 }, day: 1, hasOrderedTonight: false,
     cookStations: initialOvens,
     dirtyTrayCount: 0,
+    // ─── Tabak Yığını ─────────────────────────────────────────────────────
+    plateStack: { count: PLATE_STACK_BASE, maxCount: PLATE_STACK_BASE },
     lives: 3,
     isGameOver: false,
     revengeQueue: [],

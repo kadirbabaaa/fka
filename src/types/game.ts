@@ -16,6 +16,7 @@ export {
   type CookStation,
   type GameState,
   type HoldingStation,
+  type PlateStack,
   // Constants
   GAME_WIDTH,
   GAME_HEIGHT,
@@ -44,6 +45,7 @@ export {
   CLEAN_PLATE,
   DIRTY_PLATE,
   HOLDING_STATION_POSITIONS,
+  PLATE_STACK_POS,
   COUNTER_POSITIONS,
   CHARACTER_TYPES,
   TRAY_PREFIX,

@@ -4,6 +4,7 @@ import { Upgrades, UpgradeKey, UPGRADE_DEFS as SHARED_UPGRADES, OVEN_UPGRADE_COS
 const UPGRADE_UI: { id: UpgradeKey; icon: string; name: string; desc: string }[] = [
     { id: 'patience', icon: '⏳', name: 'Müşteri Sabrı', desc: 'Müşteriler daha uzun bekler' },
     { id: 'earnings', icon: '💰', name: 'Servis Kazancı', desc: 'Her servisten +5 ekstra puan' },
+    { id: 'plateStackMax', icon: '🍽️', name: 'Tabak Yığını', desc: 'Başlangıçta daha çok tabak' },
 ];
 
 const DISH_NAMES: Record<string, string> = {

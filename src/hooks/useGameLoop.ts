@@ -17,9 +17,10 @@ import {
   ENTRANCE,
   OUTSIDE_QUEUE_Y,
   INGREDIENTS,
-  HOLDING_STATION_POSITIONS,
+  PLATE_STACK_POS,
   TABLE_HALF_W,
   TABLE_HALF_H,
+  RECIPE_DEFS,
 } from "../types/game";
 
 import { drawFloor } from "../renderer/drawFloor";
@@ -130,12 +131,16 @@ function drawDirtyTable(ctx: CanvasRenderingContext2D, seatX: number, seatY: num
 const FLOOR_CACHE_VERSION = 9; // Duvar tuğla doku + kapı çerçeve eklendi
 let floorCache: OffscreenCanvas | HTMLCanvasElement | null = null;
 let floorCacheVersion = 0;
+let cachedUnlockedDishes = "";
 
-function drawFloorCached(ctx: CanvasRenderingContext2D) {
-  // Cache versiyonu değiştiyse yeniden oluştur
-  if (floorCacheVersion !== FLOOR_CACHE_VERSION) {
+function drawFloorCached(ctx: CanvasRenderingContext2D, unlockedDishes: string[] = []) {
+  const currentDishesStr = [...unlockedDishes].sort().join(',');
+
+  // Cache versiyonu değiştiyse veya açılan yemekler değiştiyse yeniden oluştur
+  if (floorCacheVersion !== FLOOR_CACHE_VERSION || cachedUnlockedDishes !== currentDishesStr) {
     floorCache = null;
     floorCacheVersion = FLOOR_CACHE_VERSION;
+    cachedUnlockedDishes = currentDishesStr;
   }
 
   if (!floorCache) {
@@ -149,7 +154,7 @@ function drawFloorCached(ctx: CanvasRenderingContext2D) {
     }
     const offCtx = floorCache.getContext("2d");
     if (offCtx) {
-      drawFloor(offCtx as unknown as CanvasRenderingContext2D);
+      drawFloor(offCtx as unknown as CanvasRenderingContext2D, unlockedDishes);
       TABLE_X_SLOTS.forEach((tx) =>
         drawTable(offCtx as unknown as CanvasRenderingContext2D, tx, TABLE_Y),
       );
@@ -302,14 +307,23 @@ export function useGameLoop({
 
       // ── 2. Çizim ────────────────────────────────────────────────────────
       // Zemin (cached — FPS boost)
-      drawFloorCached(ctx);
+      drawFloorCached(ctx, state.unlockedDishes);
 
       // Masalar
 
       // Malzeme istasyonları (server ile uyumlu: hamur / et / sebze)
       const stock = state.stock ?? { "🍞": 0, "🥩": 0, "🥬": 0 };
 
+      // Ayrıca RECIPE_DEFS'i almak için (zaten shared/types.ts'den import etmeliyiz if not)
+      // Yukarıda import edildiğini varsayıyoruz, yoksa import bölgesini de güncelleyeceğiz.
       INGREDIENTS.forEach((ing) => {
+        // Bu malzemenin hangi yemeği ürettiğine bak
+        const recipe = RECIPE_DEFS[ing.key as keyof typeof RECIPE_DEFS];
+        // Eğer yemeğin çıktısı (örn: Pizza) açılan yemekler arasında YOKSA, hiç çizme!
+        if (recipe && !state.unlockedDishes.includes(recipe.output)) {
+            return;
+        }
+
         drawStation(
           ctx,
           ing.pos.x,
@@ -379,11 +393,54 @@ export function useGameLoop({
       // Bekletme İstasyonları (Prep Counters / Tabaklar)
       const hs = state.holdingStations;
       if (hs) {
-        // Tabak rafları (üstte)
-        for (const pos of HOLDING_STATION_POSITIONS) {
-          const item = hs.find((s) => s.id === pos.id);
-          drawHoldingStation(ctx, pos.x, pos.y, item);
+      // Tabaklar (PLATE STACK)
+      if (state.plateStack && PLATE_STACK_POS) {
+        const sx = PLATE_STACK_POS.x;
+        const sy = PLATE_STACK_POS.y;
+        
+        ctx.fillStyle = "rgba(0,0,0,0.15)";
+        ctx.beginPath();
+        ctx.ellipse(sx, sy + 4, 25, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        for (let i = 0; i < state.plateStack.count; i++) {
+          const oy = sy - i * 4; // her tabak 4 piksel yukarı
+          const rimGrad = ctx.createRadialGradient(sx, oy, 12, sx, oy, 24);
+          rimGrad.addColorStop(0, "#f1f5f9");
+          rimGrad.addColorStop(1, "#e2e8f0");
+          ctx.fillStyle = rimGrad;
+          ctx.beginPath();
+          ctx.ellipse(sx, oy, 23, 11, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = "#fefefe";
+          ctx.beginPath();
+          ctx.ellipse(sx, oy + 1, 16, 8, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.strokeStyle = "#cbd5e1";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.ellipse(sx, oy + 1, 16, 8, 0, 0, Math.PI * 2);
+          ctx.stroke();
+
+          ctx.strokeStyle = "#94a3b8";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.ellipse(sx, oy, 23, 11, 0, 0, Math.PI * 2);
+          ctx.stroke();
         }
+
+        // Kapasite metni
+        ctx.fillStyle = "white";
+        ctx.font = "bold 13px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.shadowColor = "rgba(0,0,0,0.8)";
+        ctx.shadowBlur = 4;
+        ctx.fillText(`${state.plateStack.count}/${state.plateStack.maxCount}`, sx, sy - state.plateStack.count * 4 - 15);
+        ctx.shadowBlur = 0;
+      }
 
         // Servis masaları (duvarda)
         drawCounters(ctx, hs);

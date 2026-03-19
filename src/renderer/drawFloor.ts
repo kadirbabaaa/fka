@@ -6,12 +6,13 @@ import {
   INGREDIENTS,
   TRASH_STATION,
   SINK_STATION,
-  HOLDING_STATION_POSITIONS,
+  PLATE_STACK_POS,
   COUNTER_POSITIONS,
+  RECIPE_DEFS,
 } from "../types/game";
 
 /** Restoran zemini — PlateUp tarzı koyu mutfak + sıcak ahşap salon */
-export function drawFloor(ctx: CanvasRenderingContext2D) {
+export function drawFloor(ctx: CanvasRenderingContext2D, unlockedDishes: string[] = []) {
 
   // ══════════════════════════════════════════════════════════════════
   // SALON — sıcak açık ahşap parke (PlateUp dining room tonu)
@@ -137,6 +138,12 @@ export function drawFloor(ctx: CanvasRenderingContext2D) {
   // MALZEMELİK RAFLAR — karanlık zemine uyumlu metalik görünüm
   // ══════════════════════════════════════════════════════════════════
   INGREDIENTS.forEach((ing) => {
+    // Gizli malzemelerin raflarını da gizle
+    const recipe = RECIPE_DEFS[ing.key as keyof typeof RECIPE_DEFS];
+    if (recipe && !unlockedDishes.includes(recipe.output)) {
+      return;
+    }
+
     const { x, y } = ing.pos;
 
     // Tezgah gölgesi
@@ -244,24 +251,30 @@ export function drawFloor(ctx: CanvasRenderingContext2D) {
   ctx.fillText('🗑️ Çöp', tx, ty2 + 28);
 
   // ══════════════════════════════════════════════════════════════════
-  // TABAK BEKLETME RAFLARI — metalik
+  // TABAK YIĞINI İSTASYONU (PLATE STACK BASE)
   // ══════════════════════════════════════════════════════════════════
-  const plates = HOLDING_STATION_POSITIONS;
-  if (plates.length > 0) {
-    const fp = plates[0], lp = plates[plates.length - 1];
-    const pw = lp.x - fp.x + 100;
-
+  if (PLATE_STACK_POS) {
+    const { x, y } = PLATE_STACK_POS;
+    
+    // Masa Gövdesi Gölge
     ctx.fillStyle = 'rgba(0,0,0,0.28)';
-    ctx.beginPath(); ctx.roundRect(fp.x - 52, fp.y - 30, pw + 4, 60, 10); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(x - 44, y - 30, 88, 60, 10); ctx.fill();
 
-    const pg = ctx.createLinearGradient(fp.x - 50, fp.y - 28, fp.x - 50, fp.y + 28);
+    // Metalik Masa
+    const pg = ctx.createLinearGradient(x - 42, y - 28, x - 42, y + 28);
     pg.addColorStop(0, '#565656'); pg.addColorStop(1, '#3e3e3e');
     ctx.fillStyle = pg;
-    ctx.beginPath(); ctx.roundRect(fp.x - 50, fp.y - 28, pw, 56, 10); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(x - 42, y - 28, 84, 56, 10); ctx.fill();
     ctx.strokeStyle = '#282828'; ctx.lineWidth = 1.8; ctx.stroke();
 
+    // Parlama
     ctx.fillStyle = 'rgba(255,255,255,0.10)';
-    ctx.beginPath(); ctx.roundRect(fp.x - 46, fp.y - 26, pw - 8, 10, [8, 8, 0, 0]); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(x - 38, y - 26, 76, 10, [8, 8, 0, 0]); ctx.fill();
+    
+    // Zemin Etiketi
+    ctx.fillStyle = '#171717';
+    ctx.font = 'bold 9px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('TABAKLAR', x, y + 20);
   }
 
   // ══════════════════════════════════════════════════════════════════

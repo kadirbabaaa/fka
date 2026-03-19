@@ -57,6 +57,13 @@ export const PatchNotesModal: React.FC<Props> = ({ onClose }) => {
                                     <p className="text-sm text-stone-400 leading-relaxed">Karakter artık eşyaları iki eliyle önünde tutuyor ve yürürken yemekler dinamik olarak aşağı yukarı zıplıyor (bobbing).</p>
                                 </div>
                             </div>
+                            <div className="bg-stone-800/40 border border-stone-700/50 p-5 rounded-3xl flex gap-5 items-start">
+                                <div className="text-4xl bg-stone-800 w-16 h-16 rounded-2xl flex items-center justify-center border border-stone-700 shadow-inner flex-shrink-0">📦</div>
+                                <div>
+                                    <h4 className="text-lg font-black text-white mb-1">Gizli Malzeme İstasyonları</h4>
+                                    <p className="text-sm text-stone-400 leading-relaxed">Artık mutfakta gereksiz kalabalık yok! Bir yemeğin kilidini açana kadar o yemeğin malzemesi mutfakta hiç yer kaplamayacak.</p>
+                                </div>
+                            </div>
                         </div>
                     </section>
 

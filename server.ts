@@ -9,6 +9,7 @@ import {
   DISH_ITEMS, SEAT_SLOTS, INGREDIENTS, RECIPE_DEFS, DISH_UNLOCK_POOL,
   INITIAL_OVEN_POSITIONS, ADDITIONAL_OVEN_POSITIONS, OVEN_UPGRADE_COSTS,
   HOLDING_STATION_POSITIONS, COUNTER_POSITIONS,
+  PLATE_STACK_POS, PLATE_STACK_PER_UPGRADE,
   CLEAN_PLATE, DIRTY_PLATE, BURNED_FOOD, EAT_TICKS, BURN_TICKS,
   UPGRADE_DEFS,
   MAX_TRAY_CAPACITY, isTray, getTrayItems, createTray,
@@ -330,6 +331,9 @@ io.on("connection", (socket) => {
 
               if (!c.isEating && c.wants) {
                 c.patience -= actualDrain;
+                if (gs.isImmortal && c.patience <= 0) {
+                  c.patience = 1; // Ölümsüzlük: Müşteri sabrı asla 0'ın altına düşmez
+                }
                 if (c.patience <= 0) {
                   gs.score -= 10;
                   gs.lives -= 1;
@@ -423,34 +427,52 @@ io.on("connection", (socket) => {
       return;
     }
 
-    // Holding Stations
-    for (const station of gs.holdingStations) {
-      let stationDef: any;
-      let inRange = false;
-      if (station.type === 'plate') {
-        stationDef = HOLDING_STATION_POSITIONS.find(pos => pos.id === station.id);
-        if (stationDef) inRange = Math.hypot(px - stationDef.x, py - stationDef.y) < INTERACT_R;
-      } else {
-        stationDef = COUNTER_POSITIONS.find(pos => pos.id === station.id);
-        if (stationDef) inRange = Math.abs(px - stationDef.x) < 50 && Math.abs(py - stationDef.y) < 70;
-      }
-      if (!stationDef || !inRange) continue;
-
-      if (isTray(p.holding)) {
+    // ─── Tabak Yığını ──────────────────────────────────────────────────────────
+    // Tabak al: boş elle yaklaştıysan yığından 1 alırsın
+    if (Math.hypot(px - PLATE_STACK_POS.x, py - PLATE_STACK_POS.y) < PLATE_STACK_POS.radius) {
+      const ps = gs.plateStack;
+      if (!p.holding && ps.count > 0) {
+        p.holding = CLEAN_PLATE;
+        ps.count--;
+        socket.emit("sound", "pickup");
+        return;
+      } else if (p.holding === DIRTY_PLATE) {
+        // Kirli tabağı yığın üstüne koyma (anlık temizleme yerine lavaboya götür)
+        socket.emit("sound", "fail");
+        return;
+      } else if (p.holding === CLEAN_PLATE && ps.count < ps.maxCount) {
+        p.holding = null;
+        ps.count++;
+        socket.emit("sound", "success");
+        return;
+      } else if (isTray(p.holding)) {
         const items = getTrayItems(p.holding);
-        if (items.length > 0 && station.items.length === 0) {
-          station.items.push(items.pop()!);
-          p.holding = createTray(items);
-          socket.emit("sound", "pickup");
+        const cpIdx = items.indexOf(CLEAN_PLATE);
+        if (cpIdx !== -1 && ps.count < ps.maxCount) {
+          items.splice(cpIdx, 1);
+          p.holding = items.length > 0 ? createTray(items) : null;
+          ps.count++;
+          socket.emit("sound", "success");
           return;
-        }
-        if (station.items.length > 0 && items.length < MAX_TRAY_CAPACITY) {
-          items.push(station.items.pop()!);
+        } else if (ps.count > 0 && items.length < MAX_TRAY_CAPACITY) {
+          items.push(CLEAN_PLATE);
           p.holding = createTray(items);
+          ps.count--;
           socket.emit("sound", "pickup");
           return;
         }
       }
+    }
+
+    // Holding Stations (sadece counter için artık)
+    for (const station of gs.holdingStations) {
+      if (station.type !== 'counter') continue;  // Tabak slotları artık yok
+      let stationDef: any;
+      const inRange = false;
+      stationDef = COUNTER_POSITIONS.find(pos => pos.id === station.id);
+      if (!stationDef || !(Math.abs(px - stationDef.x) < 50 && Math.abs(py - stationDef.y) < 70)) continue;
+
+      // Counter: al veya bırak
       if (!p.holding && station.items.length > 0) {
         p.holding = station.items.pop()!;
         socket.emit("sound", "pickup");
@@ -532,6 +554,14 @@ io.on("connection", (socket) => {
           socket.emit("sound", "fail");
           return;
         }
+
+        // Kilit kontrolü
+        const recipe = RECIPE_DEFS[s.key as keyof typeof RECIPE_DEFS];
+        if (recipe && !gs.unlockedDishes.includes(recipe.output)) {
+          socket.emit("sound", "fail");
+          return;
+        }
+
         if (!p.holding) {
           p.holding = s.key;
           socket.emit("sound", "pickup");
@@ -630,6 +660,11 @@ io.on("connection", (socket) => {
     if (gs.score >= cost) {
       gs.score -= cost;
       gs.upgrades[key]++;
+      // Tabak kapasitesi upgrade'i plateStack.maxCount ve count'u da günceller
+      if (key === 'plateStackMax') {
+        gs.plateStack.maxCount += PLATE_STACK_PER_UPGRADE;
+        gs.plateStack.count = Math.min(gs.plateStack.count + PLATE_STACK_PER_UPGRADE, gs.plateStack.maxCount);
+      }
       io.to(roomId).emit("state", gs);
       socket.emit("sound", "success");
     } else {
@@ -707,6 +742,26 @@ io.on("connection", (socket) => {
     }
     socket.emit("sound", "pickup");
     io.to(roomId!).emit("punchEffect", { x: c.x, y: c.y, count: c.punchCount });
+  });
+
+  // ─── Geliştirici Araçları (DEV MODE) ──────────────────────────────────────
+  socket.on("dev:makeNight", () => {
+    if (!roomId || !RoomManager.getRoomState(roomId)) return;
+    const gs = RoomManager.getRoomState(roomId)!;
+    if (gs.dayPhase === 'day') {
+      gs.dayTimer = 1; // Süreyi hemen bitirerek gece döngüsünü tetikler
+      gs.customers = []; // Tüm müşterileri sil
+      gs.waitList = []; // Bekleyenleri sil
+      gs.dirtyTables = []; // Kirli tablaları temizle
+      io.to(roomId).emit("state", gs);
+    }
+  });
+
+  socket.on("dev:toggleImmortality", () => {
+    if (!roomId || !RoomManager.getRoomState(roomId)) return;
+    const gs = RoomManager.getRoomState(roomId)!;
+    gs.isImmortal = !gs.isImmortal;
+    io.to(roomId).emit("state", gs);
   });
 
   socket.on("disconnect", () => {
