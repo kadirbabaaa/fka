@@ -35,7 +35,6 @@ export {
   DIRTY_TRAY_POS,
   TRAY_STATION,
   SINK_STATION,
-  SEAT_SLOTS,
   DISH_ITEMS,
   UPGRADE_DEFS,
   CLOSING_THRESHOLD,
@@ -55,14 +54,13 @@ export {
   createTray,
   TABLE_HALF_W,
   TABLE_HALF_H,
+  TABLE_Y_DEFAULT,
+  type TablePosition,
+  getSeatSlots,
 } from '../../shared/types';
 
 // ─── Client-Only Sabitler ────────────────────────────────────────────────────
 export const PLAYER_SPEED = 5;
-
-// Masa pozisyonları (sadece render için)
-export const TABLE_X_SLOTS = [190, 390, 640, 890, 1090];
-export const TABLE_Y = 500;
 
 // Giriş kapısı (render + kuyruk gösterimi)
 export const ENTRANCE = { x: 640, y: 695 };

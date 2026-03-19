@@ -157,6 +157,10 @@ export interface GameState {
     // ─── Station Layout Editor ───────────────────────────────────────────────
     stationLayout: Record<string, StationPosition>;
     lockedStations: Record<string, string>; // stationId → socketId
+
+    // ─── Table Layout Editor ─────────────────────────────────────────────────
+    tableLayout: Record<string, TablePosition>;
+    lockedTables: Record<string, string>; // tableId → socketId
 }
 
 // ─── Boyut ───────────────────────────────────────────────────────────────────
@@ -173,6 +177,20 @@ export interface StationPosition {
   id: string;
   x: number;
   y: number;
+}
+
+// ─── Masa Layout ─────────────────────────────────────────────────────────────
+export interface TablePosition {
+  id: string;
+  x: number;
+  y: number;
+}
+
+export function getSeatSlots(tableLayout: Record<string, TablePosition>): { x: number; y: number }[] {
+  return Object.values(tableLayout).flatMap(t => [
+    { x: t.x, y: t.y - 47 },
+    { x: t.x, y: t.y + 47 },
+  ]);
 }
 
 // ─── Gün / Gece ──────────────────────────────────────────────────────────────
@@ -257,14 +275,12 @@ export const TRASH_STATION = { x: 1200, y: 190 };
 export const DIRTY_TRAY_POS = { x: 1050, y: 90 };
 export const SINK_STATION = { x: 1180, y: 90 };
 
-// ─── Koltuklar ───────────────────────────────────────────────────────────────
-export const SEAT_SLOTS: { x: number; y: number }[] = [
-    { x: 190, y: 453 }, { x: 190, y: 547 },
-    { x: 390, y: 453 }, { x: 390, y: 547 },
-    { x: 640, y: 453 }, { x: 640, y: 547 },
-    { x: 890, y: 453 }, { x: 890, y: 547 },
-    { x: 1090, y: 453 }, { x: 1090, y: 547 },
-];
+// ─── Koltuklar — Artık dinamik, getSeatSlots(tableLayout) kullan ─────────────
+// SEAT_SLOTS kaldırıldı — bkz. getSeatSlots()
+
+// Geriye uyum için (drawDirtyTable, drawCustomer, usePlayerMovement kullanır)
+// Dinamik tableLayout'a geçildiğinde bu sabit kaldırılabilir
+export const TABLE_Y_DEFAULT = 500;
 
 // ─── Yemek Çıktıları (tüm olası yemekler) ────────────────────────────────────
 export const DISH_ITEMS = ['🍕', '🍔', '🥗', '🍜', '🌯'] as const;
@@ -325,5 +341,14 @@ export function mkGameState(): GameState {
       // Counter'lar kasıtlı olarak buraya dahil edilmedi — duvara sabit, taşınamaz
     },
     lockedStations: {},
+    // ─── Table Layout ─────────────────────────────────────────────────────
+    tableLayout: {
+      'table0': { id: 'table0', x: 190, y: 500 },
+      'table1': { id: 'table1', x: 390, y: 500 },
+      'table2': { id: 'table2', x: 640, y: 500 },
+      'table3': { id: 'table3', x: 890, y: 500 },
+      'table4': { id: 'table4', x: 1090, y: 500 },
+    },
+    lockedTables: {},
   };
 }

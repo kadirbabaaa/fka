@@ -6,6 +6,7 @@ import {
   snapToGrid,
   pixelToGridIndex,
   isGridCellOccupied,
+  isTablePositionValid,
 } from '../renderer/drawLayoutEditor';
 
 const MOVE_INTERACT_R = 75;
@@ -23,6 +24,8 @@ const DEFAULT_STATE: LayoutEditorState = {
   originalPos: null,
   previewPos: null,
   isPreviewValid: false,
+  isMovingTable: false,
+  movingTableId: null,
 };
 
 export function useLayoutEditor({ socket, gameStateRef, localPlayerRef, dayPhase }: Params) {
@@ -36,9 +39,10 @@ export function useLayoutEditor({ socket, gameStateRef, localPlayerRef, dayPhase
 
   // dayPhase prep → day geçişinde taşıma modunu iptal et
   useEffect(() => {
-    if (dayPhase !== 'prep' && editorStateRef.current.isMoving) {
-      const { movingStationId } = editorStateRef.current;
+    if (dayPhase !== 'prep' && (editorStateRef.current.isMoving || editorStateRef.current.isMovingTable)) {
+      const { movingStationId, movingTableId } = editorStateRef.current;
       if (movingStationId) socket?.emit('unlockStation', { stationId: movingStationId });
+      if (movingTableId) socket?.emit('unlockTable', { tableId: movingTableId });
       setState(DEFAULT_STATE);
     }
   }, [dayPhase, socket, setState]);
@@ -68,33 +72,62 @@ export function useLayoutEditor({ socket, gameStateRef, localPlayerRef, dayPhase
       delete gs.lockedStations[stationId];
     };
 
+    const onTableMoved = ({ tableId, x, y }: { tableId: string; x: number; y: number }) => {
+      const gs = gameStateRef.current;
+      if (gs.tableLayout[tableId]) {
+        gs.tableLayout[tableId] = { id: tableId, x, y };
+      }
+    };
+
+    const onTableLocked = ({ tableId, lockedBy }: { tableId: string; lockedBy: string }) => {
+      const gs = gameStateRef.current;
+      gs.lockedTables[tableId] = lockedBy;
+    };
+
+    const onTableUnlocked = ({ tableId }: { tableId: string }) => {
+      const gs = gameStateRef.current;
+      delete gs.lockedTables[tableId];
+    };
+
     socket.on('stationMoved', onMoved as (...args: unknown[]) => void);
     socket.on('stationLocked', onLocked as (...args: unknown[]) => void);
     socket.on('stationUnlocked', onUnlocked as (...args: unknown[]) => void);
+    socket.on('tableMoved', onTableMoved as (...args: unknown[]) => void);
+    socket.on('tableLocked', onTableLocked as (...args: unknown[]) => void);
+    socket.on('tableUnlocked', onTableUnlocked as (...args: unknown[]) => void);
     return () => {
       socket.off('stationMoved', onMoved as (...args: unknown[]) => void);
       socket.off('stationLocked', onLocked as (...args: unknown[]) => void);
       socket.off('stationUnlocked', onUnlocked as (...args: unknown[]) => void);
+      socket.off('tableMoved', onTableMoved as (...args: unknown[]) => void);
+      socket.off('tableLocked', onTableLocked as (...args: unknown[]) => void);
+      socket.off('tableUnlocked', onTableUnlocked as (...args: unknown[]) => void);
     };
   }, [socket, gameStateRef]);
 
-  // Önizleme pozisyonunu oyuncu hareketiyle güncelle — her zaman çalışır, isMoving kontrolü içeride
+  // Önizleme pozisyonunu oyuncu hareketiyle güncelle
   useEffect(() => {
     const interval = setInterval(() => {
       const state = editorStateRef.current;
-      if (!state.isMoving || !state.movingStationId) return;
+      if (!state.isMoving && !state.isMovingTable) return;
       const { x, y } = localPlayerRef.current;
       const snapped = snapToGrid(x, y);
-      const { col, row } = pixelToGridIndex(snapped.x, snapped.y);
       const gs = gameStateRef.current;
-      const valid = !isGridCellOccupied(col, row, gs.stationLayout, state.movingStationId);
-      // Sadece değişmişse güncelle
+
+      let valid: boolean;
+      if (state.isMovingTable && state.movingTableId) {
+        valid = isTablePositionValid(snapped.x, snapped.y, gs.tableLayout, state.movingTableId);
+      } else if (state.movingStationId) {
+        const { col, row } = pixelToGridIndex(snapped.x, snapped.y);
+        valid = !isGridCellOccupied(col, row, gs.stationLayout, state.movingStationId);
+      } else return;
+
       if (state.previewPos?.x !== snapped.x || state.previewPos?.y !== snapped.y || state.isPreviewValid !== valid) {
         setState({ ...state, previewPos: snapped, isPreviewValid: valid });
       }
     }, 50);
     return () => clearInterval(interval);
-  }, [localPlayerRef, gameStateRef, setState]); // dependency'den isMoving çıkarıldı
+  }, [localPlayerRef, gameStateRef, setState]);
 
   const handleInteract = useCallback(() => {
     if (dayPhase !== 'prep') return;
@@ -102,7 +135,19 @@ export function useLayoutEditor({ socket, gameStateRef, localPlayerRef, dayPhase
     const player = gs.players[socket?.id ?? ''];
     const lp = localPlayerRef.current;
 
-    // Taşıma modu aktifse → bırak
+    // 1. Masa taşıma modu aktifse → bırak
+    if (editorStateRef.current.isMovingTable) {
+      const { movingTableId } = editorStateRef.current;
+      if (!movingTableId) return;
+      const snapped = snapToGrid(lp.x, lp.y);
+      const valid = isTablePositionValid(snapped.x, snapped.y, gs.tableLayout, movingTableId);
+      if (!valid) return;
+      socket?.emit('moveTable', { tableId: movingTableId, x: snapped.x, y: snapped.y });
+      setState(DEFAULT_STATE);
+      return;
+    }
+
+    // 2. İstasyon taşıma modu aktifse → bırak
     if (editorStateRef.current.isMoving) {
       const { movingStationId } = editorStateRef.current;
       if (!movingStationId) return;
@@ -110,11 +155,7 @@ export function useLayoutEditor({ socket, gameStateRef, localPlayerRef, dayPhase
       const snapped = snapToGrid(x, y);
       const { col, row } = pixelToGridIndex(snapped.x, snapped.y);
       const valid = !isGridCellOccupied(col, row, gs.stationLayout, movingStationId);
-      if (!valid) {
-        console.log('[LayoutEditor] Hedef dolu, bırakma reddedildi');
-        return;
-      }
-      console.log('[LayoutEditor] moveStation emit:', movingStationId, snapped);
+      if (!valid) return;
       socket?.emit('moveStation', { stationId: movingStationId, x: snapped.x, y: snapped.y });
       setState(DEFAULT_STATE);
       return;
@@ -123,7 +164,43 @@ export function useLayoutEditor({ socket, gameStateRef, localPlayerRef, dayPhase
     // Elde nesne varsa taşıma başlatma
     if (player?.holding) return;
 
-    // En yakın taşınabilir istasyonu bul (counter'lar hariç — duvara sabit)
+    // 3. En yakın boş masa kontrolü (istasyon kontrolünden ÖNCE)
+    const tableLayout = gs.tableLayout;
+    let closestTable: { id: string; dist: number } | null = null;
+    for (const [id, t] of Object.entries(tableLayout ?? {}) as [string, { id: string; x: number; y: number }][]) {
+      if ((gs.lockedTables ?? {})[id]) continue;
+      const hasCust = gs.customers.some(c =>
+        c.seatX === t.x && (c.seatY === t.y - 47 || c.seatY === t.y + 47)
+      );
+      const hasDirty = gs.dirtyTables.some(d =>
+        d.seatX === t.x && (d.seatY === t.y - 47 || d.seatY === t.y + 47)
+      );
+      if (hasCust || hasDirty) continue;
+      const dist = Math.hypot(lp.x - t.x, lp.y - t.y);
+      console.log('[TableEditor] masa:', id, 'pos:', t.x, t.y, 'dist:', dist.toFixed(1), 'limit:', MOVE_INTERACT_R);
+      if (dist < MOVE_INTERACT_R && (!closestTable || dist < closestTable.dist)) {
+        closestTable = { id, dist };
+      }
+    }
+    if (closestTable) {
+      const tableId = closestTable.id;
+      const t = (tableLayout ?? {})[tableId] as { id: string; x: number; y: number };
+      socket?.emit('lockTable', { tableId });
+      const snapped = snapToGrid(lp.x, lp.y);
+      const valid = isTablePositionValid(snapped.x, snapped.y, tableLayout ?? {}, tableId);
+      console.log('[TableEditor] masa seçildi:', tableId, 'valid:', valid);
+      setState({
+        ...DEFAULT_STATE,
+        isMovingTable: true,
+        movingTableId: tableId,
+        originalPos: { x: t.x, y: t.y },
+        previewPos: snapped,
+        isPreviewValid: valid,
+      });
+      return;
+    }
+
+    // 4. En yakın taşınabilir istasyonu bul (counter'lar hariç — duvara sabit)
     let closest: { id: string; dist: number } | null = null;
     const layout = gs.stationLayout as Record<string, { id: string; x: number; y: number }>;
     for (const [id, pos] of Object.entries(layout)) {
@@ -151,13 +228,15 @@ export function useLayoutEditor({ socket, gameStateRef, localPlayerRef, dayPhase
       originalPos: { x: pos.x, y: pos.y },
       previewPos: snapped,
       isPreviewValid: valid,
+      isMovingTable: false,
+      movingTableId: null,
     });
   }, [dayPhase, socket, gameStateRef, localPlayerRef, setState]);
 
   const handleCancel = useCallback(() => {
-    const { movingStationId } = editorStateRef.current;
-    if (!movingStationId) return;
-    socket?.emit('unlockStation', { stationId: movingStationId });
+    const { movingStationId, movingTableId } = editorStateRef.current;
+    if (movingStationId) socket?.emit('unlockStation', { stationId: movingStationId });
+    if (movingTableId) socket?.emit('unlockTable', { tableId: movingTableId });
     setState(DEFAULT_STATE);
   }, [socket, setState]);
 

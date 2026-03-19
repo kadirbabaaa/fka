@@ -7,8 +7,6 @@ import {
   GAME_HEIGHT,
   DIRTY_TRAY_POS,
   TRAY_STATION,
-  TABLE_X_SLOTS,
-  TABLE_Y,
   INGREDIENTS,
   PLATE_STACK_POS,
   RECIPE_DEFS,
@@ -49,13 +47,16 @@ let floorCache: OffscreenCanvas | HTMLCanvasElement | null = null;
 let floorCacheVersion = 0;
 let cachedUnlockedDishes = "";
 
-function drawFloorCached(ctx: CanvasRenderingContext2D, unlockedDishes: string[] = [], forceRedraw = false, ingredientPositions?: Record<string, { x: number; y: number }>) {
+function drawFloorCached(ctx: CanvasRenderingContext2D, unlockedDishes: string[] = [], forceRedraw = false, ingredientPositions?: Record<string, { x: number; y: number }>, tablePositions?: Record<string, { id: string; x: number; y: number }>, movingTableId?: string | null) {
   const currentDishesStr = [...unlockedDishes].sort().join(',');
   const ingPosStr = ingredientPositions
     ? Object.entries(ingredientPositions).map(([k, v]) => `${k}:${v.x},${v.y}`).join(';')
     : '';
-  if (forceRedraw || floorCacheVersion !== FLOOR_CACHE_VERSION || cachedUnlockedDishes !== currentDishesStr + ingPosStr) {
-    floorCache = null; floorCacheVersion = FLOOR_CACHE_VERSION; cachedUnlockedDishes = currentDishesStr + ingPosStr;
+  const tablePosStr = tablePositions
+    ? Object.entries(tablePositions).map(([k, v]) => `${k}:${v.x},${v.y}`).join(';')
+    : '';
+  if (forceRedraw || floorCacheVersion !== FLOOR_CACHE_VERSION || cachedUnlockedDishes !== currentDishesStr + ingPosStr + tablePosStr) {
+    floorCache = null; floorCacheVersion = FLOOR_CACHE_VERSION; cachedUnlockedDishes = currentDishesStr + ingPosStr + tablePosStr;
   }
   if (!floorCache) {
     floorCache = typeof OffscreenCanvas !== "undefined"
@@ -64,7 +65,17 @@ function drawFloorCached(ctx: CanvasRenderingContext2D, unlockedDishes: string[]
     const offCtx = floorCache.getContext("2d");
     if (offCtx) {
       drawFloor(offCtx as unknown as CanvasRenderingContext2D, unlockedDishes, ingredientPositions);
-      TABLE_X_SLOTS.forEach((tx) => drawTable(offCtx as unknown as CanvasRenderingContext2D, tx, TABLE_Y));
+      const tables = tablePositions ? Object.values(tablePositions) : [];
+      tables.forEach((t) => {
+        if (movingTableId === t.id) {
+          (offCtx as unknown as CanvasRenderingContext2D).save();
+          (offCtx as unknown as CanvasRenderingContext2D).globalAlpha = 0.4;
+          drawTable(offCtx as unknown as CanvasRenderingContext2D, t.x, t.y);
+          (offCtx as unknown as CanvasRenderingContext2D).restore();
+        } else {
+          drawTable(offCtx as unknown as CanvasRenderingContext2D, t.x, t.y);
+        }
+      });
     }
   }
   ctx.drawImage(floorCache, 0, 0);
@@ -95,7 +106,7 @@ export function useGameLoop({
 
       movePlayer(time, lastEmitRef, frameScale, { socket, gameStateRef, localPlayerRef, keysRef, joystickVectorRef });
 
-      const isEditing = !!(editorStateRef?.current?.isMoving);
+      const isEditing = !!(editorStateRef?.current?.isMoving || editorStateRef?.current?.isMovingTable);
       // stationLayout'tan ingredient pozisyonlarını çıkar
       const ingPositions: Record<string, { x: number; y: number }> = {};
       if (state.stationLayout) {
@@ -105,7 +116,8 @@ export function useGameLoop({
           }
         }
       }
-      drawFloorCached(ctx, state.unlockedDishes, isEditing, ingPositions);
+      const movingTableId = editorStateRef?.current?.movingTableId;
+      drawFloorCached(ctx, state.unlockedDishes, isEditing, ingPositions, state.tableLayout, movingTableId);
 
       const stock = state.stock ?? { "🍞": 0, "🥩": 0, "🥬": 0 };
       const movingId = editorStateRef?.current?.movingStationId;
@@ -167,7 +179,7 @@ export function useGameLoop({
       drawWaitList(ctx, state.waitList ?? []);
 
       // Layout editor önizlemesi — oyunculardan ÖNCE çizilir (oyuncu üstte kalır)
-      if (editorStateRef?.current?.isMoving && state.stationLayout) {
+      if ((editorStateRef?.current?.isMoving || editorStateRef?.current?.isMovingTable) && state.stationLayout) {
         drawLayoutPreview(ctx, editorStateRef.current, state.stationLayout);
       }
 

@@ -3,7 +3,7 @@ import {
   GameState, Personality,
   DAY_TICKS, NIGHT_TICKS,
   RECIPE_DEFS, BURN_TICKS, EAT_TICKS, BURNED_FOOD,
-  DISH_ITEMS, SEAT_SLOTS, DISH_UNLOCK_POOL,
+  DISH_ITEMS, getSeatSlots, DISH_UNLOCK_POOL,
   GAME_HEIGHT,
 } from "../shared/types.js";
 import { DIALOGUES } from "../shared/dialogues.js";
@@ -27,7 +27,7 @@ export function tryQueueSeat(gs: GameState, io: Server, rid: string) {
       ...gs.customers.map(c => `${c.seatX},${c.seatY}`),
       ...gs.dirtyTables.map(t => `${t.seatX},${t.seatY}`),
     ]);
-    const free = SEAT_SLOTS.filter(s => !occupied.has(`${s.x},${s.y}`));
+    const free = getSeatSlots(gs.tableLayout).filter(s => !occupied.has(`${s.x},${s.y}`));
     if (!free.length) break;
     const guest = gs.waitList.shift()!;
     const seat = free[Math.floor(Math.random() * free.length)];

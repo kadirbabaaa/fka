@@ -1,8 +1,8 @@
-import { TABLE_Y } from '../types/game';
+import { TABLE_Y_DEFAULT } from '../types/game';
 
 export function drawDirtyTable(ctx: CanvasRenderingContext2D, seatX: number, seatY: number) {
-  const isTopSeat = seatY < TABLE_Y;
-  const plateY = isTopSeat ? TABLE_Y - 20 : TABLE_Y + 20;
+  const isTopSeat = seatY < TABLE_Y_DEFAULT;
+  const plateY = isTopSeat ? TABLE_Y_DEFAULT - 20 : TABLE_Y_DEFAULT + 20;
 
   ctx.fillStyle = 'rgba(0,0,0,0.12)';
   ctx.beginPath(); ctx.ellipse(seatX + 1, plateY + 3, 18, 7, 0, 0, Math.PI * 2); ctx.fill();

@@ -1,5 +1,5 @@
 import { Socket, Server } from "socket.io";
-import { GameState, GRID_CELL_SIZE, GAME_WIDTH, GAME_HEIGHT } from "../shared/types.js";
+import { GameState, GRID_CELL_SIZE, GAME_WIDTH, GAME_HEIGHT, TablePosition, TABLE_HALF_W, TABLE_HALF_H, WALL_Y1, WALL_Y2 } from "../shared/types.js";
 
 function snapToGrid(x: number, y: number): { x: number; y: number } {
   const col = Math.floor(x / GRID_CELL_SIZE);
@@ -22,13 +22,27 @@ function isOccupied(
   );
 }
 
+const MIN_TABLE_Y = 320;
+
+function tableOverlaps(
+  x: number, y: number,
+  layout: Record<string, TablePosition>,
+  excludeId: string
+): boolean {
+  return Object.values(layout).some(t =>
+    t.id !== excludeId &&
+    Math.abs(t.x - x) < TABLE_HALF_W * 2 + 10 &&
+    Math.abs(t.y - y) < TABLE_HALF_H * 2 + 10
+  );
+}
+
 export function registerLayoutHandler(
   socket: Socket,
   io: Server,
   getRoomId: () => string | null,
   getRoomState: (rid: string) => GameState | undefined
 ): void {
-  // Oyuncu disconnect → kilitlediği istasyonları serbest bırak
+  // Oyuncu disconnect → kilitlediği istasyonları ve masaları serbest bırak
   socket.on("disconnect", () => {
     const roomId = getRoomId();
     if (!roomId) return;
@@ -44,6 +58,13 @@ export function registerLayoutHandler(
     freed.forEach(stationId =>
       io.to(roomId).emit("stationUnlocked", { stationId })
     );
+    // Masa kilitleri
+    for (const [tableId, lockedBy] of Object.entries(gs.lockedTables)) {
+      if (lockedBy === socket.id) {
+        delete gs.lockedTables[tableId];
+        io.to(roomId).emit("tableUnlocked", { tableId });
+      }
+    }
   });
 
   socket.on("lockStation", ({ stationId }: { stationId: string }) => {
@@ -100,5 +121,67 @@ export function registerLayoutHandler(
     if (gs.lockedStations[stationId] !== socket.id) return;
     delete gs.lockedStations[stationId];
     io.to(roomId).emit("stationUnlocked", { stationId });
+  });
+
+  // ─── Masa Event'leri ──────────────────────────────────────────────────────
+  socket.on("lockTable", ({ tableId }: { tableId: string }) => {
+    const roomId = getRoomId();
+    if (!roomId) return;
+    const gs = getRoomState(roomId);
+    if (!gs) return;
+    if (gs.dayPhase !== "prep") return;
+    if (!(tableId in gs.tableLayout)) return;
+    const t = gs.tableLayout[tableId];
+    // Masada müşteri var mı?
+    const hasCust = gs.customers.some(c =>
+      c.seatX === t.x && (c.seatY === t.y - 47 || c.seatY === t.y + 47)
+    );
+    if (hasCust) return;
+    // Kirli masa var mı?
+    const hasDirty = gs.dirtyTables.some(d =>
+      d.seatX === t.x && (d.seatY === t.y - 47 || d.seatY === t.y + 47)
+    );
+    if (hasDirty) return;
+    // Zaten kilitli mi?
+    if (gs.lockedTables[tableId]) {
+      socket.emit("tableLocked", { tableId, lockedBy: gs.lockedTables[tableId] });
+      return;
+    }
+    gs.lockedTables[tableId] = socket.id;
+    io.to(roomId).emit("tableLocked", { tableId, lockedBy: socket.id });
+  });
+
+  socket.on("moveTable", ({ tableId, x, y }: { tableId: string; x: number; y: number }) => {
+    const roomId = getRoomId();
+    if (!roomId) return;
+    const gs = getRoomState(roomId);
+    if (!gs) return;
+    if (gs.dayPhase !== "prep") return;
+    if (!(tableId in gs.tableLayout)) return;
+    if (gs.lockedTables[tableId] !== socket.id) return;
+    const snapped = snapToGrid(x, y);
+    // Bölge kısıtları
+    if (snapped.y < MIN_TABLE_Y) { socket.emit("sound", "fail"); return; }
+    if (snapped.y >= WALL_Y1 && snapped.y <= WALL_Y2) { socket.emit("sound", "fail"); return; }
+    if (snapped.y > GAME_HEIGHT - 60) { socket.emit("sound", "fail"); return; }
+    // AABB çakışma
+    if (tableOverlaps(snapped.x, snapped.y, gs.tableLayout, tableId)) {
+      socket.emit("sound", "fail"); return;
+    }
+    gs.tableLayout[tableId] = { id: tableId, x: snapped.x, y: snapped.y };
+    delete gs.lockedTables[tableId];
+    io.to(roomId).emit("tableMoved", { tableId, x: snapped.x, y: snapped.y });
+    io.to(roomId).emit("tableUnlocked", { tableId });
+    socket.emit("sound", "success");
+  });
+
+  socket.on("unlockTable", ({ tableId }: { tableId: string }) => {
+    const roomId = getRoomId();
+    if (!roomId) return;
+    const gs = getRoomState(roomId);
+    if (!gs) return;
+    if (gs.lockedTables[tableId] !== socket.id) return;
+    delete gs.lockedTables[tableId];
+    io.to(roomId).emit("tableUnlocked", { tableId });
   });
 }

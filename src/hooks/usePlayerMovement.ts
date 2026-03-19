@@ -1,5 +1,5 @@
 import { Socket } from "socket.io-client";
-import { GameState, GAME_WIDTH, GAME_HEIGHT, PLAYER_SPEED, TABLE_X_SLOTS, TABLE_Y, WALL_Y1, WALL_Y2, isInDoor, TABLE_HALF_W, TABLE_HALF_H } from "../types/game";
+import { GameState, GAME_WIDTH, GAME_HEIGHT, PLAYER_SPEED, WALL_Y1, WALL_Y2, isInDoor, TABLE_HALF_W, TABLE_HALF_H } from "../types/game";
 import React from "react";
 
 interface Props {
@@ -14,7 +14,7 @@ export function movePlayer(
   time: number,
   lastEmitRef: React.MutableRefObject<number>,
   frameScale: number,
-  { socket, localPlayerRef, keysRef, joystickVectorRef }: Props,
+  { socket, gameStateRef, localPlayerRef, keysRef, joystickVectorRef }: Props,
 ) {
   let dx = 0, dy = 0;
 
@@ -48,9 +48,10 @@ export function movePlayer(
   }
 
   const PR = 16;
-  for (const tx of TABLE_X_SLOTS) {
-    const left = tx - TABLE_HALF_W, right = tx + TABLE_HALF_W;
-    const top = TABLE_Y - TABLE_HALF_H, bottom = TABLE_Y + TABLE_HALF_H;
+  const tableLayout = gameStateRef.current.tableLayout ?? {};
+  for (const t of Object.values(tableLayout) as { id: string; x: number; y: number }[]) {
+    const left = t.x - TABLE_HALF_W, right = t.x + TABLE_HALF_W;
+    const top = t.y - TABLE_HALF_H, bottom = t.y + TABLE_HALF_H;
     if (nx + PR > left && nx - PR < right && ny + PR > top && ny - PR < bottom) {
       const oL = (nx + PR) - left, oR = right - (nx - PR);
       const oT = (ny + PR) - top,  oB = bottom - (ny - PR);

@@ -46,9 +46,6 @@ const SERVE_R = 95;
 const CLOSING_THRESHOLD = 300;
 const SPAWN_GRACE_TICKS  = 240;
 
-const TABLE_X_SLOTS = [190, 390, 640, 890, 1090];
-const TABLE_Y = 500;
-
 // ─── Room Manager ────────────────────────────────────────────────────────────
 class RoomManager {
   private static states = new Map<string, GameState>();

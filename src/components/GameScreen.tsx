@@ -92,7 +92,7 @@ export const GameScreen: React.FC<Props> = ({
     // Escape → taşıma modunu iptal et
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && editorStateRef.current.isMoving) handleCancel();
+            if (e.key === 'Escape' && (editorStateRef.current.isMoving || editorStateRef.current.isMovingTable)) handleCancel();
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
@@ -323,12 +323,12 @@ export const GameScreen: React.FC<Props> = ({
                 </div>
 
                 {/* ── Hazırlık: Küçük yüzen buton (ekranı KAPLAMAZ) ── */}
-                {dayPhase === 'prep' && !editorState.isMoving && (
+                {dayPhase === 'prep' && !editorState.isMoving && !editorState.isMovingTable && (
                     <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 bg-stone-900/90 backdrop-blur-sm px-4 py-2 rounded-2xl border border-purple-700/60 shadow-xl">
                         <div className="text-center">
                             <span className="text-white font-bold text-sm">🔧 Gün {day} — Hazırlık</span>
                             <p className="text-stone-400 text-[10px] leading-none mt-0.5">
-                                {isTouchDevice ? 'AL/VER: İstasyon taşı' : 'E: İstasyon taşı'}
+                                {isTouchDevice ? 'AL/VER: İstasyon/Masa taşı' : 'E: İstasyon/Masa taşı'}
                             </p>
                         </div>
                         <button
@@ -340,11 +340,26 @@ export const GameScreen: React.FC<Props> = ({
                     </div>
                 )}
 
-                {/* ── Taşıma Modu: İptal butonu ── */}
+                {/* ── Taşıma Modu: İptal butonu (istasyon) ── */}
                 {dayPhase === 'prep' && editorState.isMoving && (
                     <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 bg-stone-900/90 backdrop-blur-sm px-4 py-2 rounded-2xl border border-yellow-600/60 shadow-xl">
                         <span className="text-yellow-300 font-bold text-sm">
                             {isTouchDevice ? '📦 Yeni konuma git → AL/VER' : '📦 Yeni konuma git → E | İptal: Esc'}
+                        </span>
+                        <button
+                            onClick={handleCancel}
+                            className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-black text-sm border border-red-400 transition-all active:scale-95"
+                        >
+                            ✕ İptal
+                        </button>
+                    </div>
+                )}
+
+                {/* ── Masa Taşıma Modu: İptal butonu ── */}
+                {dayPhase === 'prep' && editorState.isMovingTable && (
+                    <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 bg-stone-900/90 backdrop-blur-sm px-4 py-2 rounded-2xl border border-amber-600/60 shadow-xl">
+                        <span className="text-amber-300 font-bold text-sm">
+                            {isTouchDevice ? '🪑 Masayı taşı → AL/VER' : '🪑 Masayı taşı → E | İptal: Esc'}
                         </span>
                         <button
                             onClick={handleCancel}
@@ -447,7 +462,9 @@ export const GameScreen: React.FC<Props> = ({
                     <span>·</span>
                     <span className={dayPhase === 'night' ? 'text-indigo-400 font-bold' : dayPhase === 'prep' ? 'text-purple-400 font-bold' : ''}>
                         {dayPhase === 'prep'
-                            ? (editorState.isMoving ? '📦 Yeni konuma git → E | İptal: Esc' : '🔧 Hazırlık — E: İstasyon taşı | Dükkanı aç!')
+                            ? (editorState.isMoving ? '📦 Yeni konuma git → E | İptal: Esc'
+                              : editorState.isMovingTable ? '🪑 Masayı taşı → E | İptal: Esc'
+                              : '🔧 Hazırlık — E: İstasyon/Masa taşı | Dükkanı aç!')
                             : dayPhase === 'night' ? '🌙 Upgrade al!'
                             : '☀️ Müşterilere servis yap'}
                     </span>

@@ -1,4 +1,4 @@
-import { GRID_CELL_SIZE, GAME_WIDTH, GAME_HEIGHT, StationPosition } from '../../shared/types';
+import { GRID_CELL_SIZE, GAME_WIDTH, GAME_HEIGHT, StationPosition, TablePosition, TABLE_HALF_W, TABLE_HALF_H, WALL_Y1, WALL_Y2 } from '../../shared/types';
 
 const GRID_COLS = Math.floor(GAME_WIDTH / GRID_CELL_SIZE);
 const GRID_ROWS = Math.floor(GAME_HEIGHT / GRID_CELL_SIZE);
@@ -44,6 +44,25 @@ export interface LayoutEditorState {
   originalPos: { x: number; y: number } | null;
   previewPos: { x: number; y: number } | null;
   isPreviewValid: boolean;
+  // Masa taşıma
+  isMovingTable: boolean;
+  movingTableId: string | null;
+}
+
+const MIN_TABLE_Y = 320;
+
+export function isTablePositionValid(
+  x: number, y: number,
+  tableLayout: Record<string, TablePosition>,
+  excludeId: string
+): boolean {
+  if (y < MIN_TABLE_Y || y > GAME_HEIGHT - 60) return false;
+  if (y >= WALL_Y1 && y <= WALL_Y2) return false;
+  return !Object.values(tableLayout).some(t =>
+    t.id !== excludeId &&
+    Math.abs(t.x - x) < TABLE_HALF_W * 2 + 10 &&
+    Math.abs(t.y - y) < TABLE_HALF_H * 2 + 10
+  );
 }
 
 export function drawLayoutPreview(
@@ -51,6 +70,51 @@ export function drawLayoutPreview(
   editorState: LayoutEditorState,
   stationLayout: Record<string, StationPosition>
 ): void {
+  // Masa taşıma preview
+  if (editorState.isMovingTable && editorState.movingTableId && editorState.previewPos) {
+    const { previewPos, isPreviewValid, originalPos } = editorState;
+    const hw = TABLE_HALF_W;
+    const hh = TABLE_HALF_H;
+
+    // Orijinal konum — yarı saydam overlay
+    if (originalPos) {
+      ctx.save();
+      ctx.globalAlpha = 0.4;
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.fillRect(originalPos.x - hw, originalPos.y - hh, hw * 2, hh * 2);
+      ctx.setLineDash([5, 5]);
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(originalPos.x - hw, originalPos.y - hh, hw * 2, hh * 2);
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+
+    // Önizleme
+    const color = isPreviewValid ? 'rgba(34,197,94,0.35)' : 'rgba(239,68,68,0.35)';
+    const border = isPreviewValid ? '#22c55e' : '#ef4444';
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.fillRect(previewPos.x - hw, previewPos.y - hh, hw * 2, hh * 2);
+    ctx.strokeStyle = border;
+    ctx.lineWidth = 3;
+    ctx.setLineDash([]);
+    ctx.strokeRect(previewPos.x - hw, previewPos.y - hh, hw * 2, hh * 2);
+    ctx.font = '22px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.globalAlpha = isPreviewValid ? 0.85 : 0.5;
+    ctx.fillText('🪑', previewPos.x, previewPos.y);
+    ctx.globalAlpha = 1;
+    ctx.font = 'bold 11px Arial';
+    ctx.fillStyle = isPreviewValid ? '#86efac' : '#fca5a5';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(isPreviewValid ? '✓ Bırak: E' : '✗ Geçersiz', previewPos.x, previewPos.y + hh + 3);
+    ctx.restore();
+    return;
+  }
+
   if (!editorState.isMoving || !editorState.movingStationId || !editorState.previewPos) return;
 
   const { previewPos, isPreviewValid, originalPos, movingStationId } = editorState;

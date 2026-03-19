@@ -1,4 +1,4 @@
-import { Customer, TABLE_Y, EAT_TICKS } from '../types/game';
+import { Customer, TABLE_Y_DEFAULT, EAT_TICKS } from '../types/game';
 import { stk, adjustColor, lighten, darken, drawShadowEllipse } from './rendererUtils';
 
 type CRS = {
@@ -88,9 +88,9 @@ export function drawCustomer(ctx: CanvasRenderingContext2D, customer: Customer) 
     const { id, x, y, seatY, wants, patience, maxPatience, isSeated, isEating, eatTimer, beatUpTimer, currentDialog } = customer;
     const shape = customer.bodyShape ?? 1;
     const bodyColor = customer.bodyColor ?? '#475569';
-    // facingUp: seatY < TABLE_Y → müşteri masanın üstündeki koltukta → aşağı (masaya/bize) bakıyor → ÖNDEN
-    // facingUp: seatY > TABLE_Y → masanın altındaki koltukta → yukarı (masaya) bakıyor → ARKADAN
-    const facingUp   = seatY !== undefined ? seatY < TABLE_Y : true;
+    // facingUp: seatY < TABLE_Y_DEFAULT → müşteri masanın üstündeki koltukta → aşağı (masaya/bize) bakıyor → ÖNDEN
+    // facingUp: seatY > TABLE_Y_DEFAULT → masanın altındaki koltukta → yukarı (masaya) bakıyor → ARKADAN
+    const facingUp   = seatY !== undefined ? seatY < TABLE_Y_DEFAULT : true;
     const facingBack = isSeated && !facingUp; // Arkasını dönerek oturuyor (yukarı bakıyor)
     const st = getCRS(id, x, y);
 
