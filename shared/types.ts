@@ -229,8 +229,8 @@ export function getSeatSlots(tableLayout: Record<string, TablePosition>): { x: n
 }
 
 // ─── Gün / Gece ──────────────────────────────────────────────────────────────
-export const DAY_TICKS = 3000;
-export const NIGHT_TICKS = 600;
+export const DAY_TICKS = 4500;
+export const NIGHT_TICKS = 1200;
 export const CLOSING_THRESHOLD = 450;
 export const BURN_TICKS = 300;
 export const EAT_TICKS = 240;
