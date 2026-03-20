@@ -251,11 +251,6 @@ export const GameScreen: React.FC<Props> = ({
                     className="w-full h-full block touch-none select-none"
                 />
 
-                {dayPhase === 'prep' && !editorState.isMoving && !editorState.isMovingTable && isTouchDevice && (
-                    <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-stone-900/80 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-purple-700/60 shadow-xl pointer-events-none">
-                        <p className="text-stone-400 text-[10px] text-center">AL/VER: İstasyon/Masa taşı</p>
-                    </div>
-                )}
 
                 {/* ── Düzenleme Modu Banner (Sol Üst Köşe, Kompakt) ── */}
                 {dayPhase === 'prep' && (editorState.isMoving || editorState.isMovingTable) && (
