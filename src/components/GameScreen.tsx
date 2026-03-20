@@ -7,6 +7,7 @@ import { SettingsPanel } from './SettingsPanel';
 import { SettingsModal } from './SettingsModal';
 import { PatchNotesModal } from './PatchNotesModal';
 import { CosmeticsModal } from './CosmeticsModal';
+import { HudEditor } from './HudEditor';
 import { MARKET_NAME } from '../constants';
 import { useGameLoop } from '../hooks/useGameLoop';
 import { Settings } from '../hooks/useSettings';
@@ -63,6 +64,7 @@ export const GameScreen: React.FC<Props> = ({
     const [musicOn, setMusicOn] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     const [showCosmetics, setShowCosmetics] = useState(false);
+    const [showHudEditor, setShowHudEditor] = useState(false);
     const [voiceActive, setVoiceActive] = useState(false);
     const [showVoiceSettings, setShowVoiceSettings] = useState(false);
     const [globalVoiceVol, setGlobalVoiceVol] = useState(1.0);
@@ -197,17 +199,34 @@ export const GameScreen: React.FC<Props> = ({
                 </div>
 
                 <div className="flex-1 max-w-xs flex flex-col items-center gap-0.5">
-                    <span className="text-[10px] font-bold flex items-center gap-2" style={{ color: dayPhase === 'prep' ? '#a78bfa' : dayPhase === 'day' ? '#fbbf24' : '#818cf8' }}>
-                        <span>{dayPhase === 'prep' ? `🔧 Hazırlık — Gün ${day} ` : dayPhase === 'day' ? `☀️ Gün ${day} ` : `🌙 Gece ${day} `}
-                            {queueLen > 0 && dayPhase === 'day' ? ` · ⏳${queueLen} ` : ''}</span>
-                        <span className="flex gap-0.5 text-sm drop-shadow-md">
-                            {Array.from({ length: 3 }).map((_, i) => (
-                                <span key={i} className="transition-transform duration-300">
-                                    {i < lives ? '❤️' : '🖤'}
-                                </span>
-                            ))}
+                    {/* Taşıma modu aktifken iptal banner'ı göster */}
+                    {dayPhase === 'prep' && (editorState.isMoving || editorState.isMovingTable) ? (
+                        <div className="flex items-center gap-2">
+                            <span className="font-bold text-[11px]" style={{ color: editorState.isMoving ? '#fde047' : '#fbbf24' }}>
+                                {editorState.isMoving
+                                    ? (isTouchDevice ? '📦 Yeni konuma git → AL/VER' : '📦 Yeni konuma git → E')
+                                    : (isTouchDevice ? '🪑 Masayı taşı → AL/VER' : '🪑 Masayı taşı → E')}
+                            </span>
+                            <button
+                                onClick={handleCancel}
+                                className="px-2 py-0.5 bg-red-600 hover:bg-red-500 text-white rounded-lg font-black text-[11px] border border-red-400 transition-all active:scale-95 whitespace-nowrap"
+                            >
+                                ✕ İptal
+                            </button>
+                        </div>
+                    ) : (
+                        <span className="text-[10px] font-bold flex items-center gap-2" style={{ color: dayPhase === 'prep' ? '#a78bfa' : dayPhase === 'day' ? '#fbbf24' : '#818cf8' }}>
+                            <span>{dayPhase === 'prep' ? `🔧 Hazırlık — Gün ${day} ` : dayPhase === 'day' ? `☀️ Gün ${day} ` : `🌙 Gece ${day} `}
+                                {queueLen > 0 && dayPhase === 'day' ? ` · ⏳${queueLen} ` : ''}</span>
+                            <span className="flex gap-0.5 text-sm drop-shadow-md">
+                                {Array.from({ length: 3 }).map((_, i) => (
+                                    <span key={i} className="transition-transform duration-300">
+                                        {i < lives ? '❤️' : '🖤'}
+                                    </span>
+                                ))}
+                            </span>
                         </span>
-                    </span>
+                    )}
                     <div className="w-full h-1.5 bg-stone-700 rounded-full overflow-hidden">
                         <div className="h-full rounded-full transition-all" style={{ width: `${progress * 100}% `, backgroundColor: barColor }} />
                     </div>
@@ -271,8 +290,13 @@ export const GameScreen: React.FC<Props> = ({
 
                 {/* Joystick */}
                 <div
-                    className={`absolute z-10 ${settings.joystickSide === 'left' ? 'left-4' : 'right-4'}`}
-                    style={{ bottom: `${settings.joystickOffset}px` }}
+                    className="absolute z-10 touch-none"
+                    style={{
+                        left: `${settings.hudLayout.joystick.x}%`,
+                        top: `${settings.hudLayout.joystick.y}%`,
+                        transform: `scale(${settings.hudLayout.joystick.scale})`,
+                        transformOrigin: 'top left',
+                    }}
                 >
                     <Joystick
                         size={settings.joystickSize}
@@ -280,10 +304,15 @@ export const GameScreen: React.FC<Props> = ({
                     />
                 </div>
 
-                {/* Kontrol butonları */}
+                {/* Döv butonu */}
                 <div
-                    className={`absolute z-10 flex flex-col gap-2 items-end ${settings.joystickSide === 'left' ? 'right-4' : 'left-4'}`}
-                    style={{ bottom: `${settings.buttonOffset}px` }}
+                    className="absolute z-10"
+                    style={{
+                        left: `${settings.hudLayout.punchBtn.x}%`,
+                        top: `${settings.hudLayout.punchBtn.y}%`,
+                        transform: `scale(${settings.hudLayout.punchBtn.scale})`,
+                        transformOrigin: 'top left',
+                    }}
                 >
                     <button
                         onPointerDown={(e) => {
@@ -310,6 +339,18 @@ export const GameScreen: React.FC<Props> = ({
                     >
                         DÖV<br />👊
                     </button>
+                </div>
+
+                {/* AL/VER butonu */}
+                <div
+                    className="absolute z-10"
+                    style={{
+                        left: `${settings.hudLayout.actionBtn.x}%`,
+                        top: `${settings.hudLayout.actionBtn.y}%`,
+                        transform: `scale(${settings.hudLayout.actionBtn.scale})`,
+                        transformOrigin: 'top left',
+                    }}
+                >
                     <button
                         onPointerDown={(e) => {
                             e.preventDefault();
@@ -324,6 +365,18 @@ export const GameScreen: React.FC<Props> = ({
                     >
                         AL<br />VER
                     </button>
+                </div>
+
+                {/* Müzik butonu */}
+                <div
+                    className="absolute z-10"
+                    style={{
+                        left: `${settings.hudLayout.musicBtn.x}%`,
+                        top: `${settings.hudLayout.musicBtn.y}%`,
+                        transform: `scale(${settings.hudLayout.musicBtn.scale})`,
+                        transformOrigin: 'top left',
+                    }}
+                >
                     <button
                         onClick={toggleMusic}
                         style={{ width: Math.round(bs * 0.55), height: Math.round(bs * 0.55) }}
@@ -331,11 +384,9 @@ export const GameScreen: React.FC<Props> = ({
                     >{musicOn ? '🎵' : '🔇'}</button>
                 </div>
 
-                {dayPhase === 'prep' && !editorState.isMoving && !editorState.isMovingTable && (
-                    <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-stone-900/80 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-purple-700/60 shadow-xl">
-                        <p className="text-stone-400 text-[10px] text-center">
-                            {isTouchDevice ? 'AL/VER: İstasyon/Masa taşı' : 'E: İstasyon/Masa taşı'}
-                        </p>
+                {dayPhase === 'prep' && !editorState.isMoving && !editorState.isMovingTable && isTouchDevice && (
+                    <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-stone-900/80 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-purple-700/60 shadow-xl pointer-events-none">
+                        <p className="text-stone-400 text-[10px] text-center">AL/VER: İstasyon/Masa taşı</p>
                     </div>
                 )}
 
@@ -472,7 +523,20 @@ export const GameScreen: React.FC<Props> = ({
             )}
 
             {showSettings && (
-                <SettingsPanel settings={settings} onUpdate={updateSettings} onClose={() => setShowSettings(false)} onLeaveGame={onLeaveGame} isJoined={isJoined} />
+                <SettingsPanel settings={settings} onUpdate={updateSettings} onClose={() => setShowSettings(false)} onLeaveGame={onLeaveGame} isJoined={isJoined}
+                    onOpenHudEditor={() => { setShowSettings(false); setShowHudEditor(true); }}
+                />
+            )}
+
+            {showHudEditor && (
+                <HudEditor
+                    layout={settings.hudLayout}
+                    onChange={(layout) => updateSettings({ hudLayout: layout })}
+                    onClose={() => setShowHudEditor(false)}
+                    joystickSize={settings.joystickSize}
+                    actionBtnSize={bs}
+                    punchBtnSize={settings.punchButtonSize}
+                />
             )}
 
             {showCosmetics && (
