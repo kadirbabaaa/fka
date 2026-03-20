@@ -225,6 +225,8 @@ io.on("connection", (socket) => {
     gs.dayPhase = 'prep';
     gs.dayTimer = DAY_TICKS;
     gs.score = Math.floor(gs.score * 0.8);
+    // Fırınları temizle
+    gs.cookStations.forEach(s => { s.input = null; s.output = null; s.isBurned = false; s.burnTimer = 0; });
     io.to(roomId).emit("state", gs);
     socket.emit("sound", "success");
   });

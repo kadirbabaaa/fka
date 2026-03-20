@@ -239,8 +239,8 @@ export const GameScreen: React.FC<Props> = ({
             </div>
 
             {/* ── Canvas ────────────────────────────────────────────────────────── */}
-            <div className="flex-1 min-h-0 relative flex justify-center" style={{ background: '#9a7858' }}>
-                <div className="relative h-full" style={{ aspectRatio: '1280/870', maxWidth: '80vw' }}>
+            <div className="flex-1 min-h-0 relative flex items-center justify-center" style={{ background: '#9a7858' }}>
+                <div className="relative" style={{ aspectRatio: '1280/870', maxWidth: '80vw', maxHeight: '100%', width: '100%' }}>
 
                 {/* ── Geliştirici Araçları (DEV) ── */}
                 {(dayPhase === 'prep' || dayPhase === 'day') && isDevMode && (
@@ -266,7 +266,7 @@ export const GameScreen: React.FC<Props> = ({
                     width={GAME_WIDTH}
                     height={GAME_HEIGHT}
                     onContextMenu={(e) => e.preventDefault()}
-                    className="w-full h-full object-contain block touch-none select-none"
+                    className="w-full h-full block touch-none select-none"
                 />
 
                 {/* Joystick */}

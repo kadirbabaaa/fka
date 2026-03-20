@@ -11,7 +11,9 @@ import { DIALOGUES } from "../shared/dialogues.js";
 const CLOSING_THRESHOLD = 300;
 const SPAWN_GRACE_TICKS = 240;
 
-function patLimit(lv: number) { return 1200 + 300 * lv; }
+function patLimit(lv: number, day: number) {
+  return Math.max(300, 1200 + 300 * lv - day * 30);
+}
 
 export function generateMenuChoices(gs: GameState): void {
   const locked = [...DISH_UNLOCK_POOL].filter((d: string) => !gs.unlockedDishes.includes(d));
@@ -31,7 +33,7 @@ export function tryQueueSeat(gs: GameState, io: Server, rid: string) {
     if (!free.length) break;
     const guest = gs.waitList.shift()!;
     const seat = free[Math.floor(Math.random() * free.length)];
-    const maxP = patLimit(gs.upgrades.patience);
+    const maxP = patLimit(gs.upgrades.patience, gs.day);
 
     // Kapı ortası: x=640, dışarıdan gelir
     const DOOR_X = 640;
@@ -89,6 +91,10 @@ export function gameTick(gs: GameState, io: Server, rid: string) {
 
   if (gs.dayPhase === 'night') {
     if (gs.dayTimer > 0) gs.dayTimer--;
+    // Menü seçimi yoksa ve timer bittiyse otomatik sonraki güne geç
+    if (gs.dayTimer <= 0 && !gs.menuChoices) {
+      gs.day++; gs.dayPhase = 'prep'; gs.dayTimer = DAY_TICKS;
+    }
   }
 
   // Spawn
@@ -114,11 +120,11 @@ export function gameTick(gs: GameState, io: Server, rid: string) {
 
 function spawnTick(gs: GameState, io: Server, rid: string) {
   const availableDishes = gs.unlockedDishes.length > 0 ? gs.unlockedDishes : [...DISH_ITEMS];
-  const baseRate = 0.001 + Math.min(gs.day * 0.0005, 0.005);
+  const baseRate = 0.001 + Math.min(gs.day * 0.0005, 0.008);
   const dayProgress = 1 - gs.dayTimer / DAY_TICKS;
   const playerCount = Object.keys(gs.players).length || 1;
   const spawnMultiplier = 1 + (playerCount - 1) * 0.6;
-  const queueLimit = 10 + (playerCount - 1) * 3;
+  const queueLimit = 10 + gs.day * 2 + (playerCount - 1) * 3;
   const currentRate = (baseRate + (dayProgress * 0.001)) * spawnMultiplier;
 
   if (Math.random() < currentRate && gs.customers.length + gs.waitList.length < queueLimit) {
@@ -256,7 +262,7 @@ function customerTick(gs: GameState, io: Server, rid: string) {
           c.patience -= actualDrain;
           if (gs.isImmortal && c.patience <= 0) c.patience = 1;
           if (c.patience <= 0) {
-            gs.score -= 10;
+          gs.score = Math.max(0, gs.score - 10);
             gs.lives -= 1;
             io.to(rid).emit("sound", "fail");
             if (gs.lives <= 0) {
