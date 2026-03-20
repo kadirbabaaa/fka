@@ -13,7 +13,6 @@ import { useGameLoop } from '../hooks/useGameLoop';
 import { Settings } from '../hooks/useSettings';
 import { useVoiceChat } from '../hooks/useVoiceChat';
 import { useGameState } from '../hooks/useGameState';
-import { useDevMode } from '../hooks/useDevMode';
 import { useLayoutEditor } from '../hooks/useLayoutEditor';
 
 const MUSIC_URL = 'https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@main/Light%20Hearted%20-%20Jeremy%20Blake.mp3';
@@ -68,11 +67,9 @@ export const GameScreen: React.FC<Props> = ({
     const [voiceActive, setVoiceActive] = useState(false);
     const [showVoiceSettings, setShowVoiceSettings] = useState(false);
     const [globalVoiceVol, setGlobalVoiceVol] = useState(1.0);
-    const [devClickCount, setDevClickCount] = useState(0);
     const audioElementsRef = useRef<Record<string, HTMLAudioElement>>({});
 
     const { score, dayPhase, dayTimer, upgrades, day, ovenCount, queueLen, lives, isGameOver, menuChoices, unlockedDishes } = useGameState(gameStateRef);
-    const { isDevMode, activateDevMode } = useDevMode();
 
     const { editorState, editorStateRef, handleInteract, handleCancel } = useLayoutEditor({
         socket,
@@ -175,15 +172,7 @@ export const GameScreen: React.FC<Props> = ({
             <div className="flex-none h-12 px-2 flex items-center justify-between gap-2 bg-stone-900/95 border-b border-stone-700">
                 <div className="flex items-center gap-2 flex-shrink-0">
                     <div 
-                        className="bg-white/95 px-2 py-0.5 rounded-lg border border-white/40 cursor-pointer"
-                        onClick={() => {
-                            setDevClickCount(prev => {
-                                const next = prev + 1;
-                                if (next >= 4) activateDevMode();
-                                return next;
-                            });
-                            setTimeout(() => setDevClickCount(0), 2000);
-                        }}
+                        className="bg-white/95 px-2 py-0.5 rounded-lg border border-white/40"
                     >
                         <h1 className="text-sm font-black text-stone-800 leading-none select-none">
                             {gameStateRef.current.marketName || MARKET_NAME} 🏪
@@ -261,24 +250,7 @@ export const GameScreen: React.FC<Props> = ({
             <div className="flex-1 min-h-0 relative flex items-center justify-center" style={{ background: '#9a7858' }}>
                 <div className="relative" style={{ aspectRatio: '1280/870', maxWidth: '80vw', maxHeight: '100%', width: '100%' }}>
 
-                {/* ── Geliştirici Araçları (DEV) ── */}
-                {(dayPhase === 'prep' || dayPhase === 'day') && isDevMode && (
-                    <div className="absolute top-2 left-2 z-20 flex flex-col gap-2">
-                        <div className="text-[9px] font-black text-stone-500 uppercase tracking-widest pl-1">🛠️ Dev Tools</div>
-                        <button
-                            onClick={() => emit('dev:makeNight')}
-                            className="px-3 py-1.5 bg-purple-900/80 hover:bg-purple-800 text-purple-100 text-[11px] font-bold rounded-lg border border-purple-500/50 backdrop-blur-sm shadow-lg text-left transition-colors"
-                        >
-                            ⏭️ Hemen Gece Yap
-                        </button>
-                        <button
-                            onClick={() => emit('dev:toggleImmortality')}
-                            className="px-3 py-1.5 bg-red-900/80 hover:bg-red-800 text-red-100 text-[11px] font-bold rounded-lg border border-red-500/50 backdrop-blur-sm shadow-lg text-left transition-colors"
-                        >
-                            🛡️ Ölümsüzlüğü Aç/Kapat
-                        </button>
-                    </div>
-                )}
+                {/* ── Geliştirici Araçları kaldırıldı ── */}
 
                 <canvas
                     ref={canvasRef}
@@ -398,6 +370,7 @@ export const GameScreen: React.FC<Props> = ({
                         lives={lives}
                         ovenCount={ovenCount}
                         unlockedDishes={unlockedDishes}
+                        menuChoices={menuChoices}
                         onUpgrade={id => emit('upgrade', id)}
                         onBuyOven={() => emit('buyOven')}
                         onBuyLife={() => emit('buyLife')}
@@ -408,6 +381,7 @@ export const GameScreen: React.FC<Props> = ({
                 </div> {/* inner aspect-ratio wrapper */}
 
                 {/* Joystick — outer wrapper'da, tüm ekrana serbestçe konumlanabilir */}
+                {!showHudEditor && (
                 <div
                     className="absolute z-10 touch-none"
                     style={{
@@ -422,8 +396,10 @@ export const GameScreen: React.FC<Props> = ({
                         onMove={(x, y) => { joystickVectorRef.current = { x, y }; }}
                     />
                 </div>
+                )}
 
                 {/* Döv butonu */}
+                {!showHudEditor && (
                 <div
                     className="absolute z-10"
                     style={{
@@ -457,8 +433,10 @@ export const GameScreen: React.FC<Props> = ({
                         DÖV<br />👊
                     </button>
                 </div>
+                )}
 
                 {/* AL/VER butonu */}
+                {!showHudEditor && (
                 <div
                     className="absolute z-10"
                     style={{
@@ -480,8 +458,10 @@ export const GameScreen: React.FC<Props> = ({
                         AL<br />VER
                     </button>
                 </div>
+                )}
 
                 {/* Müzik butonu */}
+                {!showHudEditor && (
                 <div
                     className="absolute z-10"
                     style={{
@@ -497,6 +477,7 @@ export const GameScreen: React.FC<Props> = ({
                         className={`rounded-full shadow-md text-base border-2 flex items-center justify-center ${musicOn ? 'bg-purple-500 border-purple-400 text-white' : 'bg-stone-700 border-stone-600 text-stone-400'}`}
                     >{musicOn ? '🎵' : '🔇'}</button>
                 </div>
+                )}
 
             </div>
 

@@ -12,6 +12,8 @@ import {
   RECIPE_DEFS,
   TRASH_STATION,
   SINK_STATION,
+  DAY_TICKS,
+  NIGHT_TICKS,
 } from "../types/game";
 
 import { drawFloor } from "../renderer/drawFloor";
@@ -49,7 +51,7 @@ let floorCache: OffscreenCanvas | HTMLCanvasElement | null = null;
 let floorCacheVersion = 0;
 let cachedUnlockedDishes = "";
 
-function drawFloorCached(ctx: CanvasRenderingContext2D, unlockedDishes: string[] = [], forceRedraw = false, ingredientPositions?: Record<string, { x: number; y: number }>, tablePositions?: Record<string, { id: string; x: number; y: number }>, movingTableId?: string | null, plateStackPos?: { x: number; y: number }) {
+function drawFloorCached(ctx: CanvasRenderingContext2D, unlockedDishes: string[] = [], forceRedraw = false, ingredientPositions?: Record<string, { x: number; y: number }>, tablePositions?: Record<string, { id: string; x: number; y: number }>, movingTableId?: string | null, plateStackPos?: { x: number; y: number }, sinkPos?: { x: number; y: number }) {
   const currentDishesStr = [...unlockedDishes].sort().join(',');
   const ingPosStr = ingredientPositions
     ? Object.entries(ingredientPositions).map(([k, v]) => `${k}:${v.x},${v.y}`).join(';')
@@ -58,8 +60,9 @@ function drawFloorCached(ctx: CanvasRenderingContext2D, unlockedDishes: string[]
     ? Object.entries(tablePositions).map(([k, v]) => `${k}:${v.x},${v.y}`).join(';')
     : '';
   const platePosStr = plateStackPos ? `${plateStackPos.x},${plateStackPos.y}` : '';
-  if (forceRedraw || floorCacheVersion !== FLOOR_CACHE_VERSION || cachedUnlockedDishes !== currentDishesStr + ingPosStr + tablePosStr + platePosStr) {
-    floorCache = null; floorCacheVersion = FLOOR_CACHE_VERSION; cachedUnlockedDishes = currentDishesStr + ingPosStr + tablePosStr + platePosStr;
+  const sinkPosStr = sinkPos ? `${sinkPos.x},${sinkPos.y}` : '';
+  if (forceRedraw || floorCacheVersion !== FLOOR_CACHE_VERSION || cachedUnlockedDishes !== currentDishesStr + ingPosStr + tablePosStr + platePosStr + sinkPosStr) {
+    floorCache = null; floorCacheVersion = FLOOR_CACHE_VERSION; cachedUnlockedDishes = currentDishesStr + ingPosStr + tablePosStr + platePosStr + sinkPosStr;
   }
   if (!floorCache) {
     floorCache = typeof OffscreenCanvas !== "undefined"
@@ -67,7 +70,7 @@ function drawFloorCached(ctx: CanvasRenderingContext2D, unlockedDishes: string[]
       : Object.assign(document.createElement("canvas"), { width: GAME_WIDTH, height: GAME_HEIGHT });
     const offCtx = floorCache.getContext("2d");
     if (offCtx) {
-      drawFloor(offCtx as unknown as CanvasRenderingContext2D, unlockedDishes, ingredientPositions, plateStackPos);
+      drawFloor(offCtx as unknown as CanvasRenderingContext2D, unlockedDishes, ingredientPositions, plateStackPos, sinkPos);
       const tables = tablePositions ? Object.values(tablePositions) : [];
       tables.forEach((t) => {
         if (movingTableId === t.id) {
@@ -121,7 +124,8 @@ export function useGameLoop({
       }
       const movingTableId = editorStateRef?.current?.movingTableId;
       const plateStackDynPos = state.stationLayout?.['plate_stack'] ?? undefined;
-      drawFloorCached(ctx, state.unlockedDishes, isEditing, ingPositions, state.tableLayout, movingTableId, plateStackDynPos);
+      const sinkDynPos = state.stationLayout?.['sink'] ?? undefined;
+      drawFloorCached(ctx, state.unlockedDishes, isEditing, ingPositions, state.tableLayout, movingTableId, plateStackDynPos, sinkDynPos);
 
       const stock = state.stock ?? { "🍞": 0, "🥩": 0, "🥬": 0 };
       const movingId = editorStateRef?.current?.movingStationId;
@@ -144,9 +148,7 @@ export function useGameLoop({
       const trashPos = state.stationLayout?.['trash'] ?? TRASH_STATION;
       if (movingId !== 'trash') drawStation(ctx, trashPos.x, trashPos.y, "#78716c", "🗑️", "Çöp");
 
-      // Lavabo
-      const sinkPos = state.stationLayout?.['sink'] ?? SINK_STATION;
-      if (movingId !== 'sink') drawStation(ctx, sinkPos.x, sinkPos.y, "#0ea5e9", "🚿", "Lavabo");
+      // Lavabo — drawFloor içinde detaylı çiziliyor (sinkDynPos ile)
 
       // Kirli tepsi sepeti
       const dirtyTrayLayout = state.stationLayout?.['dirty_tray'] ?? DIRTY_TRAY_POS;
@@ -212,16 +214,8 @@ export function useGameLoop({
       renderFloatingTexts(ctx, floatingTexts);
       renderPunchParticles(ctx, punchParticles);
 
-      if (state.dayPhase === "night") {
-        ctx.fillStyle = "rgba(5,10,60,0.45)";
-        ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-        ctx.fillStyle = "rgba(255,255,255,0.6)";
-        [[80,25],[200,55],[420,18],[660,42],[870,22],[1100,48],[1220,70],[320,35],[740,60],[950,30]].forEach(([sx, sy]) => {
-          ctx.beginPath(); ctx.arc(sx, sy, 1.5, 0, Math.PI * 2); ctx.fill();
-        });
-        ctx.font = "32px Arial"; ctx.textAlign = "right"; ctx.textBaseline = "top";
-        ctx.fillText("🌙", GAME_WIDTH - 16, 14);
-      }
+      // ── Işıklandırma Sistemi ──────────────────────────────────────────────
+      drawLighting(ctx, state.dayPhase, state.dayTimer);
 
       frameId = requestAnimationFrame(render);
     };
@@ -229,4 +223,66 @@ export function useGameLoop({
     frameId = requestAnimationFrame(render);
     return () => { cancelAnimationFrame(frameId); cleanupEffects(); };
   }, [isJoined, myId, socket]);
+}
+
+// ── Işıklandırma Sistemi ────────────────────────────────────────────────────
+// dayPhase + dayTimer'a göre canvas üzerine renk overlay çizer.
+// Gündüz: şeffaf (etki yok)
+// Gün sonu (CLOSING): turuncu/akşam tonu
+// Gece: koyu mavi + yıldızlar + ay
+function drawLighting(
+  ctx: CanvasRenderingContext2D,
+  dayPhase: 'prep' | 'day' | 'night',
+  dayTimer: number,
+) {
+  if (dayPhase === 'prep') {
+    // Prep: sabah tonu — hafif sıcak sarı
+    ctx.fillStyle = 'rgba(255, 220, 120, 0.08)';
+    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    return;
+  }
+
+  if (dayPhase === 'day') {
+    // Gün ortası: temiz, overlay yok
+    // Gün sonuna yaklaşınca (son %25) akşam tonu başlar
+    const progress = dayTimer / DAY_TICKS; // 1 = yeni başladı, 0 = bitti
+    if (progress < 0.25) {
+      // 0.25 → 0: giderek koyulaşan akşam
+      const t = 1 - progress / 0.25; // 0..1
+      const alpha = t * 0.28;
+      ctx.fillStyle = `rgba(200, 100, 30, ${alpha.toFixed(3)})`;
+      ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    }
+    return;
+  }
+
+  if (dayPhase === 'night') {
+    // Gece: koyu mavi overlay
+    const progress = dayTimer / NIGHT_TICKS; // 1 = gece başladı, 0 = sabah
+    // Gece başında hızlıca koyulaşır, sabaha doğru açılır
+    const alpha = progress > 0.8
+      ? 0.52                          // tam gece
+      : progress < 0.15
+        ? progress / 0.15 * 0.52      // sabah açılışı
+        : 0.52;
+
+    ctx.fillStyle = `rgba(5, 10, 60, ${alpha.toFixed(3)})`;
+    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+    // Yıldızlar — sadece tam gece (progress > 0.3)
+    if (progress > 0.3) {
+      const starAlpha = Math.min(1, (progress - 0.3) / 0.3) * 0.7;
+      ctx.fillStyle = `rgba(255, 255, 255, ${starAlpha.toFixed(3)})`;
+      [[80,25],[200,55],[420,18],[660,42],[870,22],[1100,48],[1220,70],[320,35],[740,60],[950,30]].forEach(([sx, sy]) => {
+        ctx.beginPath(); ctx.arc(sx, sy, 1.5, 0, Math.PI * 2); ctx.fill();
+      });
+    }
+
+    // Ay ikonu
+    ctx.globalAlpha = Math.min(1, progress * 2);
+    ctx.font = '32px Arial'; ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+    ctx.fillStyle = 'white';
+    ctx.fillText('🌙', GAME_WIDTH - 16, 14);
+    ctx.globalAlpha = 1;
+  }
 }

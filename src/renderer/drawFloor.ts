@@ -4,7 +4,6 @@ import {
   WALL_Y1,
   DOOR_RANGES,
   INGREDIENTS,
-  TRASH_STATION,
   SINK_STATION,
   PLATE_STACK_POS,
   COUNTER_POSITIONS,
@@ -37,7 +36,7 @@ function drawWorkstationBase(
 }
 
 /** Restoran zemini — PlateUp tarzı koyu mutfak + sıcak ahşap salon */
-export function drawFloor(ctx: CanvasRenderingContext2D, unlockedDishes: string[] = [], ingredientPositions?: Record<string, { x: number; y: number }>, plateStackPos?: { x: number; y: number }) {
+export function drawFloor(ctx: CanvasRenderingContext2D, unlockedDishes: string[] = [], ingredientPositions?: Record<string, { x: number; y: number }>, plateStackPos?: { x: number; y: number }, sinkPos?: { x: number; y: number }) {
 
   // ══════════════════════════════════════════════════════════════════
   // SALON — sıcak açık ahşap parke (PlateUp dining room tonu)
@@ -182,77 +181,29 @@ export function drawFloor(ctx: CanvasRenderingContext2D, unlockedDishes: string[
   // ══════════════════════════════════════════════════════════════════
   // LAVABO — metalik/endüstriyel görünüm
   // ══════════════════════════════════════════════════════════════════
-  const sx = SINK_STATION.x, sy = SINK_STATION.y;
+  {
+    const sx = (sinkPos ?? SINK_STATION).x, sy = (sinkPos ?? SINK_STATION).y;
 
-  drawWorkstationBase(ctx, sx, sy, 44, 32, 12, 0.30);
+    drawWorkstationBase(ctx, sx, sy, 44, 32, 12, 0.30);
 
-  const si = ctx.createRadialGradient(sx, sy, 2, sx, sy, 26);
-  si.addColorStop(0, '#6aaccc'); si.addColorStop(0.6, '#4888aa'); si.addColorStop(1, '#2c6888');
-  ctx.fillStyle = si;
-  ctx.beginPath(); ctx.roundRect(sx - 26, sy - 18, 52, 30, 14); ctx.fill();
-  ctx.strokeStyle = '#1e5068'; ctx.lineWidth = 1.5; ctx.stroke();
+    const si = ctx.createRadialGradient(sx, sy, 2, sx, sy, 26);
+    si.addColorStop(0, '#6aaccc'); si.addColorStop(0.6, '#4888aa'); si.addColorStop(1, '#2c6888');
+    ctx.fillStyle = si;
+    ctx.beginPath(); ctx.roundRect(sx - 26, sy - 18, 52, 30, 14); ctx.fill();
+    ctx.strokeStyle = '#1e5068'; ctx.lineWidth = 1.5; ctx.stroke();
 
-  ctx.fillStyle = 'rgba(160,220,255,0.30)';
-  ctx.beginPath(); ctx.ellipse(sx - 6, sy - 5, 14, 8, -0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(160,220,255,0.30)';
+    ctx.beginPath(); ctx.ellipse(sx - 6, sy - 5, 14, 8, -0.3, 0, Math.PI * 2); ctx.fill();
 
-  ctx.strokeStyle = '#707070'; ctx.lineWidth = 3.5; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(sx, sy - 18); ctx.lineTo(sx, sy - 32); ctx.lineTo(sx + 14, sy - 32); ctx.stroke();
-  ctx.fillStyle = '#909090';
-  ctx.beginPath(); ctx.ellipse(sx + 14, sy - 32, 5, 3, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#707070'; ctx.lineWidth = 3.5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(sx, sy - 18); ctx.lineTo(sx, sy - 32); ctx.lineTo(sx + 14, sy - 32); ctx.stroke();
+    ctx.fillStyle = '#909090';
+    ctx.beginPath(); ctx.ellipse(sx + 14, sy - 32, 5, 3, 0, 0, Math.PI * 2); ctx.fill();
 
-  ctx.fillStyle = '#a0a8a0';
-  ctx.font = 'bold 10px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  ctx.fillText('🚿 Lavabo', sx, sy + 18);
-
-  // ══════════════════════════════════════════════════════════════════
-  // ÇÖP KUTUSU — gerçek kova şekli
-  // ══════════════════════════════════════════════════════════════════
-  const tx = TRASH_STATION.x, ty2 = TRASH_STATION.y;
-
-  // Zemin gölgesi
-  ctx.fillStyle = 'rgba(0,0,0,0.22)';
-  ctx.beginPath(); ctx.ellipse(tx + 2, ty2 + 28, 22, 7, 0, 0, Math.PI * 2); ctx.fill();
-
-  // Kova gövdesi (hafif trapez — altta dar, üstte geniş)
-  ctx.beginPath();
-  ctx.moveTo(tx - 20, ty2 - 14);
-  ctx.lineTo(tx + 20, ty2 - 14);
-  ctx.lineTo(tx + 16, ty2 + 26);
-  ctx.lineTo(tx - 16, ty2 + 26);
-  ctx.closePath();
-  const kovGrad = ctx.createLinearGradient(tx - 20, ty2, tx + 20, ty2);
-  kovGrad.addColorStop(0, '#607a6e');
-  kovGrad.addColorStop(0.45, '#718f81');
-  kovGrad.addColorStop(1, '#4a6058');
-  ctx.fillStyle = kovGrad;
-  ctx.fill();
-  ctx.strokeStyle = '#2e4a3e'; ctx.lineWidth = 2; ctx.stroke();
-
-  // Dikey çizgi detaylar
-  ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = 1.5; ctx.lineCap = 'butt';
-  for (let i = -1; i <= 1; i++) {
-    ctx.beginPath();
-    ctx.moveTo(tx + i * 8, ty2 - 12);
-    ctx.lineTo(tx + i * 6, ty2 + 24);
-    ctx.stroke();
+    ctx.fillStyle = '#a0a8a0';
+    ctx.font = 'bold 10px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText('🚿 Lavabo', sx, sy + 18);
   }
-
-  // Kapak (lid)
-  const lidGrad = ctx.createLinearGradient(tx - 23, ty2 - 27, tx + 23, ty2 - 15);
-  lidGrad.addColorStop(0, '#859e92'); lidGrad.addColorStop(1, '#506860');
-  ctx.fillStyle = lidGrad;
-  ctx.beginPath(); ctx.roundRect(tx - 22, ty2 - 27, 44, 14, [6, 6, 0, 0]); ctx.fill();
-  ctx.strokeStyle = '#2e4a3e'; ctx.lineWidth = 2; ctx.stroke();
-
-  // Kapak tutacağı
-  ctx.fillStyle = '#3a5248';
-  ctx.beginPath(); ctx.roundRect(tx - 7, ty2 - 35, 14, 10, 4); ctx.fill();
-  ctx.strokeStyle = '#223830'; ctx.lineWidth = 1.5; ctx.stroke();
-
-  // Etiket
-  ctx.fillStyle = '#d0e8e0';
-  ctx.font = 'bold 10px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  ctx.fillText('🗑️ Çöp', tx, ty2 + 28);
 
   // ══════════════════════════════════════════════════════════════════
   // TABAK YIĞINI İSTASYONU (PLATE STACK BASE)
@@ -487,19 +438,6 @@ function drawFrontDoor(
   ctx.strokeStyle = '#a07820'; ctx.lineWidth = 1; ctx.stroke();
 }
 
-/** Çimen yama */
-function drawGrassPatch(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
-  const g = ctx.createLinearGradient(x, y, x, y + h);
-  g.addColorStop(0, '#5a8a3a'); g.addColorStop(1, '#4a7a2a');
-  ctx.fillStyle = g;
-  ctx.fillRect(x, y, w, h);
-  ctx.strokeStyle = 'rgba(80,140,40,0.5)';
-  ctx.lineWidth = 1;
-  for (let gx = x + 4; gx < x + w; gx += 6) {
-    const gh = 4 + Math.sin(gx * 0.3) * 2;
-    ctx.beginPath(); ctx.moveTo(gx, y + h); ctx.lineTo(gx - 1, y + h - gh); ctx.stroke();
-  }
-}
 
 /** Top-down ağaç */
 function drawTree(ctx: CanvasRenderingContext2D, cx: number, cy: number) {

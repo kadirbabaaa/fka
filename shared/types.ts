@@ -52,8 +52,8 @@ export interface Customer {
     beatUpTimer?: number;
     punchCount?: number;
 
-    // Giriş fazı: 'entering' = kapıya doğru geliyor, 'seating' = koltuğa gidiyor
-    phase?: 'entering' | 'seating';
+    // Giriş fazı: 'entering' = kapıya doğru geliyor, 'seating' = koltuğa gidiyor, 'seated' = oturdu
+    phase?: 'entering' | 'seating' | 'seated';
     doorX?: number; // Hangi kapıdan girecek
 }
 
@@ -63,7 +63,6 @@ export interface WaitingGuest {
     personality: Personality;
     currentDialog?: string;
     dialogTimer?: number;
-    isBeatUp?: boolean;
     bodyShape: 1 | 2 | 3 | 4;
     bodyColor: string;
 }
@@ -154,9 +153,6 @@ export interface GameState {
     // ─── Yemek Kilidi Sistemi (Plate Up tarzı) ─────────────────────────────
     unlockedDishes: string[];       // Müşterilerin sipariş edebileceği yemekler
     menuChoices: string[] | null;   // Gece ekranında seçim için sunulan kilitli yemekler
-
-    // ─── Geliştirici Araçları ────────────────────────────────────────────────
-    isImmortal?: boolean;           // Ölümsüzlük (Can gitmez)
 
     // ─── Station Layout Editor ───────────────────────────────────────────────
     stationLayout: Record<string, StationPosition>;

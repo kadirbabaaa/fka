@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CHARACTER_TYPES } from '../types/game';
+import { CHARACTER_TYPES, FLOORPLANS, type FloorplanId } from '../types/game';
 import { MARKET_NAME } from '../constants';
 
 interface CharacterSelectProps {
@@ -16,6 +16,8 @@ interface CharacterSelectProps {
     setMarketName: (v: string) => void;
     roomId: string;
     setRoomId: (v: string) => void;
+    floorplanId: FloorplanId;
+    setFloorplanId: (v: FloorplanId) => void;
     onJoin: (e: React.FormEvent) => void;
     onBack: () => void;
     onOpenSettings: () => void;

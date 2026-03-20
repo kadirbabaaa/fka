@@ -1,4 +1,4 @@
-import { Customer, TABLE_Y_DEFAULT, EAT_TICKS } from '../types/game';
+import { Customer, TABLE_Y_DEFAULT } from '../types/game';
 import { stk, adjustColor, lighten, darken, drawShadowEllipse } from './rendererUtils';
 
 type CRS = {
@@ -117,7 +117,6 @@ export function drawCustomer(ctx: CanvasRenderingContext2D, customer: Customer) 
     const tilt     = Math.sin(st.bobPhase) * 0.06 * st.bobAmount;
     const legSwing = moving ? Math.sin(st.bobPhase) * 6 : 0;
     const beatUp   = st.beatUpShake > 0;
-    const eatPct   = isEating ? eatTimer / EAT_TICKS : 0;
     const eatBob   = isEating ? Math.sin(st.eatPhase) * 3 : 0; // Yemek yerken baş aşağı yukarı
 
     const { bw, bh, hr, neck, leg, feet } = bodyProps(shape);

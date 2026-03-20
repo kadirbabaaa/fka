@@ -42,6 +42,19 @@
 - `score -= 10` → `score = Math.max(0, score - 10)` (negatife düşmez)
 - Spawn rate cap `0.005` → `0.008` (daha yüksek gün limitine uygun)
 
+### TASK 14: Grup Müşteri Gelme + Bug Düzeltmeleri
+- `CLOSING_THRESHOLD` çakışması düzeltildi — local `300` kaldırıldı, `shared/types.ts`'deki `450` kullanılıyor
+- `DOOR_X` ve `DOOR_ENTRY_Y` modül seviyesinde sabit olarak tanımlandı
+- **Grup spawn eklendi:** `groupChance = min(0.15 + day*0.04, 0.45)` — gün 1'de %19, gün 8+'da %45
+  - Solo: grup büyüklüğü 2-3 kişi
+  - Multi: grup büyüklüğü 2-4 kişi
+  - Grubun ilk üyesi konuşabilir, geri kalanlar sessiz gelir
+  - Kuyruk limitine göre grup boyutu kırpılır
+- Sistem: `waitList` → `tryQueueSeat` → `entering` → `seating` → oturma → yeme → ayrılma
+- **Bug düzeltildi:** `seating` fazına geçişte `c.x = c.seatX` anında ışınlanıyordu
+- Artık müşteri hem x hem y ekseninde smooth (3px/tick) hareket ediyor
+- `isSeated = true` sadece her iki eksen de hedefe ulaşınca set ediliyor
+
 ---
 
 ## Tespit Edilen Hatalar (Düzeltildi ✅)

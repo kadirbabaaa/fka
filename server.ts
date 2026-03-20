@@ -285,26 +285,6 @@ io.on("connection", (socket) => {
     io.to(roomId!).emit("punchEffect", { x: c.x, y: c.y, count: c.punchCount });
   });
 
-  // ─── Geliştirici Araçları (DEV MODE) ──────────────────────────────────────
-  socket.on("dev:makeNight", () => {
-    if (!roomId || !RoomManager.getRoomState(roomId)) return;
-    const gs = RoomManager.getRoomState(roomId)!;
-    if (gs.dayPhase === 'day') {
-      gs.dayTimer = 1; // Süreyi hemen bitirerek gece döngüsünü tetikler
-      gs.customers = []; // Tüm müşterileri sil
-      gs.waitList = []; // Bekleyenleri sil
-      gs.dirtyTables = []; // Kirli tablaları temizle
-      io.to(roomId).emit("state", gs);
-    }
-  });
-
-  socket.on("dev:toggleImmortality", () => {
-    if (!roomId || !RoomManager.getRoomState(roomId)) return;
-    const gs = RoomManager.getRoomState(roomId)!;
-    gs.isImmortal = !gs.isImmortal;
-    io.to(roomId).emit("state", gs);
-  });
-
   socket.on("disconnect", () => {
     if (roomId && playerId && RoomManager.getRoomState(roomId)) {
       const gs = RoomManager.getRoomState(roomId)!;

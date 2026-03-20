@@ -5,11 +5,13 @@ import {
   RECIPE_DEFS, BURN_TICKS, EAT_TICKS, BURNED_FOOD,
   DISH_ITEMS, getSeatSlots, DISH_UNLOCK_POOL,
   GAME_HEIGHT, EXTERIOR_Y,
+  CLOSING_THRESHOLD,
 } from "../shared/types.js";
 import { DIALOGUES } from "../shared/dialogues.js";
 
-const CLOSING_THRESHOLD = 300;
 const SPAWN_GRACE_TICKS = 240;
+const DOOR_X = 640;
+const DOOR_ENTRY_Y = GAME_HEIGHT - 20;
 
 function patLimit(lv: number, day: number, playerCount: number) {
   // Tek kişi: daha sabırlı müşteriler. Çok kişi: daha az sabır (daha fazla baskı)
@@ -38,10 +40,6 @@ export function tryQueueSeat(gs: GameState, io: Server, rid: string) {
     const guest = gs.waitList.shift()!;
     const seat = free[Math.floor(Math.random() * free.length)];
     const maxP = patLimit(gs.upgrades.patience, gs.day, Object.keys(gs.players).length || 1);
-
-    // Kapı ortası: x=640, dışarıdan gelir
-    const DOOR_X = 640;
-    const DOOR_ENTRY_Y = GAME_HEIGHT - 20; // Dışarıdan başlar
 
     gs.customers.push({
       id: guest.id, seatX: seat.x, seatY: seat.y,
@@ -139,34 +137,49 @@ function spawnTick(gs: GameState, io: Server, rid: string) {
   const currentRate = (baseRate + dayProgress * 0.001) * spawnMultiplier;
 
   if (Math.random() < currentRate && gs.customers.length + gs.waitList.length < queueLimit) {
-    // Tek kişide daha az rude/thug, çok kişide daha fazla
-    const personalities: Personality[] = isSolo
-      ? ['polite', 'polite', 'rude']               // solo: 2/3 polite
-      : ['polite', 'rude', 'recep'];                // multi: eşit dağılım
-    const pers = personalities[Math.floor(Math.random() * personalities.length)];
-    let dialog: string | undefined;
-    let timer: number | undefined;
-    if (Math.random() < 0.3) {
-      const list = DIALOGUES[pers].entry;
-      dialog = list[Math.floor(Math.random() * list.length)];
-      timer = 90;
+    // Grup mu, tekil mi? Gün ilerledikçe grup şansı artar
+    const groupChance = Math.min(0.15 + gs.day * 0.04, 0.45); // gün 1: %19, gün 8+: %45
+    const isGroup = Math.random() < groupChance;
+    const groupSize = isGroup ? 2 + Math.floor(Math.random() * (isSolo ? 2 : 3)) : 1; // solo: 2-3, multi: 2-4
+
+    // Kuyruğa sığıyor mu kontrol et
+    const available = queueLimit - gs.customers.length - gs.waitList.length;
+    const actualSize = Math.min(groupSize, available);
+    if (actualSize <= 0) return;
+
+    for (let g = 0; g < actualSize; g++) {
+      // Tek kişide daha az rude/thug, çok kişide daha fazla
+      const personalities: Personality[] = isSolo
+        ? ['polite', 'polite', 'rude']               // solo: 2/3 polite
+        : ['polite', 'rude', 'recep'];                // multi: eşit dağılım
+      const pers = personalities[Math.floor(Math.random() * personalities.length)];
+      let dialog: string | undefined;
+      let timer: number | undefined;
+      // Grubun ilk üyesi konuşabilir
+      if (g === 0 && Math.random() < 0.3) {
+        const list = DIALOGUES[pers].entry;
+        dialog = list[Math.floor(Math.random() * list.length)];
+        timer = 90;
+      }
+      const bodyShapes = [1, 2, 3, 4] as const;
+      const bodyColors: Record<Personality, string[]> = {
+        polite: ['#3b82f6', '#0ea5e9', '#6366f1', '#8b5cf6'],
+        rude: ['#f59e0b', '#ef4444', '#f97316', '#dc2626'],
+        recep: ['#7c3aed', '#b91c1c', '#1d4ed8', '#064e3b'],
+        thug: ['#000000', '#1c1917', '#7f1d1d', '#57534e'],
+      };
+      const bodyShape = bodyShapes[Math.floor(Math.random() * bodyShapes.length)];
+      const bodyColor = bodyColors[pers][Math.floor(Math.random() * bodyColors[pers].length)];
+      gs.waitList.push({
+        id: Math.random().toString(36).slice(2, 9),
+        wants: availableDishes[Math.floor(Math.random() * availableDishes.length)],
+        personality: pers,
+        currentDialog: dialog, dialogTimer: timer,
+        bodyShape, bodyColor,
+      });
     }
-    const bodyShapes = [1, 2, 3, 4] as const;
-    const bodyColors: Record<Personality, string[]> = {
-      polite: ['#3b82f6', '#0ea5e9', '#6366f1', '#8b5cf6'],
-      rude: ['#f59e0b', '#ef4444', '#f97316', '#dc2626'],
-      recep: ['#7c3aed', '#b91c1c', '#1d4ed8', '#064e3b'],
-      thug: ['#000000', '#1c1917', '#7f1d1d', '#57534e'],
-    };
-    const bodyShape = bodyShapes[Math.floor(Math.random() * bodyShapes.length)];
-    const bodyColor = bodyColors[pers][Math.floor(Math.random() * bodyColors[pers].length)];
-    gs.waitList.push({
-      id: Math.random().toString(36).slice(2, 9),
-      wants: availableDishes[Math.floor(Math.random() * availableDishes.length)],
-      personality: pers,
-      currentDialog: dialog, dialogTimer: timer,
-      bodyShape, bodyColor,
-    });
+
+    if (actualSize > 1) io.to(rid).emit("sound", "arrive"); // Grup geldi sesi
   }
 
   // Revenge Queue
@@ -228,10 +241,10 @@ function customerTick(gs: GameState, io: Server, rid: string) {
       if (c.y > (EXTERIOR_Y - 10)) {
         c.y = Math.max(EXTERIOR_Y - 10, c.y - 3);
       } else {
-        // Kapıdan geçti, koltuğa yönlen
+        // Kapıdan geçti, koltuğa yönlen (x ışınlama yok, smooth geçiş)
         c.phase = 'seating';
-        c.x = c.seatX;
         c.targetY = c.seatY;
+        // c.x burada değiştirilmiyor — aşağıdaki !isSeated bloğu x'i de smooth taşır
       }
       continue;
     }
@@ -257,9 +270,16 @@ function customerTick(gs: GameState, io: Server, rid: string) {
     }
 
     if (!c.isSeated) {
-      if (c.y > c.targetY) {
-        c.y = Math.max(c.targetY, c.y - 3);
-        if (c.y <= c.targetY) c.isSeated = true;
+      // Y hareketi
+      if (c.y > c.targetY) c.y = Math.max(c.targetY, c.y - 3);
+      else if (c.y < c.targetY) c.y = Math.min(c.targetY, c.y + 3);
+      // X hareketi (smooth, ışınlama yok)
+      if (c.x < c.seatX) c.x = Math.min(c.seatX, c.x + 3);
+      else if (c.x > c.seatX) c.x = Math.max(c.seatX, c.x - 3);
+      // Hedefe ulaştı mı?
+      if (Math.abs(c.x - c.seatX) < 2 && Math.abs(c.y - c.targetY) < 2) {
+        c.x = c.seatX; c.y = c.targetY;
+        c.isSeated = true; c.phase = 'seated';
       }
     } else {
       if (!c.currentDialog && Math.random() < 0.001) {
@@ -276,14 +296,13 @@ function customerTick(gs: GameState, io: Server, rid: string) {
 
         if (!c.isEating && c.wants) {
           c.patience -= actualDrain;
-          if (gs.isImmortal && c.patience <= 0) c.patience = 1;
           if (c.patience <= 0) {
           gs.score = Math.max(0, gs.score - 10);
             gs.lives -= 1;
             io.to(rid).emit("sound", "fail");
             if (gs.lives <= 0) {
               gs.isGameOver = true;
-              gs.customers = []; gs.waitList = [];
+              gs.customers = []; gs.waitList = []; gs.dirtyTables = [];
               io.to(rid).emit("sound", "fail");
               break;
             }
