@@ -13,8 +13,8 @@ export const PatchNotesModal: React.FC<Props> = ({ onClose }) => {
                 <div>
                     <h2 className="text-3xl font-black text-amber-400 tracking-tight">Yama Notları 📜</h2>
                     <div className="flex items-center gap-2 mt-1">
-                        <span className="bg-amber-400/10 text-amber-400 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest border border-amber-400/20">v1.1.0</span>
-                        <span className="text-stone-500 text-[10px] font-bold uppercase tracking-widest">Büyük Güncelleme</span>
+                        <span className="bg-amber-400/10 text-amber-400 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest border border-amber-400/20">v1.2.0</span>
+                        <span className="text-stone-500 text-[10px] font-bold uppercase tracking-widest">Kesme & Doğrama Güncellemesi</span>
                     </div>
                 </div>
                 <button
@@ -54,6 +54,7 @@ export const PatchNotesModal: React.FC<Props> = ({ onClose }) => {
                                 <ul className="text-xs text-stone-300 space-y-1">
                                     <li><span className="text-amber-300 font-bold">WASD / Ok Tuşları</span> — Hareket</li>
                                     <li><span className="text-amber-300 font-bold">E / Boşluk</span> — Al / Ver / Etkileş</li>
+                                    <li><span className="text-amber-300 font-bold">R (basılı tut)</span> — Doğra</li>
                                     <li><span className="text-amber-300 font-bold">F</span> — Yumruk (Dövüş)</li>
                                 </ul>
                             </div>
@@ -62,6 +63,7 @@ export const PatchNotesModal: React.FC<Props> = ({ onClose }) => {
                                 <ul className="text-xs text-stone-300 space-y-1">
                                     <li><span className="text-amber-300 font-bold">Sol Joystick</span> — Hareket</li>
                                     <li><span className="text-amber-300 font-bold">AL/VER Butonu</span> — Etkileş</li>
+                                    <li><span className="text-amber-300 font-bold">DOĞRA Butonu</span> — Kesme tahtası</li>
                                     <li><span className="text-amber-300 font-bold">DÖV Butonu</span> — Yumruk</li>
                                 </ul>
                             </div>
@@ -78,11 +80,11 @@ export const PatchNotesModal: React.FC<Props> = ({ onClose }) => {
                     </h3>
                     <div className="grid grid-cols-1 gap-2">
                         {[
-                            { emoji: '🥗', name: 'Salata', ing: '🥬 Sebze', time: '30 sn', note: 'En hızlı — başlangıçta açık' },
-                            { emoji: '🍔', name: 'Burger', ing: '🥩 Et', time: '60 sn', note: 'Başlangıçta açık' },
-                            { emoji: '🍕', name: 'Pizza', ing: '🍞 Hamur', time: '90 sn', note: 'Gece kilit açılır' },
-                            { emoji: '🌯', name: 'Dürüm', ing: '🍢 Kebap', time: '100 sn', note: 'Gece kilit açılır' },
-                            { emoji: '🍜', name: 'Çorba', ing: '🥘 Çorba Malz.', time: '120 sn', note: 'Gece kilit açılır' },
+                            { emoji: '🥗', name: 'Salata', ing: '🥬 Sebze → doğra → fırın', time: '0.5 sn', note: 'En hızlı — başlangıçta açık' },
+                            { emoji: '🍔', name: 'Burger', ing: '🥩 Et → doğra → fırın', time: '1.2 sn', note: 'Başlangıçta açık' },
+                            { emoji: '🍕', name: 'Pizza', ing: '🍞 Hamur → fırın', time: '3 sn', note: 'Gece kilit açılır' },
+                            { emoji: '🌯', name: 'Dürüm', ing: '🍢 Kebap → doğra → fırın', time: '2 sn', note: 'Gece kilit açılır' },
+                            { emoji: '🍜', name: 'Çorba', ing: '🥘 Çorba Malz. → fırın', time: '4 sn', note: 'Gece kilit açılır' },
                         ].map(d => (
                             <div key={d.emoji} className="flex items-center gap-3 bg-stone-800/30 border border-stone-700/40 px-4 py-2.5 rounded-xl">
                                 <span className="text-2xl w-8 text-center">{d.emoji}</span>
@@ -97,7 +99,8 @@ export const PatchNotesModal: React.FC<Props> = ({ onClose }) => {
                             </div>
                         ))}
                     </div>
-                    <p className="text-xs text-stone-500 mt-3 text-center">⚠️ Yemek pişince almazsan yanar → 🔥 uyarısı çıkar → ⬛ çöpe at</p>
+                    <p className="text-xs text-stone-500 mt-3 text-center">🔪 Doğrama gerektiren malzemeleri önce kesme tahtasına bırak, R ile doğra, sonra fırına koy</p>
+                    <p className="text-xs text-stone-500 mt-1 text-center">⚠️ Yemek pişince tabakla al → müşteriye servis et. Almazsan yanar → ⬛ çöpe at</p>
                 </section>
 
                 {/* Upgrade Sistemi */}
@@ -132,16 +135,18 @@ export const PatchNotesModal: React.FC<Props> = ({ onClose }) => {
                     </h3>
                     <ul className="space-y-3">
                         {[
+                            { icon: '🔪', text: 'Kesme tahtası — Et, Sebze ve Kebabı önce doğra (R tuşu), sonra fırına koy. Doğrama ses efekti ile birlikte!' },
                             { icon: '🧺', text: 'Tepsi sistemi — tek seferde 4 yemeğe kadar taşı, müşterilere sırayla servis et' },
                             { icon: '🏃', text: 'Çok oyunculu co-op — aynı odada birden fazla oyuncu, her biri bağımsız hareket eder' },
                             { icon: '😤', text: 'Müşteri kişilikleri — Kibar, Kaba, Recep ve Thug tipleri, her birinin farklı diyalogları var' },
                             { icon: '👊', text: 'Dövüş sistemi — kaba müşterileri dövebilirsin, ama intikam için Thug grubu gelir' },
                             { icon: '🔧', text: 'İstasyon taşıma — hazırlık fazında E tuşuyla istasyonları grid üzerinde yeniden konumlandır' },
                             { icon: '📦', text: 'Gizli malzeme istasyonları — kilidi açılmayan yemeklerin malzemeleri mutfakta görünmez' },
-                            { icon: '🎨', text: '8 farklı karakter tipi — Aşçı, Suşici, Ninja, Chef, Bahçıvan, Kaptan, Garson, Bulaşıkçı' },
-                            { icon: '🌙', text: 'Gece efekti — gece fazında ekran kararır, yıldızlar çıkar' },
+                            { icon: '�', text: '8 farklı karakter tipi — Aşçı, Suşici, Ninja, Chef, Bahçıvan, Kaptan, Garson, Bulaşıkçı' },
+                            { icon: '�🌙', text: 'Gece efekti — gece fazında ekran kararır, yıldızlar çıkar' },
                             { icon: '💀', text: 'Game Over — 3 can bitince oyun biter, %20 ceza ile aynı günden devam seçeneği' },
                             { icon: '🔊', text: 'Proximity ses — yakındaki oyuncuların sesi daha yüksek duyulur (WebRTC sesli sohbet)' },
+                            { icon: '🎮', text: 'HUD Editörü — tüm mobil butonları (Joystick, AL/VER, DOĞRA, DÖV, Müzik) sürükle-bırak ile konumlandır' },
                         ].map((f, i) => (
                             <li key={i} className="flex items-start gap-3">
                                 <span className="text-lg mt-0.5 w-6 text-center">{f.icon}</span>
@@ -167,7 +172,7 @@ export const PatchNotesModal: React.FC<Props> = ({ onClose }) => {
                                 <span className="text-purple-400">✦</span> İçecek İstasyonu: Hızlı servis edilebilen soğuk içecekler
                             </li>
                             <li className="text-sm text-purple-200/70 flex items-center gap-3">
-                                <span className="text-purple-400">✦</span> Prep Station: Overcooked tarzı doğrama mekanikleri
+                                <span className="text-purple-400">✦</span> Yeni müşteri tipleri ve özel etkinlikler
                             </li>
                         </ul>
                     </div>
