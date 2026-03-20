@@ -82,7 +82,7 @@ export function registerInteractHandler(
       } else if (!p.holding && (gs.dirtyTrayCount || 0) > 0) {
         // Sepetten tek bir kirli tabak al
         p.holding = DIRTY_PLATE;
-        gs.dirtyTrayCount--;
+        gs.dirtyTrayCount = Math.max(0, gs.dirtyTrayCount - 1);
         socket.emit("sound", "pickup");
       }
       return;
