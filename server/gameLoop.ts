@@ -337,7 +337,9 @@ function customerTick(gs: GameState, io: Server, rid: string) {
             io.to(rid).emit("sound", "fail");
             if (gs.lives <= 0) {
               gs.isGameOver = true;
+              gs.dayPhase = 'night'; // game over ekranı için night fazında kal
               gs.customers = []; gs.waitList = []; gs.dirtyTables = [];
+              io.to(rid).emit("state", gs);
               io.to(rid).emit("sound", "fail");
               break;
             }

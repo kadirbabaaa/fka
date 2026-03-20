@@ -129,7 +129,8 @@ export const GameScreen: React.FC<Props> = ({
 
     useGameLoop({
         canvasRef, isJoined, myId, socket, gameStateRef, localPlayerRef, keysRef, joystickVectorRef,
-        audioElementsRef, globalVolume: globalVoiceVol, editorStateRef
+        audioElementsRef, globalVolume: globalVoiceVol, editorStateRef,
+        showPerfStats: settings.showPerfStats,
     });
 
     // Müzik

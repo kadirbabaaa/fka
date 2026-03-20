@@ -28,6 +28,7 @@ export interface Settings {
     sfxOn: boolean;
     joystickSide: 'left' | 'right';
     hudLayout: HudLayout;
+    showPerfStats: boolean;
 }
 
 const DEFAULTS: Settings = {
@@ -35,6 +36,7 @@ const DEFAULTS: Settings = {
     sfxOn: true,
     joystickSide: 'left',
     hudLayout: DEFAULT_HUD_LAYOUT,
+    showPerfStats: false,
 };
 
 const LS_KEY = 'terracraft-settings';

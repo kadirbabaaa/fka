@@ -45,6 +45,7 @@ interface UseGameLoopProps {
   audioElementsRef?: React.MutableRefObject<Record<string, HTMLAudioElement>>;
   globalVolume?: number;
   editorStateRef?: React.MutableRefObject<LayoutEditorState>;
+  showPerfStats?: boolean;
 }
 
 const FLOOR_CACHE_VERSION = 9;
@@ -91,7 +92,7 @@ function drawFloorCached(ctx: CanvasRenderingContext2D, unlockedDishes: string[]
 
 export function useGameLoop({
   canvasRef, isJoined, myId, socket, gameStateRef,
-  localPlayerRef, keysRef, joystickVectorRef, audioElementsRef, globalVolume = 1.0, editorStateRef,
+  localPlayerRef, keysRef, joystickVectorRef, audioElementsRef, globalVolume = 1.0, editorStateRef, showPerfStats = false,
 }: UseGameLoopProps) {
   useEffect(() => {
     if (!isJoined) return;
@@ -106,7 +107,13 @@ export function useGameLoop({
     const lastEmitRef = { current: 0 };
     const { floatingTexts, punchParticles, cleanup: cleanupEffects } = setupGameEffects(socket);
 
+    // Perf stats
+    const fpsBuffer: number[] = [];
+    let perfMs = 0;
+    let perfFps = 0;
+
     const render = (time: number) => {
+      const renderStart = performance.now();
       const state = gameStateRef.current;
       const deltaMs = lastFrameTime === 0 ? 1000 / 60 : Math.min(50, time - lastFrameTime);
       lastFrameTime = time;
@@ -229,12 +236,37 @@ export function useGameLoop({
       // ── Işıklandırma Sistemi ──────────────────────────────────────────────
       drawLighting(ctx, state.dayPhase, state.dayTimer);
 
+      // ── Perf Stats ────────────────────────────────────────────────────────
+      if (showPerfStats) {
+        perfMs = performance.now() - renderStart;
+        fpsBuffer.push(1000 / Math.max(deltaMs, 1));
+        if (fpsBuffer.length > 30) fpsBuffer.shift();
+        perfFps = Math.round(fpsBuffer.reduce((a, b) => a + b, 0) / fpsBuffer.length);
+
+        const pad = 8;
+        const bw = 110, bh = 44;
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.beginPath();
+        ctx.roundRect(pad, pad, bw, bh, 6);
+        ctx.fill();
+        ctx.font = 'bold 13px monospace';
+        ctx.textBaseline = 'top';
+        const fpsColor = perfFps >= 50 ? '#4ade80' : perfFps >= 30 ? '#facc15' : '#f87171';
+        const msColor  = perfMs  <= 10 ? '#4ade80' : perfMs  <= 20 ? '#facc15' : '#f87171';
+        ctx.fillStyle = fpsColor;
+        ctx.fillText(`FPS: ${perfFps}`, pad + 8, pad + 6);
+        ctx.fillStyle = msColor;
+        ctx.fillText(` MS: ${perfMs.toFixed(1)}`, pad + 8, pad + 24);
+        ctx.restore();
+      }
+
       frameId = requestAnimationFrame(render);
     };
 
     frameId = requestAnimationFrame(render);
     return () => { cancelAnimationFrame(frameId); cleanupEffects(); };
-  }, [isJoined, myId, socket]);
+  }, [isJoined, myId, socket, showPerfStats]);
 }
 
 // ── Işıklandırma Sistemi ────────────────────────────────────────────────────
