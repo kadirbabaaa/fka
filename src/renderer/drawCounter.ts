@@ -1,4 +1,4 @@
-import { COUNTER_POSITIONS, CLEAN_PLATE, DIRTY_PLATE } from '../../shared/types';
+import { COUNTER_POSITIONS, CLEAN_PLATE, DIRTY_PLATE, isChopped, getChoppedSource } from '../../shared/types';
 
 // Tüm pişmiş yemekler tabakla servis edilir
 const PLATED_DISHES = ['🍕', '🍔', '🥗', '🍜', '🌯'];
@@ -17,6 +17,7 @@ export function drawCounters(
 
         const { x, y, width, height } = counter;
         const item = station.items[0];
+        const displayItem = item && isChopped(item) ? getChoppedSource(item) : item;
 
         ctx.save();
         ctx.translate(x, y);
@@ -118,16 +119,16 @@ export function drawCounters(
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillStyle = 'rgba(0,0,0,0.2)';
-                ctx.fillText(item, 1, -7);
-                ctx.fillText(item, 0, -8);
+                ctx.fillText(displayItem!, 1, -7);
+                ctx.fillText(displayItem!, 0, -8);
             } else {
                 // ─── SADECE ÇİĞ MALZEME (tabak çizilmez) ───
                 ctx.font = '18px Arial';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillStyle = 'rgba(0,0,0,0.2)';
-                ctx.fillText(item, 1, 1);
-                ctx.fillText(item, 0, 0);
+                ctx.fillText(displayItem!, 1, 1);
+                ctx.fillText(displayItem!, 0, 0);
             }
         }
 

@@ -154,30 +154,35 @@ export function registerInteractHandler(
     if (gs.choppingBoards) {
       for (const board of gs.choppingBoards) {
         if (Math.hypot(px - board.x, py - board.y) < INTERACT_R) {
-          if (!p.holding && board.input) {
-            // Tahtadan malzeme al
+          if (!p.holding) {
+            // Doğranmamış malzemeyi geri al (henüz tamamlanmamış)
+            if (board.input && !isChopped(board.input)) {
+              p.holding = board.input;
+              board.input = null;
+              board.progress = 0;
+              board.isChopping = false;
+              board.choppingPlayerId = null;
+              socket.emit("sound", "pickup");
+            } else if (board.input && isChopped(board.input)) {
+              // Doğranmış malzeme — elde tabak şart
+              socket.emit("sound", "fail");
+            }
+          } else if (p.holding === CLEAN_PLATE && board.input && isChopped(board.input)) {
+            // Tabakla doğranmış malzemeyi al — tabak + malzeme birleşir
             p.holding = board.input;
             board.input = null;
             board.progress = 0;
             board.isChopping = false;
             board.choppingPlayerId = null;
-            socket.emit("sound", "pickup");
-          } else if (p.holding && CHOPPABLE.includes(p.holding as any) && !board.input) {
-            // Tahtaya malzeme bırak
+            socket.emit("sound", "success");
+          } else if (CHOPPABLE.includes(p.holding as any) && !board.input) {
+            // Tahtaya doğranabilir malzeme bırak
             board.input = p.holding;
             board.progress = 0;
             board.isChopping = false;
             board.choppingPlayerId = null;
             p.holding = null;
             socket.emit("sound", "success");
-          } else if (!p.holding && board.input && isChopped(board.input)) {
-            // Doğranmış malzemeyi al
-            p.holding = board.input;
-            board.input = null;
-            board.progress = 0;
-            board.isChopping = false;
-            board.choppingPlayerId = null;
-            socket.emit("sound", "pickup");
           }
           return;
         }
@@ -187,15 +192,22 @@ export function registerInteractHandler(
     // Fırınlar
     for (const station of gs.cookStations) {
       if (Math.hypot(px - station.x, py - station.y) < INTERACT_R) {
-        // Doğranmış veya normal malzeme fırına konabilir
-        const holdingKey = p.holding as keyof typeof RECIPE_DEFS;
-        if ((INGREDIENTS.some(ing => ing.key === p.holding) || (typeof p.holding === 'string' && p.holding.startsWith(CHOP_PREFIX))) && !station.input && !station.output) {
-          const recipe = RECIPE_DEFS[holdingKey];
+        const holding = p.holding;
+        const isRawChoppable = typeof holding === 'string' && CHOPPABLE.includes(holding as any);
+        const isChoppedItem = typeof holding === 'string' && holding.startsWith(CHOP_PREFIX);
+        const isNonChoppableIngredient = INGREDIENTS.some(ing => ing.key === holding && !CHOPPABLE.includes(ing.key as any));
+
+        // Fırına koyma: doğranmış malzeme veya doğrama gerektirmeyen malzeme
+        if ((isChoppedItem || isNonChoppableIngredient) && !station.input && !station.output) {
+          const recipe = RECIPE_DEFS[holding as keyof typeof RECIPE_DEFS];
           if (recipe) {
-            station.input = p.holding; station.timer = recipe.time;
+            station.input = holding; station.timer = recipe.time;
             p.holding = null; station.isBurned = false; station.burnTimer = 0;
             socket.emit("sound", "pickup");
           }
+        } else if (isRawChoppable && !station.input && !station.output) {
+          // Ham doğranabilir malzeme — fırına koyma, uyar
+          socket.emit("sound", "fail");
         } else if (p.holding === CLEAN_PLATE && station.output && !station.isBurned) {
           p.holding = station.output;
           station.output = null; station.burnTimer = 0;

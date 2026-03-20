@@ -130,6 +130,10 @@ export function drawCookStation(
         
         const progress = 1 - station.timer / recipe.time;
         const radius = 16;
+        // Gösterilecek emoji — CHOPPED_ prefix'ini soy
+        const displayInput = station.input.startsWith('CHOPPED_')
+            ? station.input.replace('CHOPPED_', '')
+            : station.input;
 
         // Progress Ring (Geliştirilmiş)
         ctx.strokeStyle = 'rgba(0,0,0,0.4)';
@@ -151,7 +155,7 @@ export function drawCookStation(
         ctx.font = '16px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(station.input, x, contentY - 30);
+        ctx.fillText(displayInput, x, contentY - 30);
 
         // İlerleme yüzdesi
         ctx.fillStyle = 'white';

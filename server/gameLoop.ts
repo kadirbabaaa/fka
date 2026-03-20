@@ -84,6 +84,15 @@ export function gameTick(gs: GameState, io: Server, rid: string) {
   // Kesme tahtaları güncelle
   if (gs.choppingBoards) {
     gs.choppingBoards.forEach(board => {
+      // Kesici oyuncu tahtadan uzaklaştıysa otomatik durdur
+      if (board.isChopping && board.choppingPlayerId) {
+        const cutter = gs.players[board.choppingPlayerId];
+        if (!cutter || Math.hypot(cutter.x - board.x, cutter.y - board.y) > 110) {
+          board.isChopping = false;
+          board.choppingPlayerId = null;
+        }
+      }
+
       if (board.isChopping && board.input && board.progress < CHOP_TICKS) {
         board.progress++;
         if (board.progress >= CHOP_TICKS) {

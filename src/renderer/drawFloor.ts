@@ -163,7 +163,9 @@ export function drawFloor(ctx: CanvasRenderingContext2D, unlockedDishes: string[
   // ══════════════════════════════════════════════════════════════════
   INGREDIENTS.forEach((ing) => {
     // Gizli malzemelerin raflarını da gizle
-    const recipe = RECIPE_DEFS[ing.key as keyof typeof RECIPE_DEFS];
+    // CHOPPABLE malzemelerin recipe key'i 'CHOPPED_X' formatında
+    const recipeKey = (ing.key in RECIPE_DEFS) ? ing.key : `CHOPPED_${ing.key}`;
+    const recipe = RECIPE_DEFS[recipeKey as keyof typeof RECIPE_DEFS];
     if (recipe && !unlockedDishes.includes(recipe.output)) {
       return;
     }
@@ -217,25 +219,7 @@ export function drawFloor(ctx: CanvasRenderingContext2D, unlockedDishes: string[
     ctx.fillText('TABAKLAR', x, y + 20);
   }
 
-  // ══════════════════════════════════════════════════════════════════
-  // KESME TAHTASI ZEMİNİ (base — dinamik çizim useGameLoop'ta üstüne gelir)
-  // ══════════════════════════════════════════════════════════════════
-  {
-    const cx = choppingBoardPos?.x ?? 760;
-    const cy = choppingBoardPos?.y ?? 170;
-    drawWorkstationBase(ctx, cx, cy, 44, 28, 10, 0.28);
-    ctx.fillStyle = '#c8a96e';
-    ctx.beginPath();
-    ctx.roundRect(cx - 36, cy - 14, 72, 32, 5);
-    ctx.fill();
-    ctx.strokeStyle = '#7a5535'; ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.roundRect(cx - 36, cy - 14, 72, 32, 5);
-    ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.8)';
-    ctx.font = 'bold 9px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    ctx.fillText('🔪 Kesme Tahtası', cx, cy + 20);
-  }
+
 
   // ══════════════════════════════════════════════════════════════════
   // SERVİS TEZGAHI — metalik / açık

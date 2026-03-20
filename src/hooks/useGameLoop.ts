@@ -133,7 +133,8 @@ export function useGameLoop({
       const stock = state.stock ?? { "🍞": 0, "🥩": 0, "🥬": 0 };
       const movingId = editorStateRef?.current?.movingStationId;
       INGREDIENTS.forEach((ing) => {
-        const recipe = RECIPE_DEFS[ing.key as keyof typeof RECIPE_DEFS];
+        const recipeKey = (ing.key in RECIPE_DEFS) ? ing.key : `CHOPPED_${ing.key}`;
+        const recipe = RECIPE_DEFS[recipeKey as keyof typeof RECIPE_DEFS];
         if (recipe && !state.unlockedDishes.includes(recipe.output)) return;
         if (movingId === `ingredient_${ing.key}`) return; // taşınıyor, preview çizer
         // stationLayout'tan dinamik koordinat al, yoksa sabit koordinata düş
@@ -195,10 +196,11 @@ export function useGameLoop({
       }
 
       // Kesme tahtaları
-      const boards = state.choppingBoards ?? [];
-      for (const board of boards) {
-        if (movingId === board.id) continue; // taşınıyor, preview çizer
-        drawChoppingBoard(ctx, board, time);
+      if (state.choppingBoards) {
+        for (const board of state.choppingBoards) {
+          if (movingId === board.id) continue;
+          drawChoppingBoard(ctx, board, time);
+        }
       }
 
       state.customers.forEach((c) => drawCustomer(ctx, c));

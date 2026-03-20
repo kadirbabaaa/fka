@@ -115,8 +115,8 @@ export interface ChoppingBoard {
   choppingPlayerId: string | null;
 }
 
-// Kesme gerektiren malzemeler: et ve sebze
-export const CHOPPABLE: StockKey[] = ['🥩', '🥬'];
+// Kesme gerektiren malzemeler: et, sebze, kebap
+export const CHOPPABLE: StockKey[] = ['🥩', '🥬', '🍢'];
 export const CHOPPING_BOARD_POS = { x: 760, y: 170 };
 
 
@@ -280,15 +280,12 @@ export const INGREDIENTS = [
 ];
 
 // ─── Universal Fırın Sistemi ─────────────────────────────────────────────────
-// CHOPPED_ malzemeler daha hızlı pişer (doğrama zahmetine değer)
+// CHOPPABLE malzemeler önce doğranmalı, sonra fırına girer
 export const RECIPE_DEFS = {
     '🍞':          { output: '🍕', time: 90,  label: '🍕 Pizza' },
-    '🥩':          { output: '🍔', time: 60,  label: '🍔 Burger (çiğ)' },
     'CHOPPED_🥩':  { output: '🍔', time: 35,  label: '🍔 Burger' },
-    '🥬':          { output: '🥗', time: 30,  label: '🥗 Salata (kaba)' },
     'CHOPPED_🥬':  { output: '🥗', time: 15,  label: '🥗 Salata' },
     '🥘':          { output: '🍜', time: 120, label: '🍜 Çorba' },
-    '🍢':          { output: '🌯', time: 100, label: '🌯 Dürüm (çiğ)' },
     'CHOPPED_🍢':  { output: '🌯', time: 60,  label: '🌯 Dürüm' },
 } as const;
 

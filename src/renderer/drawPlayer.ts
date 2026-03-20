@@ -1,4 +1,4 @@
-import { Player, CHARACTER_TYPES, CLEAN_PLATE, DIRTY_PLATE, isTray, getTrayItems } from '../types/game';
+import { Player, CHARACTER_TYPES, CLEAN_PLATE, DIRTY_PLATE, isTray, getTrayItems, isChopped, getChoppedSource } from '../types/game';
 import { stk, adjustColor, drawShadowEllipse } from './rendererUtils';
 
 const playerRenderState = new Map<string, {
@@ -16,7 +16,9 @@ export function drawPlayer(
 ) {
     const rawHolding = p.holding;
     const isHolding = !!rawHolding;
-    const heldItem = rawHolding === CLEAN_PLATE ? '🍽️' : rawHolding === DIRTY_PLATE ? '🧽' : rawHolding;
+    // CHOPPED_ prefix'ini soy — görsel olarak sadece emoji göster
+    const stripChopped = (item: string) => isChopped(item) ? getChoppedSource(item) : item;
+    const heldItem = rawHolding === CLEAN_PLATE ? '🍽️' : rawHolding === DIRTY_PLATE ? '🧽' : rawHolding ? stripChopped(rawHolding) : rawHolding;
     
     const typeId   = Math.min(p.charType ?? 0, CHARACTER_TYPES.length - 1);
     const charDef  = CHARACTER_TYPES[typeId];
@@ -189,7 +191,7 @@ export function drawPlayer(
                 // Eşyaları tepsi üzerinde yanyana diz
                 items.forEach((item, idx) => {
                     const offset = (idx - (items.length - 1) / 2) * 12;
-                    ctx.fillText(item, offset, -4);
+                    ctx.fillText(stripChopped(item), offset, -4);
                 });
             } else {
                 ctx.font = '12px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
