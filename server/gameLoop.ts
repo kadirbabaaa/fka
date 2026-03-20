@@ -110,14 +110,28 @@ export function gameTick(gs: GameState, io: Server, rid: string) {
     });
   }
 
+  // Menü seçimi sadece belirli günlerde çıkar
+  const MENU_UNLOCK_DAYS = [3, 10, 13, 20, 24, 28];
+
   // Gündüz timer
   if (gs.dayPhase === 'day') {
     if (gs.dayTimer > 0) gs.dayTimer--;
-    if (gs.dayTimer <= 0 && gs.customers.filter(c => !c.isLeaving).length === 0 && gs.waitList.length === 0 && gs.dirtyTables.length === 0) {
+    if (gs.dayTimer <= 0 && gs.customers.filter(c => !c.isLeaving).length === 0 && gs.waitList.length === 0) {
+      // Kapanış saatinde kalan kirli tabakları otomatik temizle
+      gs.dirtyTables = [];
+      // Elde kirli tabak tutan oyuncuların elini boşalt (hazırlık fazında sorun çıkmaması için)
+      Object.values(gs.players).forEach((player: any) => {
+        if (player.holding === 'dirty_plate') player.holding = null;
+      });
       gs.dayPhase = 'night';
       gs.dayTimer = NIGHT_TICKS;
       gs.hasOrderedTonight = false;
-      generateMenuChoices(gs);
+      // Sadece belirli günlerde yemek seçim ekranı çıkar
+      if (MENU_UNLOCK_DAYS.includes(gs.day + 1)) {
+        generateMenuChoices(gs);
+      } else {
+        gs.menuChoices = null;
+      }
     }
   }
 
@@ -166,15 +180,12 @@ function spawnTick(gs: GameState, io: Server, rid: string) {
   const playerCount = Object.keys(gs.players).length || 1;
   const isSolo = playerCount === 1;
 
-  // Tek kişi: daha yavaş spawn, çok kişi: daha hızlı
-  const baseRate = isSolo
-    ? 0.0007 + Math.min(gs.day * 0.0003, 0.005)   // solo: daha yavaş
-    : 0.001  + Math.min(gs.day * 0.0005, 0.008);   // multi: daha hızlı
+  // Spawn hızı ve kuyruk limiti oyuncu sayısıyla doğrudan orantılı
+  const baseRate = 0.0007 + Math.min(gs.day * 0.0003, 0.005);
   const dayProgress = 1 - gs.dayTimer / DAY_TICKS;
-  const spawnMultiplier = isSolo ? 1.0 : 1 + (playerCount - 1) * 0.6;
-  const queueLimit = isSolo
-    ? 6 + gs.day                                    // solo: daha az kuyruk
-    : 10 + gs.day * 2 + (playerCount - 1) * 3;     // multi: daha fazla
+  // 1 oyuncu = 1x, 2 oyuncu = 2x, 3 oyuncu = 3x, 4 oyuncu = 4x
+  const spawnMultiplier = playerCount;
+  const queueLimit = (6 + gs.day) * playerCount;
   const currentRate = (baseRate + dayProgress * 0.001) * spawnMultiplier;
 
   if (Math.random() < currentRate && gs.customers.length + gs.waitList.length < queueLimit) {
