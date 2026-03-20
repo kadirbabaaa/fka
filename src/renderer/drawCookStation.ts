@@ -189,6 +189,13 @@ export function drawCookStation(
         ctx.fillText(station.output, 0, 0);
         ctx.restore();
 
+        // Tabak ipucu
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.font = 'bold 9px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🍽️ tabakla al', x, contentY - 10);
+
         if (station.burnTimer !== undefined && station.burnTimer > 0) {
             const burnPct = Math.max(0, 1 - station.burnTimer / BURN_TICKS);
             

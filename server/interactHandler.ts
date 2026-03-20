@@ -213,7 +213,7 @@ export function registerInteractHandler(
         } else if (isRawChoppable && !station.input && !station.output) {
           // Ham doğranabilir malzeme — fırına koyma, uyar
           socket.emit("sound", "fail");
-        } else if ((p.holding === CLEAN_PLATE || (typeof p.holding === 'string' && p.holding.startsWith(CHOP_PREFIX))) && station.output && !station.isBurned) {
+        } else if (p.holding === CLEAN_PLATE && station.output && !station.isBurned) {
           p.holding = station.output;
           station.output = null; station.burnTimer = 0;
           socket.emit("sound", "success");
