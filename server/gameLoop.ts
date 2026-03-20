@@ -11,8 +11,12 @@ import { DIALOGUES } from "../shared/dialogues.js";
 const CLOSING_THRESHOLD = 300;
 const SPAWN_GRACE_TICKS = 240;
 
-function patLimit(lv: number, day: number) {
-  return Math.max(300, 1200 + 300 * lv - day * 30);
+function patLimit(lv: number, day: number, playerCount: number) {
+  // Tek kişi: daha sabırlı müşteriler. Çok kişi: daha az sabır (daha fazla baskı)
+  const basePatience = playerCount === 1 ? 1500 : 1200;
+  const perLv = playerCount === 1 ? 350 : 300;
+  const perDay = playerCount === 1 ? 20 : 30;
+  return Math.max(300, basePatience + perLv * lv - perDay * day);
 }
 
 export function generateMenuChoices(gs: GameState): void {
@@ -33,7 +37,7 @@ export function tryQueueSeat(gs: GameState, io: Server, rid: string) {
     if (!free.length) break;
     const guest = gs.waitList.shift()!;
     const seat = free[Math.floor(Math.random() * free.length)];
-    const maxP = patLimit(gs.upgrades.patience, gs.day);
+    const maxP = patLimit(gs.upgrades.patience, gs.day, Object.keys(gs.players).length || 1);
 
     // Kapı ortası: x=640, dışarıdan gelir
     const DOOR_X = 640;
@@ -120,15 +124,25 @@ export function gameTick(gs: GameState, io: Server, rid: string) {
 
 function spawnTick(gs: GameState, io: Server, rid: string) {
   const availableDishes = gs.unlockedDishes.length > 0 ? gs.unlockedDishes : [...DISH_ITEMS];
-  const baseRate = 0.001 + Math.min(gs.day * 0.0005, 0.008);
-  const dayProgress = 1 - gs.dayTimer / DAY_TICKS;
   const playerCount = Object.keys(gs.players).length || 1;
-  const spawnMultiplier = 1 + (playerCount - 1) * 0.6;
-  const queueLimit = 10 + gs.day * 2 + (playerCount - 1) * 3;
-  const currentRate = (baseRate + (dayProgress * 0.001)) * spawnMultiplier;
+  const isSolo = playerCount === 1;
+
+  // Tek kişi: daha yavaş spawn, çok kişi: daha hızlı
+  const baseRate = isSolo
+    ? 0.0007 + Math.min(gs.day * 0.0003, 0.005)   // solo: daha yavaş
+    : 0.001  + Math.min(gs.day * 0.0005, 0.008);   // multi: daha hızlı
+  const dayProgress = 1 - gs.dayTimer / DAY_TICKS;
+  const spawnMultiplier = isSolo ? 1.0 : 1 + (playerCount - 1) * 0.6;
+  const queueLimit = isSolo
+    ? 6 + gs.day                                    // solo: daha az kuyruk
+    : 10 + gs.day * 2 + (playerCount - 1) * 3;     // multi: daha fazla
+  const currentRate = (baseRate + dayProgress * 0.001) * spawnMultiplier;
 
   if (Math.random() < currentRate && gs.customers.length + gs.waitList.length < queueLimit) {
-    const personalities: Personality[] = ['polite', 'rude', 'recep'];
+    // Tek kişide daha az rude/thug, çok kişide daha fazla
+    const personalities: Personality[] = isSolo
+      ? ['polite', 'polite', 'rude']               // solo: 2/3 polite
+      : ['polite', 'rude', 'recep'];                // multi: eşit dağılım
     const pers = personalities[Math.floor(Math.random() * personalities.length)];
     let dialog: string | undefined;
     let timer: number | undefined;
@@ -160,7 +174,9 @@ function spawnTick(gs: GameState, io: Server, rid: string) {
     gs.revengeQueue[i]--;
     if (gs.revengeQueue[i] <= 0) {
       gs.revengeQueue.splice(i, 1);
-      const thugCount = 3 + Math.floor(Math.random() * 2);
+      const thugCount = isSolo
+        ? 2 + Math.floor(Math.random() * 2)   // solo: 2-3 thug
+        : 3 + Math.floor(Math.random() * 2);  // multi: 3-4 thug
       for (let j = 0; j < thugCount; j++) {
         const bodyShapes = [2, 4] as const;
         const bodyShape = bodyShapes[Math.floor(Math.random() * bodyShapes.length)];
