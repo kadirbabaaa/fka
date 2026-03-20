@@ -168,7 +168,7 @@ export interface GameState {
 }
 
 // ─── Boyut ───────────────────────────────────────────────────────────────────
-export const GAME_WIDTH = 1280;
+export const GAME_WIDTH = 1080;
 export const GAME_HEIGHT = 870;
 
 // ─── Dış Alan Sınırı (salon biter, dışarı başlar) ────────────────────────────
@@ -230,8 +230,8 @@ export const COUNTER_POSITIONS = [
     { id: 'counter7', x: 700, y: 245, width: 40, height: 40, type: 'counter' as const },
     { id: 'counter8', x: 800, y: 245, width: 40, height: 40, type: 'counter' as const },
     { id: 'counter9', x: 840, y: 245, width: 40, height: 40, type: 'counter' as const },
-    { id: 'counter10', x: 1020, y: 245, width: 40, height: 40, type: 'counter' as const },
-    { id: 'counter11', x: 1060, y: 245, width: 40, height: 40, type: 'counter' as const },
+    { id: 'counter10', x: 860, y: 245, width: 40, height: 40, type: 'counter' as const },
+    { id: 'counter11', x: 900, y: 245, width: 40, height: 40, type: 'counter' as const },
 ];
 
 // ─── Yatay Duvar & Kapılar ────────────────────────────────────────────────────
@@ -280,9 +280,9 @@ export const ADDITIONAL_OVEN_POSITIONS = [
 ];
 
 // ─── Çöp Kutusu, Kirli Sepeti & Lavabo ──────────────────────────────────────
-export const TRASH_STATION = { x: 1200, y: 190 };
-export const DIRTY_TRAY_POS = { x: 1050, y: 90 };
-export const SINK_STATION = { x: 1180, y: 90 };
+export const TRASH_STATION = { x: 1010, y: 190 };
+export const DIRTY_TRAY_POS = { x: 880, y: 90 };
+export const SINK_STATION = { x: 990, y: 90 };
 
 // ─── Koltuklar — Artık dinamik, getSeatSlots(tableLayout) kullan ─────────────
 // SEAT_SLOTS kaldırıldı — bkz. getSeatSlots()
@@ -344,9 +344,9 @@ export function mkGameState(): GameState {
       'ingredient_🍢': { id: 'ingredient_🍢', x: 460, y: 65 },
       'oven1':         { id: 'oven1',         x: 200, y: 170 },
       'tray':          { id: 'tray',          x: 80,  y: 170 },
-      'sink':          { id: 'sink',          x: 1180, y: 90 },
-      'trash':         { id: 'trash',         x: 1200, y: 190 },
-      'dirty_tray':    { id: 'dirty_tray',    x: 1050, y: 90 },
+      'sink':          { id: 'sink',          x: 990,  y: 90 },
+      'trash':         { id: 'trash',         x: 1010, y: 190 },
+      'dirty_tray':    { id: 'dirty_tray',    x: 880,  y: 90 },
       'plate_stack':   { id: 'plate_stack',   x: 650, y: 65 },
       // Counter'lar kasıtlı olarak buraya dahil edilmedi — duvara sabit, taşınamaz
     },
@@ -357,7 +357,7 @@ export function mkGameState(): GameState {
       'table1': { id: 'table1', x: 390, y: 500 },
       'table2': { id: 'table2', x: 640, y: 500 },
       'table3': { id: 'table3', x: 890, y: 500 },
-      'table4': { id: 'table4', x: 1090, y: 500 },
+      'table4': { id: 'table4', x: 920, y: 500 },
     },
     lockedTables: {},
   };

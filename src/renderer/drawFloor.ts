@@ -424,7 +424,7 @@ function drawExterior(ctx: CanvasRenderingContext2D) {
 
   // ── Ağaçlar ───────────────────────────────────────────────────────────────
   const treeY = WALL_BOT + (SIDEWALK_END - WALL_BOT) / 2 + 4;
-  [90, 210, 370, 910, 1070, 1185].forEach(tx2 => {
+  [90, 210, 370, 760, 900, 990].forEach(tx2 => {
     if (tx2 > DOOR_X0 - 55 && tx2 < DOOR_X1 + 55) return;
     drawTree(ctx, tx2, treeY);
   });
