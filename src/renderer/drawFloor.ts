@@ -36,7 +36,7 @@ function drawWorkstationBase(
 }
 
 /** Restoran zemini — PlateUp tarzı koyu mutfak + sıcak ahşap salon */
-export function drawFloor(ctx: CanvasRenderingContext2D, unlockedDishes: string[] = [], ingredientPositions?: Record<string, { x: number; y: number }>, plateStackPos?: { x: number; y: number }, sinkPos?: { x: number; y: number }) {
+export function drawFloor(ctx: CanvasRenderingContext2D, unlockedDishes: string[] = [], ingredientPositions?: Record<string, { x: number; y: number }>, plateStackPos?: { x: number; y: number }, sinkPos?: { x: number; y: number }, choppingBoardPos?: { x: number; y: number }) {
 
   // ══════════════════════════════════════════════════════════════════
   // SALON — sıcak açık ahşap parke (PlateUp dining room tonu)
@@ -221,7 +221,8 @@ export function drawFloor(ctx: CanvasRenderingContext2D, unlockedDishes: string[
   // KESME TAHTASI ZEMİNİ (base — dinamik çizim useGameLoop'ta üstüne gelir)
   // ══════════════════════════════════════════════════════════════════
   {
-    const cx = 760, cy = 170;
+    const cx = choppingBoardPos?.x ?? 760;
+    const cy = choppingBoardPos?.y ?? 170;
     drawWorkstationBase(ctx, cx, cy, 44, 28, 10, 0.28);
     ctx.fillStyle = '#c8a96e';
     ctx.beginPath();

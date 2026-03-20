@@ -107,6 +107,10 @@ export function registerLayoutHandler(
     const oven = gs.cookStations.find(s => s.id === stationId);
     if (oven) { oven.x = snapped.x; oven.y = snapped.y; }
 
+    // Kesme tahtası ise choppingBoards koordinatını da güncelle
+    const board = gs.choppingBoards?.find(b => b.id === stationId);
+    if (board) { board.x = snapped.x; board.y = snapped.y; }
+
     delete gs.lockedStations[stationId];
     io.to(roomId).emit("stationMoved", { stationId, x: snapped.x, y: snapped.y });
     io.to(roomId).emit("stationUnlocked", { stationId });

@@ -60,6 +60,9 @@ export function useLayoutEditor({ socket, gameStateRef, localPlayerRef, dayPhase
       // Fırın ise cookStations koordinatını da güncelle
       const oven = gs.cookStations?.find(s => s.id === stationId);
       if (oven) { oven.x = x; oven.y = y; }
+      // Kesme tahtası ise choppingBoards koordinatını da güncelle
+      const board = gs.choppingBoards?.find(b => b.id === stationId);
+      if (board) { board.x = x; board.y = y; }
     };
 
     const onLocked = ({ stationId, lockedBy }: { stationId: string; lockedBy: string }) => {

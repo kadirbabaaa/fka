@@ -52,7 +52,7 @@ let floorCache: OffscreenCanvas | HTMLCanvasElement | null = null;
 let floorCacheVersion = 0;
 let cachedUnlockedDishes = "";
 
-function drawFloorCached(ctx: CanvasRenderingContext2D, unlockedDishes: string[] = [], forceRedraw = false, ingredientPositions?: Record<string, { x: number; y: number }>, tablePositions?: Record<string, { id: string; x: number; y: number }>, movingTableId?: string | null, plateStackPos?: { x: number; y: number }, sinkPos?: { x: number; y: number }) {
+function drawFloorCached(ctx: CanvasRenderingContext2D, unlockedDishes: string[] = [], forceRedraw = false, ingredientPositions?: Record<string, { x: number; y: number }>, tablePositions?: Record<string, { id: string; x: number; y: number }>, movingTableId?: string | null, plateStackPos?: { x: number; y: number }, sinkPos?: { x: number; y: number }, choppingBoardPos?: { x: number; y: number }) {
   const currentDishesStr = [...unlockedDishes].sort().join(',');
   const ingPosStr = ingredientPositions
     ? Object.entries(ingredientPositions).map(([k, v]) => `${k}:${v.x},${v.y}`).join(';')
@@ -62,8 +62,9 @@ function drawFloorCached(ctx: CanvasRenderingContext2D, unlockedDishes: string[]
     : '';
   const platePosStr = plateStackPos ? `${plateStackPos.x},${plateStackPos.y}` : '';
   const sinkPosStr = sinkPos ? `${sinkPos.x},${sinkPos.y}` : '';
-  if (forceRedraw || floorCacheVersion !== FLOOR_CACHE_VERSION || cachedUnlockedDishes !== currentDishesStr + ingPosStr + tablePosStr + platePosStr + sinkPosStr) {
-    floorCache = null; floorCacheVersion = FLOOR_CACHE_VERSION; cachedUnlockedDishes = currentDishesStr + ingPosStr + tablePosStr + platePosStr + sinkPosStr;
+  const chopPosStr = choppingBoardPos ? `${choppingBoardPos.x},${choppingBoardPos.y}` : '';
+  if (forceRedraw || floorCacheVersion !== FLOOR_CACHE_VERSION || cachedUnlockedDishes !== currentDishesStr + ingPosStr + tablePosStr + platePosStr + sinkPosStr + chopPosStr) {
+    floorCache = null; floorCacheVersion = FLOOR_CACHE_VERSION; cachedUnlockedDishes = currentDishesStr + ingPosStr + tablePosStr + platePosStr + sinkPosStr + chopPosStr;
   }
   if (!floorCache) {
     floorCache = typeof OffscreenCanvas !== "undefined"
@@ -71,7 +72,7 @@ function drawFloorCached(ctx: CanvasRenderingContext2D, unlockedDishes: string[]
       : Object.assign(document.createElement("canvas"), { width: GAME_WIDTH, height: GAME_HEIGHT });
     const offCtx = floorCache.getContext("2d");
     if (offCtx) {
-      drawFloor(offCtx as unknown as CanvasRenderingContext2D, unlockedDishes, ingredientPositions, plateStackPos, sinkPos);
+      drawFloor(offCtx as unknown as CanvasRenderingContext2D, unlockedDishes, ingredientPositions, plateStackPos, sinkPos, choppingBoardPos);
       const tables = tablePositions ? Object.values(tablePositions) : [];
       tables.forEach((t) => {
         if (movingTableId === t.id) {
@@ -126,7 +127,8 @@ export function useGameLoop({
       const movingTableId = editorStateRef?.current?.movingTableId;
       const plateStackDynPos = state.stationLayout?.['plate_stack'] ?? undefined;
       const sinkDynPos = state.stationLayout?.['sink'] ?? undefined;
-      drawFloorCached(ctx, state.unlockedDishes, isEditing, ingPositions, state.tableLayout, movingTableId, plateStackDynPos, sinkDynPos);
+      const chopBoardDynPos = state.stationLayout?.['chop1'] ?? undefined;
+      drawFloorCached(ctx, state.unlockedDishes, isEditing, ingPositions, state.tableLayout, movingTableId, plateStackDynPos, sinkDynPos, chopBoardDynPos);
 
       const stock = state.stock ?? { "🍞": 0, "🥩": 0, "🥬": 0 };
       const movingId = editorStateRef?.current?.movingStationId;
@@ -194,7 +196,10 @@ export function useGameLoop({
 
       // Kesme tahtaları
       const boards = state.choppingBoards ?? [];
-      for (const board of boards) drawChoppingBoard(ctx, board, time);
+      for (const board of boards) {
+        if (movingId === board.id) continue; // taşınıyor, preview çizer
+        drawChoppingBoard(ctx, board, time);
+      }
 
       state.customers.forEach((c) => drawCustomer(ctx, c));
       (state.dirtyTables ?? []).forEach((t) => drawDirtyTable(ctx, t.seatX, t.seatY));
