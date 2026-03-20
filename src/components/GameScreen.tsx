@@ -252,27 +252,6 @@ export const GameScreen: React.FC<Props> = ({
                 />
 
 
-                {/* ── Düzenleme Modu Banner (Sol Üst Köşe, Kompakt) ── */}
-                {dayPhase === 'prep' && (editorState.isMoving || editorState.isMovingTable) && (
-                    <div className="absolute top-2 left-2 z-50 flex flex-col items-start gap-1 pointer-events-auto">
-                        <div className="bg-stone-900/90 border border-purple-500 rounded-lg px-2 py-1.5 shadow-lg flex flex-col items-start gap-1 backdrop-blur-sm">
-                            <span className="font-black text-[10px] uppercase tracking-wider text-purple-300">
-                                {editorState.isMoving ? '📦 İstasyon Taşı' : '🪑 Masa Taşı'}
-                            </span>
-                            <span className="font-bold text-[9px] text-stone-400">
-                                {editorState.isMoving
-                                    ? (isTouchDevice ? 'AL/VER\'e bas' : 'E\'ye bas')
-                                    : (isTouchDevice ? 'AL/VER\'e bas' : 'E\'ye bas')}
-                            </span>
-                            <button
-                                onClick={handleCancel}
-                                className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white rounded font-black text-[10px] border-b-2 border-red-800 active:border-b-0 active:translate-y-0.5 transition-all flex items-center gap-1"
-                            >
-                                ✕ İPTAL (ESC)
-                            </button>
-                        </div>
-                    </div>
-                )}
 
                 {/* GAME OVER Overlay */}
                 {isGameOver && (
@@ -444,6 +423,24 @@ export const GameScreen: React.FC<Props> = ({
                 )}
 
             </div>
+
+            {/* ── Düzenleme Modu Bar (Canvas Dışı, Mobil Yatay) ── */}
+            {dayPhase === 'prep' && (editorState.isMoving || editorState.isMovingTable) && (
+                <div className="flex-none flex items-center justify-between gap-3 px-3 py-1.5 bg-stone-900 border-t border-purple-700/60">
+                    <span className="font-black text-[11px] uppercase tracking-wider text-purple-300">
+                        {editorState.isMoving ? '📦 İstasyon Taşı' : '🪑 Masa Taşı'}
+                    </span>
+                    <span className="font-bold text-[10px] text-stone-400">
+                        {isTouchDevice ? 'Yeni konuma git → AL/VER\'e bas' : 'Yeni konuma git → E\'ye bas'}
+                    </span>
+                    <button
+                        onClick={handleCancel}
+                        className="px-3 py-1 bg-red-600 hover:bg-red-500 text-white rounded font-black text-[11px] border-b-2 border-red-800 active:border-b-0 active:translate-y-0.5 transition-all flex items-center gap-1 flex-shrink-0"
+                    >
+                        ✕ İPTAL (ESC)
+                    </button>
+                </div>
+            )}
 
             {/* PC İpuçları */}
             {!isTouchDevice && (
