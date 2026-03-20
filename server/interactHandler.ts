@@ -65,13 +65,25 @@ export function registerInteractHandler(
         socket.emit("sound", "success");
       } else if (isTray(p.holding)) {
         const items = getTrayItems(p.holding);
-        const dirtyCount = items.filter(i => i === DIRTY_PLATE).length;
-        if (dirtyCount > 0) {
+        const dirtyCountInTray = items.filter(i => i === DIRTY_PLATE).length;
+        if (dirtyCountInTray > 0) {
+          // Tepsideki kirli tabakları sepete bırak
           const cleaned = items.filter(i => i !== DIRTY_PLATE);
           p.holding = cleaned.length > 0 ? createTray(cleaned) : null;
-          gs.dirtyTrayCount = (gs.dirtyTrayCount || 0) + dirtyCount;
+          gs.dirtyTrayCount = (gs.dirtyTrayCount || 0) + dirtyCountInTray;
           socket.emit("sound", "success");
+        } else if (items.length < MAX_TRAY_CAPACITY && (gs.dirtyTrayCount || 0) > 0) {
+          // Sepetten kirli tabağı tepsiye al
+          items.push(DIRTY_PLATE);
+          p.holding = createTray(items);
+          gs.dirtyTrayCount--;
+          socket.emit("sound", "pickup");
         }
+      } else if (!p.holding && (gs.dirtyTrayCount || 0) > 0) {
+        // Sepetten tek bir kirli tabak al
+        p.holding = DIRTY_PLATE;
+        gs.dirtyTrayCount--;
+        socket.emit("sound", "pickup");
       }
       return;
     }
