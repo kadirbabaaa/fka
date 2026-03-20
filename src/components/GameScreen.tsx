@@ -193,22 +193,8 @@ export const GameScreen: React.FC<Props> = ({
                 </div>
 
                 <div className="flex-1 max-w-xs flex flex-col items-center gap-0.5">
-                    {/* Taşıma modu aktifken iptal banner'ı göster */}
-                    {dayPhase === 'prep' && (editorState.isMoving || editorState.isMovingTable) ? (
-                        <div className="flex items-center gap-2">
-                            <span className="font-bold text-[11px]" style={{ color: editorState.isMoving ? '#fde047' : '#fbbf24' }}>
-                                {editorState.isMoving
-                                    ? (isTouchDevice ? '📦 Yeni konuma git → AL/VER' : '📦 Yeni konuma git → E')
-                                    : (isTouchDevice ? '🪑 Masayı taşı → AL/VER' : '🪑 Masayı taşı → E')}
-                            </span>
-                            <button
-                                onClick={handleCancel}
-                                className="px-2 py-0.5 bg-red-600 hover:bg-red-500 text-white rounded-lg font-black text-[11px] border border-red-400 transition-all active:scale-95 whitespace-nowrap"
-                            >
-                                ✕ İptal
-                            </button>
-                        </div>
-                    ) : (
+                    {/* Taşıma modu aktifken iptal banner'ı göster (Eski yerinden kaldırıldı, aşağıya taşındı) */}
+                    {dayPhase !== 'prep' || (!editorState.isMoving && !editorState.isMovingTable) ? (
                         <span className="text-[10px] font-bold flex items-center gap-2" style={{ color: dayPhase === 'prep' ? '#a78bfa' : dayPhase === 'day' ? '#fbbf24' : '#818cf8' }}>
                             <span>{dayPhase === 'prep' ? `🔧 Hazırlık — Gün ${day} ` : dayPhase === 'day' ? `☀️ Gün ${day} ` : `🌙 Gece ${day} `}
                                 {queueLen > 0 && dayPhase === 'day' ? ` · ⏳${queueLen} ` : ''}</span>
@@ -220,6 +206,8 @@ export const GameScreen: React.FC<Props> = ({
                                 ))}
                             </span>
                         </span>
+                    ) : (
+                        <span className="text-[10px] font-bold text-purple-400">🔧 Düzenleme Modu</span>
                     )}
                     <div className="w-full h-1.5 bg-stone-700 rounded-full overflow-hidden">
                         <div className="h-full rounded-full transition-all" style={{ width: `${progress * 100}% `, backgroundColor: barColor }} />
@@ -269,33 +257,27 @@ export const GameScreen: React.FC<Props> = ({
                     </div>
                 )}
 
-                {/* ── Taşıma Modu: İptal butonu (istasyon) ── */}
-                {dayPhase === 'prep' && editorState.isMoving && (
-                    <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 bg-stone-900/90 backdrop-blur-sm px-4 py-2 rounded-2xl border border-yellow-600/60 shadow-xl">
-                        <span className="text-yellow-300 font-bold text-sm">
-                            {isTouchDevice ? '📦 Yeni konuma git → AL/VER' : '📦 Yeni konuma git → E | İptal: Esc'}
-                        </span>
-                        <button
-                            onClick={handleCancel}
-                            className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-black text-sm border border-red-400 transition-all active:scale-95"
-                        >
-                            ✕ İptal
-                        </button>
-                    </div>
-                )}
-
-                {/* ── Masa Taşıma Modu: İptal butonu ── */}
-                {dayPhase === 'prep' && editorState.isMovingTable && (
-                    <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 bg-stone-900/90 backdrop-blur-sm px-4 py-2 rounded-2xl border border-amber-600/60 shadow-xl">
-                        <span className="text-amber-300 font-bold text-sm">
-                            {isTouchDevice ? '🪑 Masayı taşı → AL/VER' : '🪑 Masayı taşı → E | İptal: Esc'}
-                        </span>
-                        <button
-                            onClick={handleCancel}
-                            className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-black text-sm border border-red-400 transition-all active:scale-95"
-                        >
-                            ✕ İptal
-                        </button>
+                {/* ── Düzenleme Modu Banner (Yeni Konum: Orta Alt) ── */}
+                {dayPhase === 'prep' && (editorState.isMoving || editorState.isMovingTable) && (
+                    <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none">
+                        <div className="bg-stone-900/90 border-2 border-purple-500 rounded-xl px-4 py-3 shadow-2xl flex flex-col items-center gap-2 pointer-events-auto backdrop-blur-sm">
+                            <span className="font-black text-sm uppercase tracking-wider text-white">
+                                {editorState.isMoving ? '📦 İstasyon Taşı' : '🪑 Masa Taşı'}
+                            </span>
+                            <span className="font-bold text-xs text-purple-300 text-center">
+                                {editorState.isMoving
+                                    ? (isTouchDevice ? 'Yeni konuma git ve AL/VER\'e bas' : 'Yeni konuma git ve E\'ye bas')
+                                    : (isTouchDevice ? 'Masayı taşı ve AL/VER\'e bas' : 'Masayı taşı ve E\'ye bas')}
+                            </span>
+                            <div className="flex gap-2 w-full mt-1">
+                                <button
+                                    onClick={handleCancel}
+                                    className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg font-black text-xs border-b-4 border-red-800 active:border-b-0 active:translate-y-1 transition-all flex items-center justify-center gap-2"
+                                >
+                                    ✕ İPTAL (ESC)
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 )}
 
