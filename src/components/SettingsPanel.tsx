@@ -22,6 +22,22 @@ function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
     );
 }
 
+function SliderRow({ label, valueLabel, min, max, step, value, onChange }: {
+    label: string; valueLabel: string; min: number; max: number; step: number; value: number; onChange: (v: number) => void;
+}) {
+    return (
+        <div className="rounded-2xl border border-white/8 bg-white/4 p-4">
+            <div className="flex items-center justify-between gap-4">
+                <span className="text-sm font-black uppercase tracking-[0.14em] text-stone-200">{label}</span>
+                <span className="text-xs font-black uppercase tracking-[0.16em] text-amber-200">{valueLabel}</span>
+            </div>
+            <input type="range" min={min} max={max} step={step} value={value}
+                onChange={(e) => onChange(Number(e.target.value))}
+                className="mt-4 w-full accent-amber-400" />
+        </div>
+    );
+}
+
 export const SettingsPanel: React.FC<Props> = ({ settings, onUpdate, onClose, isJoined, onLeaveGame, onOpenHudEditor }) => (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
         <div className="max-h-[92dvh] w-full max-w-3xl overflow-y-auto rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,#1c1917,#0c0a09)] p-4 text-stone-100 shadow-[0_30px_120px_rgba(0,0,0,0.45)] md:p-6">
