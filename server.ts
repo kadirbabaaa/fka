@@ -95,16 +95,14 @@ io.on("connection", (socket) => {
 
     if (!RoomManager.getRoomState(roomId)) {
       RoomManager.setRoomState(roomId, mkGameState());
-      const gs = RoomManager.getRoomState(roomId)!;
 
+      const stableRoomId = roomId;
       const interval = setInterval(() => {
         try {
-          const rid = roomId;
-          if (!rid) return;
-          const gs = RoomManager.getRoomState(rid);
+          const gs = RoomManager.getRoomState(stableRoomId);
           if (!gs) return;
-          if (gs.isGameOver) { io.to(rid).emit("state", gs); return; }
-          gameTick(gs, io, rid);
+          if (gs.isGameOver) { io.to(stableRoomId).emit("state", gs); return; }
+          gameTick(gs, io, stableRoomId);
         } catch (err) {
           console.error('[GameLoop] Hata yakalandı, oyun devam ediyor:', err);
         }
@@ -235,6 +233,12 @@ io.on("connection", (socket) => {
     } else {
       socket.emit("sound", "fail");
     }
+  });
+
+  socket.on("requestSync", () => {
+    if (!roomId || !RoomManager.getRoomState(roomId)) return;
+    const gs = RoomManager.getRoomState(roomId)!;
+    socket.emit("state", gs);
   });
 
   socket.on("resetDay", () => {
