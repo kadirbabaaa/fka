@@ -5,7 +5,7 @@ import {
   COUNTER_POSITIONS, PLATE_STACK_POS,
   CLEAN_PLATE, DIRTY_PLATE, BURNED_FOOD, EAT_TICKS,
   MAX_TRAY_CAPACITY, isTray, getTrayItems, createTray,
-  SINK_STATION,
+  SINK_STATION, TRASH_STATION,
 } from "../shared/types.js";
 
 const INTERACT_R = 75;
@@ -39,7 +39,41 @@ export function registerInteractHandler(
       return;
     }
 
-    // Kirli masa
+    // Çöp kovası — yanmış yemek, kirli tabak, kirli tepsi içindekiler atılabilir
+    const trashPos = gs.stationLayout['trash'] ?? TRASH_STATION;
+    if (Math.hypot(px - trashPos.x, py - trashPos.y) < 90) {
+      if (p.holding) {
+        if (isTray(p.holding)) {
+          // Tepsi içindeki kirli tabakları say, dirtyTrayCount'u güncelle
+          const items = getTrayItems(p.holding);
+          const dirtyCount = items.filter(i => i === DIRTY_PLATE).length;
+          gs.dirtyTrayCount = Math.max(0, (gs.dirtyTrayCount || 0) - dirtyCount);
+        }
+        p.holding = null;
+        socket.emit("sound", "trash");
+      }
+      return;
+    }
+
+    // Kirli tepsi sepeti — kirli tabakları bırak, dirtyTrayCount artar
+    const dirtyTrayPos = gs.stationLayout['dirty_tray'] ?? { x: 1050, y: 90 };
+    if (Math.hypot(px - dirtyTrayPos.x, py - dirtyTrayPos.y) < 90) {
+      if (p.holding === DIRTY_PLATE) {
+        gs.dirtyTrayCount = (gs.dirtyTrayCount || 0) + 1;
+        p.holding = null;
+        socket.emit("sound", "success");
+      } else if (isTray(p.holding)) {
+        const items = getTrayItems(p.holding);
+        const dirtyCount = items.filter(i => i === DIRTY_PLATE).length;
+        if (dirtyCount > 0) {
+          const cleaned = items.filter(i => i !== DIRTY_PLATE);
+          p.holding = cleaned.length > 0 ? createTray(cleaned) : null;
+          gs.dirtyTrayCount = (gs.dirtyTrayCount || 0) + dirtyCount;
+          socket.emit("sound", "success");
+        }
+      }
+      return;
+    }
     const dirtyIdx = gs.dirtyTables.findIndex(t => Math.hypot(px - t.seatX, py - t.seatY) < SERVE_R);
     if (dirtyIdx !== -1) {
       const dt = gs.dirtyTables[dirtyIdx];

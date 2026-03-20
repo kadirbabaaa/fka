@@ -41,10 +41,6 @@ app.get("*", (req, res) => {
 
 // ─── Sabitler ────────────────────────────────────────────────────────────────
 const LOGIC_STEP_MS = 33;
-const INTERACT_R = 75;
-const SERVE_R = 95;
-const CLOSING_THRESHOLD = 300;
-const SPAWN_GRACE_TICKS  = 240;
 
 // ─── Room Manager ────────────────────────────────────────────────────────────
 class RoomManager {
@@ -79,6 +75,7 @@ io.on("connection", (socket) => {
       const interval = setInterval(() => {
         try {
           const rid = roomId;
+          if (!rid) return;
           const gs = RoomManager.getRoomState(rid);
           if (!gs) return;
           if (gs.isGameOver) { io.to(rid).emit("state", gs); return; }
@@ -138,6 +135,7 @@ io.on("connection", (socket) => {
     if (currentOvens >= maxOvens) { socket.emit("sound", "fail"); return; }
 
     const ovenIdx = currentOvens - INITIAL_OVEN_POSITIONS.length;
+    if (ovenIdx < 0 || ovenIdx >= OVEN_UPGRADE_COSTS.length) { socket.emit("sound", "fail"); return; }
     const cost = OVEN_UPGRADE_COSTS[ovenIdx];
 
     if (gs.score >= cost) {
@@ -170,6 +168,7 @@ io.on("connection", (socket) => {
     if (!roomId || !RoomManager.getRoomState(roomId)) return;
     const gs = RoomManager.getRoomState(roomId)!;
     // menuChoices hâlâ varsa seçim yapılmadan geçilmesin
+    // Race condition: zaten prep'e geçilmişse tekrar geçme
     if (gs.dayPhase === 'night' && !gs.menuChoices) {
       gs.day++; gs.dayPhase = 'prep'; gs.dayTimer = DAY_TICKS;
       io.to(roomId).emit("state", gs);
@@ -242,7 +241,7 @@ io.on("connection", (socket) => {
     if (c.beatUpTimer && c.beatUpTimer > 3) return;
 
     if (c.personality === 'polite') {
-      gs.score -= 20;
+      gs.score = Math.max(0, gs.score - 20);
       c.beatUpTimer = 20;
       c.currentDialog = ["AY!", "Ne yapıyorsunuz!", "İmdat!", "Polis!"][Math.floor(Math.random() * 4)];
       c.dialogTimer = 30;
