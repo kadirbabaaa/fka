@@ -76,7 +76,7 @@ export function movePlayer(
   lp.x = nx;
   lp.y = ny;
 
-  if (time - lastEmitRef.current > 50 && socket) {
+  if (time - lastEmitRef.current > 33 && socket) {
     socket.emit("move", { x: nx, y: ny });
     lastEmitRef.current = time;
   }
