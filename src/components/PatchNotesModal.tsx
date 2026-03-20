@@ -13,8 +13,8 @@ export const PatchNotesModal: React.FC<Props> = ({ onClose }) => {
                 <div>
                     <h2 className="text-3xl font-black text-amber-400 tracking-tight">Yama Notları 📜</h2>
                     <div className="flex items-center gap-2 mt-1">
-                        <span className="bg-amber-400/10 text-amber-400 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest border border-amber-400/20">v1.2.0</span>
-                        <span className="text-stone-500 text-[10px] font-bold uppercase tracking-widest">Kesme & Doğrama Güncellemesi</span>
+                        <span className="bg-amber-400/10 text-amber-400 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest border border-amber-400/20">v1.3.0</span>
+                        <span className="text-stone-500 text-[10px] font-bold uppercase tracking-widest">Güvenli Fırın & Ping Güncellemesi</span>
                     </div>
                 </div>
                 <button
@@ -113,6 +113,7 @@ export const PatchNotesModal: React.FC<Props> = ({ onClose }) => {
                     <ul className="space-y-3">
                         {[
                             { icon: '🔥', name: 'Ek Fırın', desc: 'Başlangıçta 1 fırın var, toplamda 4\'e kadar alınabilir. Her fırın farklı yemek pişirebilir.' },
+                            { icon: '🛡️', name: 'Güvenli Fırın', desc: 'Lv1: yemek yanma süresi 2 kat uzar. Lv2: yemekler hiç yanmaz. 2 seviye.' },
                             { icon: '⏳', name: 'Müşteri Sabrı', desc: 'Müşterilerin bekleme süresi uzar. 3 seviye, her biri +300 tick sabır ekler.' },
                             { icon: '💰', name: 'Servis Kazancı', desc: 'Her servisten +5 ekstra puan. 2 seviye.' },
                             { icon: '🍽️', name: 'Tabak Yığını', desc: 'Başlangıç tabak kapasitesi artar (4→6→8→10). 3 seviye.' },

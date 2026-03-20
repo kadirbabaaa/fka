@@ -132,7 +132,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onPlay, onQuickSta
                     )}
                 </div>
 
-                <p className="text-[10px] text-stone-700 tracking-widest uppercase mt-2">v1.1.0</p>
+                <p className="text-[10px] text-stone-700 tracking-widest uppercase mt-2">v1.3.0</p>
             </div>
 
             {showPatchNotes && <PatchNotesModal onClose={() => setShowPatchNotes(false)} />}

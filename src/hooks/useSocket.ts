@@ -10,6 +10,7 @@ interface UseSocketReturn {
     gameStateRef: React.MutableRefObject<GameState>;
     audioCtxRef: React.MutableRefObject<AudioContext | null>;
     connectionStatus: 'connected' | 'disconnected' | 'reconnecting';
+    ping: number;
 }
 
 const DEFAULT_STATE: GameState = {
@@ -55,6 +56,7 @@ export function useSocket(
     const [isConnected, setIsConnected] = useState(false);
     const [myId, setMyId] = useState('');
     const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'reconnecting'>('disconnected');
+    const [ping, setPing] = useState<number>(0);
     const gameStateRef = useRef<GameState>(DEFAULT_STATE);
     const audioCtxRef = useRef<AudioContext | null>(null);
     const roomIdRef = useRef<string>('');
@@ -85,6 +87,15 @@ export function useSocket(
             reconnectAttemptsRef.current = 0;
             reconnectDelayRef.current = 1000;
 
+            // Ping ölçümü — her 3 saniyede bir
+            const pingInterval = setInterval(() => {
+                if (!newSocket.connected) return;
+                const t0 = Date.now();
+                newSocket.emit('ping_check', t0);
+            }, 3000);
+            // Cleanup için ref'e kaydet
+            (newSocket as any)._pingInterval = pingInterval;
+
             // Eğer önceden oyuncu verisi varsa, yeniden join et
             if (playerDataRef.current && roomIdRef.current) {
                 console.log('[Socket] Re-joining room after reconnect:', roomIdRef.current);
@@ -96,6 +107,7 @@ export function useSocket(
             console.log('[Socket] Disconnected');
             setIsConnected(false);
             setConnectionStatus('disconnected');
+            clearInterval((newSocket as any)._pingInterval);
         });
 
         newSocket.on('connect_error', (error) => {
@@ -166,6 +178,10 @@ export function useSocket(
             }
         });
 
+        newSocket.on('pong_check', (t0: number) => {
+            setPing(Date.now() - t0);
+        });
+
         newSocket.on('sound', (type: string) => {
             playSound(audioCtxRef, type);
         });
@@ -211,5 +227,5 @@ export function useSocket(
         }
     }, [socket]);
 
-    return { socket, isConnected, myId, gameStateRef, audioCtxRef, connectionStatus };
+    return { socket, isConnected, myId, gameStateRef, audioCtxRef, connectionStatus, ping };
 }

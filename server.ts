@@ -346,6 +346,9 @@ io.on("connection", (socket) => {
     removePlayerFromRoom();
   });
 
+  socket.on("ping_check", (t0: number) => {
+    socket.emit("pong_check", t0);
+  });
   socket.on("disconnect", () => {
     removePlayerFromRoom();
   });
