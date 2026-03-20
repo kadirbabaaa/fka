@@ -143,7 +143,7 @@ export const PatchNotesModal: React.FC<Props> = ({ onClose }) => {
                             { icon: '👊', text: 'Dövüş sistemi — kaba müşterileri dövebilirsin, ama intikam için Thug grubu gelir' },
                             { icon: '🔧', text: 'İstasyon taşıma — hazırlık fazında E tuşuyla istasyonları grid üzerinde yeniden konumlandır' },
                             { icon: '📦', text: 'Gizli malzeme istasyonları — kilidi açılmayan yemeklerin malzemeleri mutfakta görünmez' },
-                            { icon: '�', text: '8 farklı karakter tipi — Aşçı, Suşici, Ninja, Chef, Bahçıvan, Kaptan, Garson, Bulaşıkçı' },
+                            { icon: '👥', text: '8 farklı karakter tipi — Aşçı, Chef, Garson, Kasiyer, Temizlikçi, Kasap, Fırıncı, Müdür' },
                             { icon: '�🌙', text: 'Gece efekti — gece fazında ekran kararır, yıldızlar çıkar' },
                             { icon: '💀', text: 'Game Over — 3 can bitince oyun biter, %20 ceza ile aynı günden devam seçeneği' },
                             { icon: '🔊', text: 'Proximity ses — yakındaki oyuncuların sesi daha yüksek duyulur (WebRTC sesli sohbet)' },

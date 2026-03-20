@@ -22,14 +22,14 @@ export interface Player {
 
 // 8 Karakter Tipi — CharacterSelect + drawPlayer kullanır
 export const CHARACTER_TYPES = [
-    { id: 0, name: 'Aşçı', hat: '👨‍🍳', bodyColor: '#f5f5f4', accent: '#a78bfa', label: 'Klasik Aşçı' },
-    { id: 1, name: 'Suşici', hat: '🍣', bodyColor: '#fca5a5', accent: '#dc2626', label: 'Hızlı Suşi' },
-    { id: 2, name: 'Ninja', hat: '🥷', bodyColor: '#292524', accent: '#ef4444', label: 'Gizli Ninja' },
-    { id: 3, name: 'Chef', hat: '🧑‍🍳', bodyColor: '#fed7aa', accent: '#f97316', label: 'Baş Chef' },
-    { id: 4, name: 'Bahçıvan', hat: '🌿', bodyColor: '#bbf7d0', accent: '#16a34a', label: 'Taze Bahçı' },
-    { id: 5, name: 'Kaptan', hat: '⛴️', bodyColor: '#bfdbfe', accent: '#1d4ed8', label: 'Kaptan' },
-    { id: 6, name: 'Garson', hat: '🍽️', bodyColor: '#fef3c7', accent: '#92400e', label: 'Şık Garson' },
-    { id: 7, name: 'Bulaşıkçı', hat: '🧽', bodyColor: '#e0f2fe', accent: '#0284c7', label: 'Temizlikçi' },
+    { id: 0, name: 'Aşçı',     hat: '👨‍🍳', bodyColor: '#f5f5f4', accent: '#a78bfa', label: 'Klasik Aşçı' },
+    { id: 1, name: 'Chef',     hat: '🧑‍🍳', bodyColor: '#fed7aa', accent: '#f97316', label: 'Baş Chef' },
+    { id: 2, name: 'Garson',   hat: '🎩',   bodyColor: '#fef3c7', accent: '#92400e', label: 'Şık Garson' },
+    { id: 3, name: 'Kasiyer',  hat: '💼',   bodyColor: '#dbeafe', accent: '#1d4ed8', label: 'Kasiyer' },
+    { id: 4, name: 'Temizlikçi', hat: '🧹', bodyColor: '#e0f2fe', accent: '#0284c7', label: 'Temizlikçi' },
+    { id: 5, name: 'Kasap',    hat: '🔪',   bodyColor: '#fca5a5', accent: '#dc2626', label: 'Kasap' },
+    { id: 6, name: 'Fırıncı',  hat: '🥐',   bodyColor: '#fde68a', accent: '#d97706', label: 'Fırıncı' },
+    { id: 7, name: 'Müdür',    hat: '📋',   bodyColor: '#bbf7d0', accent: '#16a34a', label: 'Müdür' },
 ] as const;
 
 export interface Customer {
