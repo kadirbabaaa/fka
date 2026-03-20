@@ -288,102 +288,6 @@ export const GameScreen: React.FC<Props> = ({
                     className="w-full h-full block touch-none select-none"
                 />
 
-                {/* Joystick */}
-                <div
-                    className="absolute z-10 touch-none"
-                    style={{
-                        left: `${settings.hudLayout.joystick.x}%`,
-                        top: `${settings.hudLayout.joystick.y}%`,
-                        transform: `scale(${settings.hudLayout.joystick.scale})`,
-                        transformOrigin: 'top left',
-                    }}
-                >
-                    <Joystick
-                        size={settings.joystickSize}
-                        onMove={(x, y) => { joystickVectorRef.current = { x, y }; }}
-                    />
-                </div>
-
-                {/* Döv butonu */}
-                <div
-                    className="absolute z-10"
-                    style={{
-                        left: `${settings.hudLayout.punchBtn.x}%`,
-                        top: `${settings.hudLayout.punchBtn.y}%`,
-                        transform: `scale(${settings.hudLayout.punchBtn.scale})`,
-                        transformOrigin: 'top left',
-                    }}
-                >
-                    <button
-                        onPointerDown={(e) => {
-                            e.preventDefault();
-                            const now = Date.now();
-                            const PUNCH_RADIUS = 120;
-                            const PUNCH_COOLDOWN_MS = 250;
-                            if (now - lastPunchTimeRef.current < PUNCH_COOLDOWN_MS) return;
-                            lastPunchTimeRef.current = now;
-                            const gs = gameStateRef.current;
-                            const lp = localPlayerRef.current;
-
-                            const punchTarget = gs.customers.find(c => {
-                                if (c.isLeaving) return false;
-                                const visualY = c.isSeated ? c.seatY + 20 : c.y;
-                                const dist = Math.hypot(c.x - lp.x, visualY - lp.y);
-                                return dist <= PUNCH_RADIUS && (c.personality === 'rude' || c.personality === 'recep' || c.personality === 'thug');
-                            });
-
-                            if (punchTarget) socket?.emit('punchCustomer', punchTarget.id);
-                        }}
-                        style={{ width: settings.punchButtonSize, height: settings.punchButtonSize, touchAction: 'none' }}
-                        className="bg-red-500 active:bg-red-700 text-white rounded-full shadow-xl font-black text-sm border-4 border-red-300 flex items-center justify-center active:scale-95"
-                    >
-                        DÖV<br />👊
-                    </button>
-                </div>
-
-                {/* AL/VER butonu */}
-                <div
-                    className="absolute z-10"
-                    style={{
-                        left: `${settings.hudLayout.actionBtn.x}%`,
-                        top: `${settings.hudLayout.actionBtn.y}%`,
-                        transform: `scale(${settings.hudLayout.actionBtn.scale})`,
-                        transformOrigin: 'top left',
-                    }}
-                >
-                    <button
-                        onPointerDown={(e) => {
-                            e.preventDefault();
-                            if (dayPhase === 'prep') {
-                                handleInteract();
-                            } else {
-                                emit('interact');
-                            }
-                        }}
-                        style={{ width: bs, height: bs, touchAction: 'none' }}
-                        className="bg-blue-500 active:bg-blue-700 text-white rounded-full shadow-xl font-black text-sm border-4 border-blue-300 flex items-center justify-center active:scale-95"
-                    >
-                        AL<br />VER
-                    </button>
-                </div>
-
-                {/* Müzik butonu */}
-                <div
-                    className="absolute z-10"
-                    style={{
-                        left: `${settings.hudLayout.musicBtn.x}%`,
-                        top: `${settings.hudLayout.musicBtn.y}%`,
-                        transform: `scale(${settings.hudLayout.musicBtn.scale})`,
-                        transformOrigin: 'top left',
-                    }}
-                >
-                    <button
-                        onClick={toggleMusic}
-                        style={{ width: Math.round(bs * 0.55), height: Math.round(bs * 0.55) }}
-                        className={`rounded-full shadow-md text-base border-2 flex items-center justify-center ${musicOn ? 'bg-purple-500 border-purple-400 text-white' : 'bg-stone-700 border-stone-600 text-stone-400'}`}
-                    >{musicOn ? '🎵' : '🔇'}</button>
-                </div>
-
                 {dayPhase === 'prep' && !editorState.isMoving && !editorState.isMovingTable && isTouchDevice && (
                     <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-stone-900/80 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-purple-700/60 shadow-xl pointer-events-none">
                         <p className="text-stone-400 text-[10px] text-center">AL/VER: İstasyon/Masa taşı</p>
@@ -502,6 +406,98 @@ export const GameScreen: React.FC<Props> = ({
                     />
                 )}
                 </div> {/* inner aspect-ratio wrapper */}
+
+                {/* Joystick — outer wrapper'da, tüm ekrana serbestçe konumlanabilir */}
+                <div
+                    className="absolute z-10 touch-none"
+                    style={{
+                        left: `${settings.hudLayout.joystick.x}%`,
+                        top: `${settings.hudLayout.joystick.y}%`,
+                        transform: `scale(${settings.hudLayout.joystick.scale})`,
+                        transformOrigin: 'top left',
+                    }}
+                >
+                    <Joystick
+                        size={settings.joystickSize}
+                        onMove={(x, y) => { joystickVectorRef.current = { x, y }; }}
+                    />
+                </div>
+
+                {/* Döv butonu */}
+                <div
+                    className="absolute z-10"
+                    style={{
+                        left: `${settings.hudLayout.punchBtn.x}%`,
+                        top: `${settings.hudLayout.punchBtn.y}%`,
+                        transform: `scale(${settings.hudLayout.punchBtn.scale})`,
+                        transformOrigin: 'top left',
+                    }}
+                >
+                    <button
+                        onPointerDown={(e) => {
+                            e.preventDefault();
+                            const now = Date.now();
+                            const PUNCH_RADIUS = 120;
+                            const PUNCH_COOLDOWN_MS = 250;
+                            if (now - lastPunchTimeRef.current < PUNCH_COOLDOWN_MS) return;
+                            lastPunchTimeRef.current = now;
+                            const gs = gameStateRef.current;
+                            const lp = localPlayerRef.current;
+                            const punchTarget = gs.customers.find(c => {
+                                if (c.isLeaving) return false;
+                                const visualY = c.isSeated ? c.seatY + 20 : c.y;
+                                const dist = Math.hypot(c.x - lp.x, visualY - lp.y);
+                                return dist <= PUNCH_RADIUS && (c.personality === 'rude' || c.personality === 'recep' || c.personality === 'thug');
+                            });
+                            if (punchTarget) socket?.emit('punchCustomer', punchTarget.id);
+                        }}
+                        style={{ width: settings.punchButtonSize, height: settings.punchButtonSize, touchAction: 'none' }}
+                        className="bg-red-500 active:bg-red-700 text-white rounded-full shadow-xl font-black text-sm border-4 border-red-300 flex items-center justify-center active:scale-95"
+                    >
+                        DÖV<br />👊
+                    </button>
+                </div>
+
+                {/* AL/VER butonu */}
+                <div
+                    className="absolute z-10"
+                    style={{
+                        left: `${settings.hudLayout.actionBtn.x}%`,
+                        top: `${settings.hudLayout.actionBtn.y}%`,
+                        transform: `scale(${settings.hudLayout.actionBtn.scale})`,
+                        transformOrigin: 'top left',
+                    }}
+                >
+                    <button
+                        onPointerDown={(e) => {
+                            e.preventDefault();
+                            if (dayPhase === 'prep') handleInteract();
+                            else emit('interact');
+                        }}
+                        style={{ width: bs, height: bs, touchAction: 'none' }}
+                        className="bg-blue-500 active:bg-blue-700 text-white rounded-full shadow-xl font-black text-sm border-4 border-blue-300 flex items-center justify-center active:scale-95"
+                    >
+                        AL<br />VER
+                    </button>
+                </div>
+
+                {/* Müzik butonu */}
+                <div
+                    className="absolute z-10"
+                    style={{
+                        left: `${settings.hudLayout.musicBtn.x}%`,
+                        top: `${settings.hudLayout.musicBtn.y}%`,
+                        transform: `scale(${settings.hudLayout.musicBtn.scale})`,
+                        transformOrigin: 'top left',
+                    }}
+                >
+                    <button
+                        onClick={toggleMusic}
+                        style={{ width: Math.round(bs * 0.55), height: Math.round(bs * 0.55) }}
+                        className={`rounded-full shadow-md text-base border-2 flex items-center justify-center ${musicOn ? 'bg-purple-500 border-purple-400 text-white' : 'bg-stone-700 border-stone-600 text-stone-400'}`}
+                    >{musicOn ? '🎵' : '🔇'}</button>
+                </div>
+
             </div>
 
             {/* PC İpuçları */}

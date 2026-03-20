@@ -10,6 +10,8 @@ import {
   INGREDIENTS,
   PLATE_STACK_POS,
   RECIPE_DEFS,
+  TRASH_STATION,
+  SINK_STATION,
 } from "../types/game";
 
 import { drawFloor } from "../renderer/drawFloor";
@@ -137,6 +139,14 @@ export function useGameLoop({
       // Tepsi
       const trayPos = state.stationLayout?.['tray'] ?? TRAY_STATION;
       if (movingId !== 'tray') drawStation(ctx, trayPos.x, trayPos.y, "#8b5a2b", "🍽️", "Tepsi");
+
+      // Çöp kovası
+      const trashPos = state.stationLayout?.['trash'] ?? TRASH_STATION;
+      if (movingId !== 'trash') drawStation(ctx, trashPos.x, trashPos.y, "#78716c", "🗑️", "Çöp");
+
+      // Lavabo
+      const sinkPos = state.stationLayout?.['sink'] ?? SINK_STATION;
+      if (movingId !== 'sink') drawStation(ctx, sinkPos.x, sinkPos.y, "#0ea5e9", "🚿", "Lavabo");
 
       // Kirli tepsi sepeti
       const dirtyTrayLayout = state.stationLayout?.['dirty_tray'] ?? DIRTY_TRAY_POS;
