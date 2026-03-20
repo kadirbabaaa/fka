@@ -236,7 +236,7 @@ export function useGameLoop({
       // ── Işıklandırma Sistemi ──────────────────────────────────────────────
       drawLighting(ctx, state.dayPhase, state.dayTimer);
 
-      // ── Perf Stats ────────────────────────────────────────────────────────
+      // ── Perf Stats (sadece FPS — ping HTML overlay'de gösteriliyor) ─────────
       if (showPerfStats) {
         perfMs = performance.now() - renderStart;
         fpsBuffer.push(1000 / Math.max(deltaMs, 1));
@@ -244,7 +244,7 @@ export function useGameLoop({
         perfFps = Math.round(fpsBuffer.reduce((a, b) => a + b, 0) / fpsBuffer.length);
 
         const pad = 8;
-        const bw = 110, bh = 44;
+        const bw = 80, bh = 28;
         ctx.save();
         ctx.fillStyle = 'rgba(0,0,0,0.55)';
         ctx.beginPath();
@@ -253,11 +253,8 @@ export function useGameLoop({
         ctx.font = 'bold 13px monospace';
         ctx.textBaseline = 'top';
         const fpsColor = perfFps >= 50 ? '#4ade80' : perfFps >= 30 ? '#facc15' : '#f87171';
-        const msColor  = perfMs  <= 10 ? '#4ade80' : perfMs  <= 20 ? '#facc15' : '#f87171';
         ctx.fillStyle = fpsColor;
-        ctx.fillText(`FPS: ${perfFps}`, pad + 8, pad + 6);
-        ctx.fillStyle = msColor;
-        ctx.fillText(` MS: ${perfMs.toFixed(1)}`, pad + 8, pad + 24);
+        ctx.fillText(`FPS: ${perfFps}`, pad + 8, pad + 8);
         ctx.restore();
       }
 

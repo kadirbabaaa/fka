@@ -125,20 +125,20 @@ const DraggableHudItem: React.FC<DraggableHudItemProps> = ({ id, layout, contain
         >
             {/* Seçim çerçevesi */}
             <div className="relative">
-                <div className="absolute inset-0 rounded-full border-2 border-dashed border-yellow-400 pointer-events-none z-10" />
+                <div className="absolute inset-0 rounded-full border-2 border-dashed border-gray-400 pointer-events-none z-10" />
                 {/* Label */}
-                <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] font-black text-yellow-300 whitespace-nowrap pointer-events-none z-10 drop-shadow-md">
+                <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] font-bold text-gray-600 whitespace-nowrap pointer-events-none z-10 bg-white/80 px-1 rounded">
                     {label}
                 </div>
                 {/* Resize handle — sağ alt köşe */}
                 <div
                     data-resize="1"
-                    className="absolute -bottom-2 -right-2 w-5 h-5 bg-yellow-400 rounded-full z-20 cursor-se-resize flex items-center justify-center shadow-lg"
+                    className="absolute -bottom-2 -right-2 w-5 h-5 bg-gray-700 rounded-full z-20 cursor-se-resize flex items-center justify-center shadow-lg"
                     onMouseDown={onResizeMouseDown}
                     onTouchStart={onResizeTouchStart}
                 >
                     <svg width="8" height="8" viewBox="0 0 8 8" className="pointer-events-none">
-                        <path d="M1 7L7 1M4 7L7 4M7 7L7 7" stroke="#1c1917" strokeWidth="1.5" strokeLinecap="round"/>
+                        <path d="M1 7L7 1M4 7L7 4M7 7L7 7" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
                     </svg>
                 </div>
                 {children}
@@ -160,23 +160,23 @@ export const HudEditor: React.FC<Props> = ({ layout, onChange, onClose }) => {
     const musicBtnSize = Math.round(actionBtnSize * 0.55);
 
     return (
-        <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'rgba(0,0,0,0.6)' }}>
-            {/* Üst bar */}
-            <div className="flex-none flex items-center justify-between px-4 py-2 bg-stone-900/90 border-b border-yellow-600/40">
+        <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'rgba(0,0,0,0.45)' }}>
+            {/* Üst bar — sade beyaz */}
+            <div className="flex-none flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200 shadow-sm">
                 <div>
-                    <span className="text-yellow-300 font-black text-sm">🎮 Arayüz Düzenle</span>
-                    <p className="text-stone-400 text-[10px] mt-0.5">Sürükle: taşı · Sarı köşe: boyutlandır</p>
+                    <span className="text-gray-800 font-bold text-sm">🎮 Arayüz Düzenle</span>
+                    <p className="text-gray-400 text-[11px] mt-0.5">Sürükle: taşı · Köşe tutacağı: boyutlandır</p>
                 </div>
                 <div className="flex gap-2">
                     <button
                         onClick={() => onChange(DEFAULT_HUD_LAYOUT)}
-                        className="px-3 py-1.5 bg-stone-700 hover:bg-stone-600 text-stone-300 rounded-lg text-xs font-bold border border-stone-600 transition-colors"
+                        className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-xs font-semibold border border-gray-300 transition-colors"
                     >
                         ↺ Sıfırla
                     </button>
                     <button
                         onClick={onClose}
-                        className="px-4 py-1.5 bg-yellow-500 hover:bg-yellow-400 text-stone-900 rounded-lg text-xs font-black border border-yellow-300 transition-colors"
+                        className="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-xs font-bold transition-colors"
                     >
                         ✓ Kaydet
                     </button>
@@ -186,8 +186,8 @@ export const HudEditor: React.FC<Props> = ({ layout, onChange, onClose }) => {
             {/* Düzenleme alanı */}
             <div ref={containerRef} className="flex-1 relative overflow-hidden">
                 {/* Izgara arka plan */}
-                <div className="absolute inset-0 opacity-10"
-                    style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '5% 5%' }}
+                <div className="absolute inset-0 opacity-[0.07]"
+                    style={{ backgroundImage: 'linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)', backgroundSize: '5% 5%' }}
                 />
 
                 <DraggableHudItem id="joystick" layout={layout.joystick} containerRef={containerRef} onUpdate={updateElement} label="Joystick">

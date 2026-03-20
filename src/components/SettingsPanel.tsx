@@ -79,8 +79,8 @@ export const SettingsPanel: React.FC<Props> = ({ settings, onUpdate, onClose, is
                     <div className="rounded-2xl border border-white/8 bg-white/4 p-4">
                         <div className="flex items-center justify-between gap-4">
                             <div>
-                                <div className="text-sm font-black uppercase tracking-[0.14em] text-stone-200">FPS / MS Göstergesi</div>
-                                <div className="mt-1 text-sm text-stone-400">Performans istatistiklerini ekranda göster.</div>
+                                <div className="text-sm font-black uppercase tracking-[0.14em] text-stone-200">Ping Göstergesi</div>
+                                <div className="mt-1 text-sm text-stone-400">Sunucu gecikmesini (ping) ekranda göster.</div>
                             </div>
                             <Toggle on={settings.showPerfStats} onClick={() => onUpdate({ showPerfStats: !settings.showPerfStats })} />
                         </div>

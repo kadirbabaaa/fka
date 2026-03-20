@@ -50,12 +50,13 @@ interface Props {
     roomId: string;
     onLeaveGame?: () => void;
     interactOverrideRef?: React.MutableRefObject<(() => void) | null>;
+    ping?: number;
 }
 
 export const GameScreen: React.FC<Props> = ({
     canvasRef, isJoined, myId, socket,
     gameStateRef, localPlayerRef, keysRef, audioCtxRef, settings, updateSettings, roomId, onLeaveGame,
-    interactOverrideRef
+    interactOverrideRef, ping = 0
 }) => {
     const joystickVectorRef = useRef({ x: 0, y: 0 });
     const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -254,8 +255,6 @@ export const GameScreen: React.FC<Props> = ({
             <div className="flex-1 min-h-0 relative flex items-center justify-center" style={{ background: '#9a7858' }}>
                 <div className="relative" style={{ aspectRatio: '1280/870', maxWidth: '80vw', maxHeight: '100%', width: '100%' }}>
 
-                {/* ── Geliştirici Araçları kaldırıldı ── */}
-
                 <canvas
                     ref={canvasRef}
                     width={GAME_WIDTH}
@@ -384,147 +383,88 @@ export const GameScreen: React.FC<Props> = ({
                 )}
                 </div> {/* inner aspect-ratio wrapper */}
 
-                {/* Joystick — outer wrapper'da, tüm ekrana serbestçe konumlanabilir */}
+                {/* ── HUD Butonları — outer wrapper'da, tüm ekrana serbestçe konumlanabilir ── */}
+                {/* Joystick */}
                 {!showHudEditor && (
-                <div
-                    className="absolute z-10 touch-none"
-                    style={{
-                        left: `${settings.hudLayout.joystick.x}%`,
-                        top: `${settings.hudLayout.joystick.y}%`,
-                        transform: `scale(${settings.hudLayout.joystick.scale})`,
-                        transformOrigin: 'top left',
-                    }}
-                >
-                    <Joystick
-                        size={joystickSize}
-                        onMove={(x, y) => { joystickVectorRef.current = { x, y }; }}
-                    />
+                <div className="absolute z-10 touch-none" style={{ left: `${settings.hudLayout.joystick.x}%`, top: `${settings.hudLayout.joystick.y}%`, transform: `scale(${settings.hudLayout.joystick.scale})`, transformOrigin: 'top left' }}>
+                    <Joystick size={joystickSize} onMove={(x, y) => { joystickVectorRef.current = { x, y }; }} />
                 </div>
                 )}
-
-                {/* Döv butonu */}
+                {/* Döv */}
                 {!showHudEditor && (
-                <div
-                    className="absolute z-10"
-                    style={{
-                        left: `${settings.hudLayout.punchBtn.x}%`,
-                        top: `${settings.hudLayout.punchBtn.y}%`,
-                        transform: `scale(${settings.hudLayout.punchBtn.scale})`,
-                        transformOrigin: 'top left',
-                    }}
-                >
+                <div className="absolute z-10" style={{ left: `${settings.hudLayout.punchBtn.x}%`, top: `${settings.hudLayout.punchBtn.y}%`, transform: `scale(${settings.hudLayout.punchBtn.scale})`, transformOrigin: 'top left' }}>
                     <button
                         onPointerDown={(e) => {
                             e.preventDefault();
                             const now = Date.now();
-                            const PUNCH_RADIUS = 120;
-                            const PUNCH_COOLDOWN_MS = 250;
-                            if (now - lastPunchTimeRef.current < PUNCH_COOLDOWN_MS) return;
+                            if (now - lastPunchTimeRef.current < 250) return;
                             lastPunchTimeRef.current = now;
                             const gs = gameStateRef.current;
                             const lp = localPlayerRef.current;
                             const punchTarget = gs.customers.find(c => {
                                 if (c.isLeaving) return false;
                                 const visualY = c.isSeated ? c.seatY + 20 : c.y;
-                                const dist = Math.hypot(c.x - lp.x, visualY - lp.y);
-                                return dist <= PUNCH_RADIUS && (c.personality === 'rude' || c.personality === 'recep' || c.personality === 'thug');
+                                return Math.hypot(c.x - lp.x, visualY - lp.y) <= 120 && (c.personality === 'rude' || c.personality === 'recep' || c.personality === 'thug');
                             });
                             if (punchTarget) socket?.emit('punchCustomer', punchTarget.id);
                         }}
                         style={{ width: punchButtonSize, height: punchButtonSize, touchAction: 'none' }}
                         className="bg-red-500 active:bg-red-700 text-white rounded-full shadow-xl font-black text-sm border-4 border-red-300 flex items-center justify-center active:scale-95"
-                    >
-                        DÖV<br />👊
-                    </button>
+                    >DÖV<br />👊</button>
                 </div>
                 )}
-
-                {/* AL/VER butonu */}
+                {/* AL/VER */}
                 {!showHudEditor && (
-                <div
-                    className="absolute z-10"
-                    style={{
-                        left: `${settings.hudLayout.actionBtn.x}%`,
-                        top: `${settings.hudLayout.actionBtn.y}%`,
-                        transform: `scale(${settings.hudLayout.actionBtn.scale})`,
-                        transformOrigin: 'top left',
-                    }}
-                >
+                <div className="absolute z-10" style={{ left: `${settings.hudLayout.actionBtn.x}%`, top: `${settings.hudLayout.actionBtn.y}%`, transform: `scale(${settings.hudLayout.actionBtn.scale})`, transformOrigin: 'top left' }}>
                     <button
-                        onPointerDown={(e) => {
-                            e.preventDefault();
-                            if (dayPhase === 'prep') handleInteract();
-                            else emit('interact');
-                        }}
+                        onPointerDown={(e) => { e.preventDefault(); if (dayPhase === 'prep') handleInteract(); else emit('interact'); }}
                         style={{ width: bs, height: bs, touchAction: 'none' }}
                         className="bg-blue-500 active:bg-blue-700 text-white rounded-full shadow-xl font-black text-sm border-4 border-blue-300 flex items-center justify-center active:scale-95"
-                    >
-                        AL<br />VER
-                    </button>
+                    >AL<br />VER</button>
                 </div>
                 )}
-
-                {/* DOĞRA butonu — kesme tahtasına yakınken basılı tut */}
+                {/* DOĞRA */}
                 {!showHudEditor && dayPhase === 'day' && (
-                <div
-                    className="absolute z-10"
-                    style={{
-                        left: `${settings.hudLayout.chopBtn.x}%`,
-                        top: `${settings.hudLayout.chopBtn.y}%`,
-                        transform: `scale(${settings.hudLayout.chopBtn.scale})`,
-                        transformOrigin: 'top left',
-                    }}
-                >
+                <div className="absolute z-10" style={{ left: `${settings.hudLayout.chopBtn.x}%`, top: `${settings.hudLayout.chopBtn.y}%`, transform: `scale(${settings.hudLayout.chopBtn.scale})`, transformOrigin: 'top left' }}>
                     <button
                         onPointerDown={(e) => {
                             e.preventDefault();
-                            const gs = gameStateRef.current;
-                            const lp = localPlayerRef.current;
+                            const gs = gameStateRef.current; const lp = localPlayerRef.current;
                             const board = gs.choppingBoards?.find(b => Math.hypot(b.x - lp.x, b.y - lp.y) < 90);
-                            if (board) {
-                                socket?.emit('chop_start', board.id);
-                                playSound(null, 'chop');
-                                (e.currentTarget as any)._chopInterval = setInterval(() => playSound(null, 'chop'), 300);
-                            }
+                            if (board) { socket?.emit('chop_start', board.id); playSound(null, 'chop'); (e.currentTarget as any)._chopInterval = setInterval(() => playSound(null, 'chop'), 300); }
                         }}
                         onPointerUp={(e) => {
-                            e.preventDefault();
-                            clearInterval((e.currentTarget as any)._chopInterval);
-                            const gs = gameStateRef.current;
-                            const lp = localPlayerRef.current;
+                            e.preventDefault(); clearInterval((e.currentTarget as any)._chopInterval);
+                            const gs = gameStateRef.current; const lp = localPlayerRef.current;
                             const board = gs.choppingBoards?.find(b => Math.hypot(b.x - lp.x, b.y - lp.y) < 90);
                             if (board) socket?.emit('chop_stop', board.id);
                         }}
                         onPointerLeave={(e) => {
-                            e.preventDefault();
-                            clearInterval((e.currentTarget as any)._chopInterval);
-                            const gs = gameStateRef.current;
-                            gs.choppingBoards?.forEach(b => socket?.emit('chop_stop', b.id));
+                            e.preventDefault(); clearInterval((e.currentTarget as any)._chopInterval);
+                            gameStateRef.current.choppingBoards?.forEach(b => socket?.emit('chop_stop', b.id));
                         }}
                         style={{ width: Math.round(bs * 0.7), height: Math.round(bs * 0.7), touchAction: 'none' }}
                         className="bg-amber-600 active:bg-amber-800 text-white rounded-full shadow-xl font-black text-xs border-4 border-amber-400 flex items-center justify-center active:scale-95"
-                    >
-                        🔪<br />DOĞRA
-                    </button>
+                    >🔪<br />DOĞRA</button>
+                </div>
+                )}
+                {/* Müzik */}
+                {!showHudEditor && (
+                <div className="absolute z-10" style={{ left: `${settings.hudLayout.musicBtn.x}%`, top: `${settings.hudLayout.musicBtn.y}%`, transform: `scale(${settings.hudLayout.musicBtn.scale})`, transformOrigin: 'top left' }}>
+                    <button onClick={toggleMusic} style={{ width: Math.round(bs * 0.55), height: Math.round(bs * 0.55) }}
+                        className={`rounded-full shadow-md text-base border-2 flex items-center justify-center ${musicOn ? 'bg-purple-500 border-purple-400 text-white' : 'bg-stone-700 border-stone-600 text-stone-400'}`}
+                    >{musicOn ? '🎵' : '🔇'}</button>
                 </div>
                 )}
 
-                {/* Müzik butonu */}
-                {!showHudEditor && (
-                <div
-                    className="absolute z-10"
-                    style={{
-                        left: `${settings.hudLayout.musicBtn.x}%`,
-                        top: `${settings.hudLayout.musicBtn.y}%`,
-                        transform: `scale(${settings.hudLayout.musicBtn.scale})`,
-                        transformOrigin: 'top left',
-                    }}
-                >
-                    <button
-                        onClick={toggleMusic}
-                        style={{ width: Math.round(bs * 0.55), height: Math.round(bs * 0.55) }}
-                        className={`rounded-full shadow-md text-base border-2 flex items-center justify-center ${musicOn ? 'bg-purple-500 border-purple-400 text-white' : 'bg-stone-700 border-stone-600 text-stone-400'}`}
-                    >{musicOn ? '🎵' : '🔇'}</button>
+                {/* Ping göstergesi */}
+                {settings.showPerfStats && (
+                <div className="absolute top-2 right-2 z-20 pointer-events-none">
+                    <div className="bg-black/60 rounded-lg px-2 py-1 font-mono text-xs leading-tight">
+                        <div style={{ color: ping < 80 ? '#4ade80' : ping < 150 ? '#facc15' : '#f87171' }}>
+                            PING: {ping}ms
+                        </div>
+                    </div>
                 </div>
                 )}
 
