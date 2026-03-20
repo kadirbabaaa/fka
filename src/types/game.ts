@@ -57,6 +57,9 @@ export {
   TABLE_Y_DEFAULT,
   type TablePosition,
   getSeatSlots,
+  EXTERIOR_Y,
+  SIDEWALK_Y,
+  ROAD_Y,
 } from '../../shared/types';
 
 // ─── Client-Only Sabitler ────────────────────────────────────────────────────

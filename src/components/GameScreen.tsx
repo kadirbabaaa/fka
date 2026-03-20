@@ -167,10 +167,10 @@ export const GameScreen: React.FC<Props> = ({
     const bs = settings.buttonSize;
 
     return (
-        <div className="game-screen w-full bg-stone-950 flex flex-col select-none safe-top safe-bottom">
+        <div className="game-screen w-full flex flex-col select-none safe-top safe-bottom" style={{ background: '#545250' }}>
 
             {/* ── Üst Bar ──────────────────────────────────────────────────────── */}
-            <div className="flex-none h-12 px-2 flex items-center justify-between gap-2 bg-stone-950/90 border-b border-stone-800">
+            <div className="flex-none h-12 px-2 flex items-center justify-between gap-2 bg-stone-900/95 border-b border-stone-700">
                 <div className="flex items-center gap-2 flex-shrink-0">
                     <div 
                         className="bg-white/95 px-2 py-0.5 rounded-lg border border-white/40 cursor-pointer"
@@ -231,7 +231,7 @@ export const GameScreen: React.FC<Props> = ({
             </div>
 
             {/* ── Canvas ────────────────────────────────────────────────────────── */}
-            <div className="flex-1 min-h-0 relative">
+            <div className="flex-1 min-h-0 relative" style={{ background: '#545250' }}>
 
                 {/* ── Geliştirici Araçları (DEV) ── */}
                 {(dayPhase === 'prep' || dayPhase === 'day') && isDevMode && (
@@ -257,7 +257,7 @@ export const GameScreen: React.FC<Props> = ({
                     width={GAME_WIDTH}
                     height={GAME_HEIGHT}
                     onContextMenu={(e) => e.preventDefault()}
-                    className="w-full h-full object-contain block touch-none select-none"
+                    className="w-full h-full object-fill block touch-none select-none"
                 />
 
                 {/* Joystick */}

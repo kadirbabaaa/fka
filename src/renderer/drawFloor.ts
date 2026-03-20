@@ -9,6 +9,7 @@ import {
   PLATE_STACK_POS,
   COUNTER_POSITIONS,
   RECIPE_DEFS,
+  EXTERIOR_Y,
 } from "../types/game";
 
 /** Metalik tezgah tabanı — gölge + gradient gövde + üst parlama */
@@ -278,4 +279,318 @@ export function drawFloor(ctx: CanvasRenderingContext2D, unlockedDishes: string[
     ctx.fillStyle = '#303030';
     ctx.fillRect(cp0.x - 40, cp0.y + 24, cw - 8, 2);
   }
+
+  // ══════════════════════════════════════════════════════════════════
+  // DIŞ ALAN — kaldırım + yol + çimen
+  // EXTERIOR_Y (720) → GAME_HEIGHT (870)
+  // ══════════════════════════════════════════════════════════════════
+  drawExterior(ctx);
+
+  // ══════════════════════════════════════════════════════════════════
+  // SOL / SAĞ DUVARLAR — mutfak + salon boyunca (y=0 → EXTERIOR_Y)
+  // ══════════════════════════════════════════════════════════════════
+  drawSideWall(ctx, 0, 30, 0, EXTERIOR_Y);
+  drawSideWall(ctx, GAME_WIDTH - 30, 30, 0, EXTERIOR_Y);
+
+  // ══════════════════════════════════════════════════════════════════
+  // ÜST DUVAR — yatay tuğla şerit (y=0..30)
+  // ══════════════════════════════════════════════════════════════════
+  drawTopWall(ctx, 30);
+}
+
+/**
+ * Dış alan: restoranın ön cephesi (kalın duvar + tek gerçekçi kapı),
+ * taş döşeme kaldırım, yaya yolu, çimen şeritleri, ağaçlar.
+ * EXTERIOR_Y (720) → GAME_HEIGHT (870)
+ */
+function drawExterior(ctx: CanvasRenderingContext2D) {
+  const W = GAME_WIDTH;
+
+  // Tek kapı — ortada
+  const DOOR_X0 = 580, DOOR_X1 = 700, DOOR_W = 120;
+
+  // ══════════════════════════════════════════════════════════════════
+  // ÖN DUVAR — kalın tuğla, EXTERIOR_Y → EXTERIOR_Y+30
+  // ══════════════════════════════════════════════════════════════════
+  const WALL_TOP = EXTERIOR_Y;
+  const WALL_BOT = EXTERIOR_Y + 30;
+
+  // Duvar gövdesi
+  const wallGrad = ctx.createLinearGradient(0, WALL_TOP, 0, WALL_BOT);
+  wallGrad.addColorStop(0, '#9a7858');
+  wallGrad.addColorStop(1, '#7a5838');
+  ctx.fillStyle = wallGrad;
+  ctx.fillRect(0, WALL_TOP, W, WALL_BOT - WALL_TOP);
+
+  // Tuğla desen
+  const brickH = 9, brickW = 36;
+  ctx.strokeStyle = 'rgba(0,0,0,0.22)';
+  ctx.lineWidth = 1;
+  for (let row = 0; row * brickH < WALL_BOT - WALL_TOP; row++) {
+    const by = WALL_TOP + row * brickH;
+    ctx.beginPath(); ctx.moveTo(0, by); ctx.lineTo(W, by); ctx.stroke();
+    const off = row % 2 === 0 ? 0 : brickW / 2;
+    for (let bx = off; bx < W; bx += brickW) {
+      ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx, by + brickH); ctx.stroke();
+    }
+  }
+  // Duvar üst parlama
+  ctx.fillStyle = 'rgba(255,255,255,0.07)';
+  ctx.fillRect(0, WALL_TOP, W, 3);
+  // Duvar alt gölgesi
+  const wallShadow = ctx.createLinearGradient(0, WALL_BOT, 0, WALL_BOT + 14);
+  wallShadow.addColorStop(0, 'rgba(0,0,0,0.38)');
+  wallShadow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = wallShadow;
+  ctx.fillRect(0, WALL_BOT, W, 14);
+
+  // Kapı boşluğunu salon rengiyle doldur (duvarı kes)
+  ctx.fillStyle = '#d4c4a0';
+  ctx.fillRect(DOOR_X0, WALL_TOP, DOOR_W, WALL_BOT - WALL_TOP);
+
+  // Gerçekçi kapı
+  drawFrontDoor(ctx, DOOR_X0, DOOR_X1, WALL_TOP, WALL_BOT);
+
+  // ══════════════════════════════════════════════════════════════════
+  // KALDIRM — taş döşeme (WALL_BOT → SIDEWALK_END)
+  // ══════════════════════════════════════════════════════════════════
+  const SIDEWALK_END = WALL_BOT + 78;
+
+  const swGrad = ctx.createLinearGradient(0, WALL_BOT, 0, SIDEWALK_END);
+  swGrad.addColorStop(0, '#c2bcb2');
+  swGrad.addColorStop(1, '#aeaaa0');
+  ctx.fillStyle = swGrad;
+  ctx.fillRect(0, WALL_BOT, W, SIDEWALK_END - WALL_BOT);
+
+  // Taş döşeme levhaları
+  const stoneW = 88, stoneH = 36;
+  ctx.strokeStyle = 'rgba(70,60,50,0.20)';
+  ctx.lineWidth = 2;
+  for (let row = 0; row * stoneH < SIDEWALK_END - WALL_BOT; row++) {
+    const sy2 = WALL_BOT + row * stoneH;
+    ctx.beginPath(); ctx.moveTo(0, sy2); ctx.lineTo(W, sy2); ctx.stroke();
+    const off = row % 2 === 0 ? 0 : stoneW / 2;
+    for (let sx2 = off; sx2 < W; sx2 += stoneW) {
+      ctx.beginPath(); ctx.moveTo(sx2, sy2); ctx.lineTo(sx2, sy2 + stoneH); ctx.stroke();
+      // Levha parlaması
+      ctx.fillStyle = 'rgba(255,255,255,0.05)';
+      ctx.fillRect(sx2 + 3, sy2 + 3, stoneW - 6, stoneH * 0.35);
+    }
+  }
+
+  // Kaldırım bordürü
+  const bordurGrad = ctx.createLinearGradient(0, SIDEWALK_END - 5, 0, SIDEWALK_END + 6);
+  bordurGrad.addColorStop(0, '#888078');
+  bordurGrad.addColorStop(0.5, '#686058');
+  bordurGrad.addColorStop(1, '#504840');
+  ctx.fillStyle = bordurGrad;
+  ctx.fillRect(0, SIDEWALK_END - 5, W, 11);
+
+  // Kapı önü yol şeridi (kapıdan kaldırıma)
+  const pathCX = (DOOR_X0 + DOOR_X1) / 2;
+  const pathW2 = DOOR_W - 16;
+  ctx.fillStyle = 'rgba(195,185,165,0.55)';
+  ctx.fillRect(pathCX - pathW2 / 2, WALL_BOT, pathW2, SIDEWALK_END - WALL_BOT);
+
+  // ══════════════════════════════════════════════════════════════════
+  // YAYA YOLU — kare taş döşeme (SIDEWALK_END → GAME_HEIGHT)
+  // ══════════════════════════════════════════════════════════════════
+  const ROAD_END = GAME_HEIGHT;
+
+  const roadGrad = ctx.createLinearGradient(0, SIDEWALK_END, 0, ROAD_END);
+  roadGrad.addColorStop(0, '#686460');
+  roadGrad.addColorStop(1, '#545250');
+  ctx.fillStyle = roadGrad;
+  ctx.fillRect(0, SIDEWALK_END, W, ROAD_END - SIDEWALK_END);
+
+  // Kare taş deseni
+  const pave = 26;
+  ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+  ctx.lineWidth = 1.5;
+  for (let py = SIDEWALK_END; py < ROAD_END; py += pave) {
+    ctx.beginPath(); ctx.moveTo(0, py); ctx.lineTo(W, py); ctx.stroke();
+    for (let px = 0; px < W; px += pave) {
+      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, py + pave); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.03)';
+      ctx.fillRect(px + 1, py + 1, pave - 2, (pave - 2) * 0.3);
+    }
+  }
+  // Yaya yolu kenar çizgileri
+  ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, SIDEWALK_END + 3); ctx.lineTo(W, SIDEWALK_END + 3); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, ROAD_END - 3); ctx.lineTo(W, ROAD_END - 3); ctx.stroke();
+
+  // ── Ağaçlar ───────────────────────────────────────────────────────────────
+  const treeY = WALL_BOT + (SIDEWALK_END - WALL_BOT) / 2 + 4;
+  [90, 210, 370, 910, 1070, 1185].forEach(tx2 => {
+    if (tx2 > DOOR_X0 - 55 && tx2 < DOOR_X1 + 55) return;
+    drawTree(ctx, tx2, treeY);
+  });
+
+  // ── Sokak lambaları ────────────────────────────────────────────────────────
+  drawStreetLamp(ctx, 28, WALL_BOT + 6);
+  drawStreetLamp(ctx, W - 28, WALL_BOT + 6);
+}
+
+/** Gerçekçi çift kanatlı cam kapı */
+function drawFrontDoor(
+  ctx: CanvasRenderingContext2D,
+  x0: number, x1: number,
+  wallTop: number, wallBot: number,
+) {
+  const mid = (x0 + x1) / 2;
+  const h = wallBot - wallTop;
+
+  // Dış çerçeve (koyu ahşap)
+  ctx.fillStyle = '#3e2810';
+  ctx.fillRect(x0 - 5, wallTop, 7, h);
+  ctx.fillRect(x1 - 2, wallTop, 7, h);
+  ctx.fillRect(x0 - 5, wallTop, x1 - x0 + 12, 5);
+
+  // Sol kanat
+  const lg = ctx.createLinearGradient(x0, 0, mid - 2, 0);
+  lg.addColorStop(0, '#7a5c3a'); lg.addColorStop(0.5, '#8e6e4a'); lg.addColorStop(1, '#6a4c2a');
+  ctx.fillStyle = lg;
+  ctx.fillRect(x0 + 2, wallTop + 5, mid - x0 - 4, h - 5);
+
+  // Sağ kanat
+  const rg = ctx.createLinearGradient(mid + 2, 0, x1, 0);
+  rg.addColorStop(0, '#6a4c2a'); rg.addColorStop(0.5, '#8e6e4a'); rg.addColorStop(1, '#7a5c3a');
+  ctx.fillStyle = rg;
+  ctx.fillRect(mid + 2, wallTop + 5, x1 - mid - 4, h - 5);
+
+  // Cam paneller
+  ctx.fillStyle = 'rgba(150,205,235,0.50)';
+  ctx.fillRect(x0 + 5, wallTop + 7, mid - x0 - 10, h - 10);
+  ctx.fillRect(mid + 5, wallTop + 7, x1 - mid - 10, h - 10);
+
+  // Cam çerçeve
+  ctx.strokeStyle = '#4a3020'; ctx.lineWidth = 1;
+  ctx.strokeRect(x0 + 5, wallTop + 7, mid - x0 - 10, h - 10);
+  ctx.strokeRect(mid + 5, wallTop + 7, x1 - mid - 10, h - 10);
+
+  // Cam parlaması
+  ctx.fillStyle = 'rgba(255,255,255,0.22)';
+  ctx.fillRect(x0 + 6, wallTop + 8, 5, h - 12);
+  ctx.fillRect(mid + 6, wallTop + 8, 5, h - 12);
+
+  // Orta çizgi
+  ctx.strokeStyle = '#2e1808'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(mid, wallTop + 4); ctx.lineTo(mid, wallBot); ctx.stroke();
+
+  // Kapı kolları (altın)
+  ctx.fillStyle = '#d4a830';
+  ctx.beginPath(); ctx.roundRect(mid - 11, wallTop + h / 2 - 3, 8, 6, 2); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(mid + 3, wallTop + h / 2 - 3, 8, 6, 2); ctx.fill();
+  ctx.strokeStyle = '#a07820'; ctx.lineWidth = 1; ctx.stroke();
+}
+
+/** Çimen yama */
+function drawGrassPatch(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
+  const g = ctx.createLinearGradient(x, y, x, y + h);
+  g.addColorStop(0, '#5a8a3a'); g.addColorStop(1, '#4a7a2a');
+  ctx.fillStyle = g;
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = 'rgba(80,140,40,0.5)';
+  ctx.lineWidth = 1;
+  for (let gx = x + 4; gx < x + w; gx += 6) {
+    const gh = 4 + Math.sin(gx * 0.3) * 2;
+    ctx.beginPath(); ctx.moveTo(gx, y + h); ctx.lineTo(gx - 1, y + h - gh); ctx.stroke();
+  }
+}
+
+/** Top-down ağaç */
+function drawTree(ctx: CanvasRenderingContext2D, cx: number, cy: number) {
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  ctx.beginPath(); ctx.ellipse(cx + 3, cy + 4, 14, 8, 0, 0, Math.PI * 2); ctx.fill();
+  const tg = ctx.createRadialGradient(cx - 3, cy - 3, 2, cx, cy, 14);
+  tg.addColorStop(0, '#6ab840'); tg.addColorStop(0.6, '#4e9a28'); tg.addColorStop(1, '#3a7818');
+  ctx.fillStyle = tg;
+  ctx.beginPath(); ctx.arc(cx, cy, 14, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(120,200,60,0.25)';
+  ctx.beginPath(); ctx.arc(cx - 4, cy - 4, 7, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#6b4226';
+  ctx.beginPath(); ctx.arc(cx, cy + 2, 3, 0, Math.PI * 2); ctx.fill();
+}
+
+/** Üst yatay duvar — ön duvarla aynı tuğla desen */
+function drawTopWall(ctx: CanvasRenderingContext2D, h: number) {
+  const W = GAME_WIDTH;
+
+  // Duvar gövdesi
+  const wallGrad = ctx.createLinearGradient(0, 0, 0, h);
+  wallGrad.addColorStop(0, '#9a7858');
+  wallGrad.addColorStop(1, '#7a5838');
+  ctx.fillStyle = wallGrad;
+  ctx.fillRect(0, 0, W, h);
+
+  // Tuğla desen
+  const brickH = 9, brickW = 36;
+  ctx.strokeStyle = 'rgba(0,0,0,0.22)';
+  ctx.lineWidth = 1;
+  for (let row = 0; row * brickH < h; row++) {
+    const by = row * brickH;
+    ctx.beginPath(); ctx.moveTo(0, by); ctx.lineTo(W, by); ctx.stroke();
+    const off = row % 2 === 0 ? 0 : brickW / 2;
+    for (let bx = off; bx < W; bx += brickW) {
+      ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx, by + brickH); ctx.stroke();
+    }
+  }
+
+  // Alt gölge
+  const shadow = ctx.createLinearGradient(0, h, 0, h + 12);
+  shadow.addColorStop(0, 'rgba(0,0,0,0.30)');
+  shadow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = shadow;
+  ctx.fillRect(0, h, W, 12);
+}
+
+/** Sol/sağ yan duvar — ön duvarla aynı tuğla desen, sadece belirtilen y aralığında */
+function drawSideWall(ctx: CanvasRenderingContext2D, x: number, w: number, yStart: number, yEnd: number) {
+  const H = yEnd - yStart;
+
+  // Duvar gövdesi
+  const wallGrad = ctx.createLinearGradient(x, 0, x + w, 0);
+  wallGrad.addColorStop(0, '#9a7858');
+  wallGrad.addColorStop(1, '#7a5838');
+  ctx.fillStyle = wallGrad;
+  ctx.fillRect(x, yStart, w, H);
+
+  // Tuğla desen
+  const brickH = 9, brickW = 36;
+  ctx.strokeStyle = 'rgba(0,0,0,0.22)';
+  ctx.lineWidth = 1;
+  for (let row = 0; row * brickH < H; row++) {
+    const by = yStart + row * brickH;
+    ctx.beginPath(); ctx.moveTo(x, by); ctx.lineTo(x + w, by); ctx.stroke();
+    const off = row % 2 === 0 ? 0 : brickW / 2;
+    for (let bx = x + off; bx < x + w; bx += brickW) {
+      ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx, by + brickH); ctx.stroke();
+    }
+  }
+
+  // İç kenar gölgesi
+  const innerEdge = ctx.createLinearGradient(x, 0, x + w, 0);
+  if (x === 0) {
+    innerEdge.addColorStop(0, 'rgba(0,0,0,0)');
+    innerEdge.addColorStop(1, 'rgba(0,0,0,0.30)');
+  } else {
+    innerEdge.addColorStop(0, 'rgba(0,0,0,0.30)');
+    innerEdge.addColorStop(1, 'rgba(0,0,0,0)');
+  }
+  ctx.fillStyle = innerEdge;
+  ctx.fillRect(x, yStart, w, H);
+}
+
+/** Sokak lambası */
+function drawStreetLamp(ctx: CanvasRenderingContext2D, cx: number, cy: number) {
+  ctx.strokeStyle = '#505050'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(cx, cy + 28); ctx.lineTo(cx, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + 10, cy); ctx.stroke();
+  ctx.fillStyle = '#e8d060';
+  ctx.beginPath(); ctx.ellipse(cx + 10, cy, 6, 4, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#a09040'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = 'rgba(255,240,100,0.12)';
+  ctx.beginPath(); ctx.arc(cx + 10, cy, 16, 0, Math.PI * 2); ctx.fill();
 }

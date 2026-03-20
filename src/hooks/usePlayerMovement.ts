@@ -1,5 +1,5 @@
 import { Socket } from "socket.io-client";
-import { GameState, GAME_WIDTH, GAME_HEIGHT, PLAYER_SPEED, WALL_Y1, WALL_Y2, isInDoor, TABLE_HALF_W, TABLE_HALF_H } from "../types/game";
+import { GameState, GAME_WIDTH, GAME_HEIGHT, PLAYER_SPEED, WALL_Y1, WALL_Y2, isInDoor, TABLE_HALF_W, TABLE_HALF_H, EXTERIOR_Y } from "../types/game";
 import React from "react";
 
 interface Props {
@@ -38,13 +38,23 @@ export function movePlayer(
   if (Math.abs(dx) <= 0.1 && Math.abs(dy) <= 0.1) return;
 
   const lp = localPlayerRef.current;
-  let nx = Math.max(20, Math.min(GAME_WIDTH - 20, lp.x + dx));
+  let nx = Math.max(30, Math.min(GAME_WIDTH - 30, lp.x + dx));
   let ny = Math.max(20, Math.min(GAME_HEIGHT - 20, lp.y + dy));
 
   const wasAbove = lp.y < WALL_Y1;
   const wasBelow = lp.y > WALL_Y2;
   if ((wasAbove && ny >= WALL_Y1) || (wasBelow && ny <= WALL_Y2)) {
     if (!isInDoor(nx)) ny = wasAbove ? WALL_Y1 - 1 : WALL_Y2 + 1;
+  }
+
+  // Ön duvar (salon → dış alan) — sadece kapıdan geçilebilir
+  const FRONT_WALL = EXTERIOR_Y;
+  const wasInsideSalon = lp.y < FRONT_WALL;
+  const wasOutside = lp.y >= FRONT_WALL;
+  if ((wasInsideSalon && ny >= FRONT_WALL) || (wasOutside && ny < FRONT_WALL)) {
+    // Kapı: x 580-700
+    const inFrontDoor = nx >= 580 && nx <= 700;
+    if (!inFrontDoor) ny = wasInsideSalon ? FRONT_WALL - 1 : FRONT_WALL + 1;
   }
 
   const PR = 16;

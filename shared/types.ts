@@ -165,7 +165,12 @@ export interface GameState {
 
 // ─── Boyut ───────────────────────────────────────────────────────────────────
 export const GAME_WIDTH = 1280;
-export const GAME_HEIGHT = 720;
+export const GAME_HEIGHT = 870;
+
+// ─── Dış Alan Sınırı (salon biter, dışarı başlar) ────────────────────────────
+export const EXTERIOR_Y = 720;       // Bu çizgiden aşağısı dış alan
+export const SIDEWALK_Y = 740;       // Kaldırım başlangıcı
+export const ROAD_Y = 790;           // Yol başlangıcı
 
 // ─── Grid Sabitleri ───────────────────────────────────────────────────────────
 export const GRID_CELL_SIZE = 40;
@@ -228,9 +233,9 @@ export const COUNTER_POSITIONS = [
 // ─── Yatay Duvar & Kapılar ────────────────────────────────────────────────────
 export const WALL_Y1 = 225;
 export const WALL_Y2 = 265;
+// Tek kapı — ortada, 120px genişlik
 export const DOOR_RANGES: [number, number][] = [
-    [280, 420],
-    [860, 1000],
+    [580, 700],
 ];
 export function isInDoor(x: number): boolean {
     return DOOR_RANGES.some(([a, b]) => x >= a && x <= b);
