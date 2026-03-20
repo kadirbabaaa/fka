@@ -42,6 +42,7 @@ export default function App() {
 
   const handleLeaveGame = () => {
     isJoinedRef.current = false;
+    socket?.emit('leave');
     setIsJoined(false);
     setEntryScreen('menu');
     setRoomId(Math.random().toString(36).substring(2, 6).toUpperCase());

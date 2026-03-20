@@ -63,7 +63,25 @@ io.on("connection", (socket) => {
   let roomId: string | null = null;
   let playerId: string | null = null;
 
+  // Oyuncuyu odadan temizleyen yardımcı
+  function removePlayerFromRoom() {
+    if (roomId && playerId && RoomManager.getRoomState(roomId)) {
+      const gs = RoomManager.getRoomState(roomId)!;
+      delete gs.players[playerId];
+      if (Object.keys(gs.players).length === 0) {
+        RoomManager.deleteRoom(roomId);
+      } else {
+        io.to(roomId).emit("state", gs);
+      }
+      socket.leave(roomId);
+      roomId = null;
+    }
+  }
+
   socket.on("join", ({ room, roomId: clientRoomId, name, color, hat, charType }) => {
+    // Önceki odadan temizle (aynı socket yeni odaya geçiyorsa)
+    removePlayerFromRoom();
+
     roomId = room || clientRoomId;
     playerId = socket.id;
     socket.join(roomId);
@@ -308,13 +326,12 @@ io.on("connection", (socket) => {
     io.to(roomId!).emit("punchEffect", { x: c.x, y: c.y, count: c.punchCount });
   });
 
+  socket.on("leave", () => {
+    removePlayerFromRoom();
+  });
+
   socket.on("disconnect", () => {
-    if (roomId && playerId && RoomManager.getRoomState(roomId)) {
-      const gs = RoomManager.getRoomState(roomId)!;
-      delete gs.players[playerId];
-      if (Object.keys(gs.players).length === 0) RoomManager.deleteRoom(roomId);
-      else io.to(roomId).emit("state", gs);
-    }
+    removePlayerFromRoom();
   });
 });
 
