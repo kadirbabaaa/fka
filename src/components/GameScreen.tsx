@@ -257,26 +257,24 @@ export const GameScreen: React.FC<Props> = ({
                     </div>
                 )}
 
-                {/* ── Düzenleme Modu Banner (Yeni Konum: Orta Alt) ── */}
+                {/* ── Düzenleme Modu Banner (Sol Üst Köşe, Kompakt) ── */}
                 {dayPhase === 'prep' && (editorState.isMoving || editorState.isMovingTable) && (
-                    <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none">
-                        <div className="bg-stone-900/90 border-2 border-purple-500 rounded-xl px-4 py-3 shadow-2xl flex flex-col items-center gap-2 pointer-events-auto backdrop-blur-sm">
-                            <span className="font-black text-sm uppercase tracking-wider text-white">
+                    <div className="absolute top-2 left-2 z-50 flex flex-col items-start gap-1 pointer-events-auto">
+                        <div className="bg-stone-900/90 border border-purple-500 rounded-lg px-2 py-1.5 shadow-lg flex flex-col items-start gap-1 backdrop-blur-sm">
+                            <span className="font-black text-[10px] uppercase tracking-wider text-purple-300">
                                 {editorState.isMoving ? '📦 İstasyon Taşı' : '🪑 Masa Taşı'}
                             </span>
-                            <span className="font-bold text-xs text-purple-300 text-center">
+                            <span className="font-bold text-[9px] text-stone-400">
                                 {editorState.isMoving
-                                    ? (isTouchDevice ? 'Yeni konuma git ve AL/VER\'e bas' : 'Yeni konuma git ve E\'ye bas')
-                                    : (isTouchDevice ? 'Masayı taşı ve AL/VER\'e bas' : 'Masayı taşı ve E\'ye bas')}
+                                    ? (isTouchDevice ? 'AL/VER\'e bas' : 'E\'ye bas')
+                                    : (isTouchDevice ? 'AL/VER\'e bas' : 'E\'ye bas')}
                             </span>
-                            <div className="flex gap-2 w-full mt-1">
-                                <button
-                                    onClick={handleCancel}
-                                    className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg font-black text-xs border-b-4 border-red-800 active:border-b-0 active:translate-y-1 transition-all flex items-center justify-center gap-2"
-                                >
-                                    ✕ İPTAL (ESC)
-                                </button>
-                            </div>
+                            <button
+                                onClick={handleCancel}
+                                className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white rounded font-black text-[10px] border-b-2 border-red-800 active:border-b-0 active:translate-y-0.5 transition-all flex items-center gap-1"
+                            >
+                                ✕ İPTAL (ESC)
+                            </button>
                         </div>
                     </div>
                 )}
