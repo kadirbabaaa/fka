@@ -164,7 +164,9 @@ export const GameScreen: React.FC<Props> = ({
             ? `hsl(${220 + progress * 20}, 70%, 40%)`
             : '#a78bfa';
 
-    const bs = settings.buttonSize;
+    const bs = 80;
+    const joystickSize = 128;
+    const punchButtonSize = 72;
 
     return (
         <div className="game-screen w-full flex flex-col select-none safe-top safe-bottom" style={{ background: '#545250' }}>
@@ -393,7 +395,7 @@ export const GameScreen: React.FC<Props> = ({
                     }}
                 >
                     <Joystick
-                        size={settings.joystickSize}
+                        size={joystickSize}
                         onMove={(x, y) => { joystickVectorRef.current = { x, y }; }}
                     />
                 </div>
@@ -428,7 +430,7 @@ export const GameScreen: React.FC<Props> = ({
                             });
                             if (punchTarget) socket?.emit('punchCustomer', punchTarget.id);
                         }}
-                        style={{ width: settings.punchButtonSize, height: settings.punchButtonSize, touchAction: 'none' }}
+                        style={{ width: punchButtonSize, height: punchButtonSize, touchAction: 'none' }}
                         className="bg-red-500 active:bg-red-700 text-white rounded-full shadow-xl font-black text-sm border-4 border-red-300 flex items-center justify-center active:scale-95"
                     >
                         DÖV<br />👊
@@ -558,9 +560,6 @@ export const GameScreen: React.FC<Props> = ({
                     layout={settings.hudLayout}
                     onChange={(layout) => updateSettings({ hudLayout: layout })}
                     onClose={() => setShowHudEditor(false)}
-                    joystickSize={settings.joystickSize}
-                    actionBtnSize={bs}
-                    punchBtnSize={settings.punchButtonSize}
                 />
             )}
 

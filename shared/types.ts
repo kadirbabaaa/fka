@@ -188,6 +188,9 @@ export interface GameState {
 
     // ─── Kesme Tahtaları ─────────────────────────────────────────────────────
     choppingBoards: ChoppingBoard[];
+
+    // ─── Internal (sunucu tarafı, client'a gönderilir ama kullanılmaz) ────────
+    _stateTick?: number;
 }
 
 // ─── Boyut ───────────────────────────────────────────────────────────────────

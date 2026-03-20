@@ -41,9 +41,11 @@ export default function App() {
   const [isJoiningExistingRoom, setIsJoiningExistingRoom] = useState(false);
 
   const handleLeaveGame = () => {
+    isJoinedRef.current = false;
     setIsJoined(false);
     setEntryScreen('menu');
-    socket?.disconnect();
+    setRoomId(Math.random().toString(36).substring(2, 6).toUpperCase());
+    setIsJoiningExistingRoom(false);
   };
 
   const handleQuickStart = (name: string, quickRoomId: string) => {

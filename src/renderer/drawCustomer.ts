@@ -98,12 +98,12 @@ export function drawCustomer(ctx: CanvasRenderingContext2D, customer: Customer) 
     const moving = !isSeated && (dx * dx + dy * dy > 0.8);
 
     if (moving) {
-        st.bobPhase  += 0.26;
-        st.bobAmount  = Math.min(1, st.bobAmount + 0.16);
+        st.bobPhase  += 0.32;
+        st.bobAmount  = Math.min(1, st.bobAmount + 0.22);
         if (Math.abs(dx) > 0.2) st.faceRight = dx > 0;
     } else {
-        st.bobAmount = Math.max(0, st.bobAmount - 0.20);
-        if (st.bobAmount > 0) st.bobPhase += 0.16;
+        st.bobAmount = Math.max(0, st.bobAmount - 0.18);
+        if (st.bobAmount > 0) st.bobPhase += 0.20;
         else st.bobPhase = 0;
     }
     if (isEating) st.eatPhase += 0.18;

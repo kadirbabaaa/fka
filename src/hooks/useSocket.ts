@@ -138,6 +138,16 @@ export function useSocket(
             gameStateRef.current = state;
         });
 
+        newSocket.on('positions', (positions: Record<string, { x: number; y: number }>) => {
+            if (!gameStateRef.current) return;
+            for (const [id, pos] of Object.entries(positions)) {
+                if (gameStateRef.current.players[id]) {
+                    gameStateRef.current.players[id].x = pos.x;
+                    gameStateRef.current.players[id].y = pos.y;
+                }
+            }
+        });
+
         newSocket.on('sound', (type: string) => {
             playSound(audioCtxRef, type);
         });

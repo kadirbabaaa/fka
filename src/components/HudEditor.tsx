@@ -5,9 +5,6 @@ interface Props {
     layout: HudLayout;
     onChange: (layout: HudLayout) => void;
     onClose: () => void;
-    joystickSize: number;
-    actionBtnSize: number;
-    punchBtnSize: number;
 }
 
 interface DraggableHudItemProps {
@@ -150,13 +147,16 @@ const DraggableHudItem: React.FC<DraggableHudItemProps> = ({ id, layout, contain
     );
 };
 
-export const HudEditor: React.FC<Props> = ({ layout, onChange, onClose, joystickSize, actionBtnSize, punchBtnSize }) => {
+export const HudEditor: React.FC<Props> = ({ layout, onChange, onClose }) => {
     const containerRef = useRef<HTMLDivElement>(null!);
 
     const updateElement = useCallback((id: keyof HudLayout, patch: Partial<HudElementLayout>) => {
         onChange({ ...layout, [id]: { ...layout[id], ...patch } });
     }, [layout, onChange]);
 
+    const joystickSize = 128;
+    const actionBtnSize = 80;
+    const punchBtnSize = 72;
     const musicBtnSize = Math.round(actionBtnSize * 0.55);
 
     return (

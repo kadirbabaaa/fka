@@ -26,26 +26,14 @@ export const DEFAULT_HUD_LAYOUT: HudLayout = {
 export interface Settings {
     masterVolume: number;
     sfxOn: boolean;
-    // Legacy (artık kullanılmıyor ama eski kayıtlarla uyumluluk için tutuyoruz)
-    buttonSize: number;
-    buttonOffset: number;
     joystickSide: 'left' | 'right';
-    joystickSize: number;
-    punchButtonSize: number;
-    joystickOffset: number;
-    // Yeni HUD layout sistemi
     hudLayout: HudLayout;
 }
 
 const DEFAULTS: Settings = {
     masterVolume: 0.5,
     sfxOn: true,
-    buttonSize: 80,
-    buttonOffset: 32,
     joystickSide: 'left',
-    joystickSize: 128,
-    punchButtonSize: 72,
-    joystickOffset: 32,
     hudLayout: DEFAULT_HUD_LAYOUT,
 };
 

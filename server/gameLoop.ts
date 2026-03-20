@@ -141,7 +141,18 @@ export function gameTick(gs: GameState, io: Server, rid: string) {
   // Müşteri tick
   customerTick(gs, io, rid);
 
-  io.to(rid).emit("state", gs);
+  // Pozisyonları ayrı hafif event olarak gönder (her tick)
+  const positions: Record<string, { x: number; y: number }> = {};
+  for (const [id, p] of Object.entries(gs.players)) {
+    positions[id] = { x: p.x, y: p.y };
+  }
+  io.to(rid).emit("positions", positions);
+
+  // Ağır state'i daha seyrek gönder (her 3 tick'te bir = ~100ms)
+  gs._stateTick = ((gs._stateTick ?? 0) + 1) % 3;
+  if (gs._stateTick === 0) {
+    io.to(rid).emit("state", gs);
+  }
 }
 
 function spawnTick(gs: GameState, io: Server, rid: string) {
