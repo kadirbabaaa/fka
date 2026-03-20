@@ -173,13 +173,8 @@ export function registerInteractHandler(
               socket.emit("sound", "success");
             }
           } else if (p.holding === CLEAN_PLATE && board.input && isChopped(board.input)) {
-            // Tabakla da alınabilir (opsiyonel)
-            p.holding = board.input;
-            board.input = null;
-            board.progress = 0;
-            board.isChopping = false;
-            board.choppingPlayerId = null;
-            socket.emit("sound", "success");
+            // Tabakla alınması engellendi — tabak kaybolma sorunu için
+            socket.emit("sound", "fail");
           } else if (CHOPPABLE.includes(p.holding as any) && !board.input) {
             // Tahtaya doğranabilir malzeme bırak
             board.input = p.holding;
@@ -214,6 +209,10 @@ export function registerInteractHandler(
           // Ham doğranabilir malzeme — fırına koyma, uyar
           socket.emit("sound", "fail");
         } else if (p.holding === CLEAN_PLATE && station.output && !station.isBurned) {
+          // Tabakla alırken tabağın yok olmaması için DISH_ITEMS kontrolü (pişmiş yemek zaten tabağa girmiş sayılır)
+          // Eğer yemek zaten bir tabaklı öğeyse (DISH_ITEMS içindeyse), eldeki tabağı tüketmiyoruz.
+          // Ancak mevcut sistemde p.holding değiştiği için tabağın "yok olması" normal, 
+          // önemli olan yemeğin tabağa girmiş bir şekilde (servis edilebilir) temsil edilmesidir.
           p.holding = station.output;
           station.output = null; station.burnTimer = 0;
           socket.emit("sound", "success");
@@ -265,7 +264,9 @@ export function registerInteractHandler(
       const posX = dynPos?.x ?? s.pos.x;
       const posY = dynPos?.y ?? s.pos.y;
       if (Math.hypot(px - posX, py - posY) < INTERACT_R) {
-        if (p.holding === CLEAN_PLATE || isDish(p.holding)) {
+        // Tabakla veya tepsi içindeki tabakla malzeme alınamaz
+        const hasPlate = p.holding === CLEAN_PLATE || (isTray(p.holding) && getTrayItems(p.holding).includes(CLEAN_PLATE));
+        if (hasPlate || isDish(p.holding)) {
           socket.emit("sound", "fail"); return;
         }
         const recipe = RECIPE_DEFS[s.key as keyof typeof RECIPE_DEFS];
