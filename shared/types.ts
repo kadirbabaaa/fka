@@ -95,7 +95,31 @@ export interface PlateStack {
     maxCount: number; // Maks tabak kapasitesi
 }
 
-// ─── Tepsi Fonksiyonları ───────────────────────────────────────────────────
+// ─── Kesme Tahtası ────────────────────────────────────────────────────────────
+export const CHOP_PREFIX = 'CHOPPED_';
+export const CHOP_TICKS = 60; // ~2 saniye (33ms * 60)
+export function isChopped(item: Item): boolean {
+  return typeof item === 'string' && item.startsWith(CHOP_PREFIX);
+}
+export function getChoppedSource(item: string): string {
+  return item.replace(CHOP_PREFIX, '');
+}
+
+export interface ChoppingBoard {
+  id: string;
+  x: number;
+  y: number;
+  input: string | null;   // üzerindeki malzeme
+  progress: number;       // 0..CHOP_TICKS
+  isChopping: boolean;    // oyuncu aktif kesiyor mu
+  choppingPlayerId: string | null;
+}
+
+// Kesme gerektiren malzemeler: et ve sebze
+export const CHOPPABLE: StockKey[] = ['🥩', '🥬'];
+export const CHOPPING_BOARD_POS = { x: 760, y: 170 };
+
+
 export const TRAY_PREFIX = 'TRAY:';
 export const MAX_TRAY_CAPACITY = 4;
 
@@ -161,6 +185,9 @@ export interface GameState {
     // ─── Table Layout Editor ─────────────────────────────────────────────────
     tableLayout: Record<string, TablePosition>;
     lockedTables: Record<string, string>; // tableId → socketId
+
+    // ─── Kesme Tahtaları ─────────────────────────────────────────────────────
+    choppingBoards: ChoppingBoard[];
 }
 
 // ─── Boyut ───────────────────────────────────────────────────────────────────
@@ -253,12 +280,16 @@ export const INGREDIENTS = [
 ];
 
 // ─── Universal Fırın Sistemi ─────────────────────────────────────────────────
+// CHOPPED_ malzemeler daha hızlı pişer (doğrama zahmetine değer)
 export const RECIPE_DEFS = {
-    '🍞': { output: '🍕', time: 90,  label: '🍕 Pizza' },
-    '🥩': { output: '🍔', time: 60,  label: '🍔 Burger' },
-    '🥬': { output: '🥗', time: 30,  label: '🥗 Salata' },
-    '🥘': { output: '🍜', time: 120, label: '🍜 Çorba' },
-    '🍢': { output: '🌯', time: 100, label: '🌯 Dürüm' },
+    '🍞':          { output: '🍕', time: 90,  label: '🍕 Pizza' },
+    '🥩':          { output: '🍔', time: 60,  label: '🍔 Burger (çiğ)' },
+    'CHOPPED_🥩':  { output: '🍔', time: 35,  label: '🍔 Burger' },
+    '🥬':          { output: '🥗', time: 30,  label: '🥗 Salata (kaba)' },
+    'CHOPPED_🥬':  { output: '🥗', time: 15,  label: '🥗 Salata' },
+    '🥘':          { output: '🍜', time: 120, label: '🍜 Çorba' },
+    '🍢':          { output: '🌯', time: 100, label: '🌯 Dürüm (çiğ)' },
+    'CHOPPED_🍢':  { output: '🌯', time: 60,  label: '🌯 Dürüm' },
 } as const;
 
 // ─── Yemek kilidi sırası — her gece 1 yeni yemek seçilir ─────────────────────
@@ -344,6 +375,7 @@ export function mkGameState(): GameState {
       'trash':         { id: 'trash',         x: 1200, y: 190 },
       'dirty_tray':    { id: 'dirty_tray',    x: 1050, y: 90 },
       'plate_stack':   { id: 'plate_stack',   x: 650, y: 65 },
+      'chop1':         { id: 'chop1',         x: 760, y: 170 },
       // Counter'lar kasıtlı olarak buraya dahil edilmedi — duvara sabit, taşınamaz
     },
     lockedStations: {},
@@ -356,5 +388,9 @@ export function mkGameState(): GameState {
       'table4': { id: 'table4', x: 1090, y: 500 },
     },
     lockedTables: {},
+    // ─── Kesme Tahtaları ──────────────────────────────────────────────────
+    choppingBoards: [
+      { id: 'chop1', x: CHOPPING_BOARD_POS.x, y: CHOPPING_BOARD_POS.y, input: null, progress: 0, isChopping: false, choppingPlayerId: null },
+    ],
   };
 }

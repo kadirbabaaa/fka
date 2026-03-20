@@ -6,6 +6,7 @@ import {
   DISH_ITEMS, getSeatSlots, DISH_UNLOCK_POOL,
   GAME_HEIGHT, EXTERIOR_Y,
   CLOSING_THRESHOLD,
+  CHOP_TICKS, CHOP_PREFIX,
 } from "../shared/types.js";
 import { DIALOGUES } from "../shared/dialogues.js";
 
@@ -79,6 +80,20 @@ export function gameTick(gs: GameState, io: Server, rid: string) {
       }
     }
   });
+
+  // Kesme tahtaları güncelle
+  if (gs.choppingBoards) {
+    gs.choppingBoards.forEach(board => {
+      if (board.isChopping && board.input && board.progress < CHOP_TICKS) {
+        board.progress++;
+        if (board.progress >= CHOP_TICKS) {
+          board.input = CHOP_PREFIX + board.input;
+          board.isChopping = false;
+          board.choppingPlayerId = null;
+        }
+      }
+    });
+  }
 
   // Gündüz timer
   if (gs.dayPhase === 'day') {

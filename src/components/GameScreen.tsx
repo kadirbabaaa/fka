@@ -460,6 +460,44 @@ export const GameScreen: React.FC<Props> = ({
                 </div>
                 )}
 
+                {/* DOĞRA butonu — kesme tahtasına yakınken basılı tut */}
+                {!showHudEditor && dayPhase === 'day' && (
+                <div
+                    className="absolute z-10"
+                    style={{
+                        left: `${settings.hudLayout.actionBtn.x + 8}%`,
+                        top: `${settings.hudLayout.actionBtn.y + 8}%`,
+                        transformOrigin: 'top left',
+                    }}
+                >
+                    <button
+                        onPointerDown={(e) => {
+                            e.preventDefault();
+                            const gs = gameStateRef.current;
+                            const lp = localPlayerRef.current;
+                            const board = gs.choppingBoards?.find(b => Math.hypot(b.x - lp.x, b.y - lp.y) < 90);
+                            if (board) socket?.emit('chop_start', board.id);
+                        }}
+                        onPointerUp={(e) => {
+                            e.preventDefault();
+                            const gs = gameStateRef.current;
+                            const lp = localPlayerRef.current;
+                            const board = gs.choppingBoards?.find(b => Math.hypot(b.x - lp.x, b.y - lp.y) < 90);
+                            if (board) socket?.emit('chop_stop', board.id);
+                        }}
+                        onPointerLeave={(e) => {
+                            e.preventDefault();
+                            const gs = gameStateRef.current;
+                            gs.choppingBoards?.forEach(b => socket?.emit('chop_stop', b.id));
+                        }}
+                        style={{ width: Math.round(bs * 0.7), height: Math.round(bs * 0.7), touchAction: 'none' }}
+                        className="bg-amber-600 active:bg-amber-800 text-white rounded-full shadow-xl font-black text-xs border-4 border-amber-400 flex items-center justify-center active:scale-95"
+                    >
+                        🔪<br />DOĞRA
+                    </button>
+                </div>
+                )}
+
                 {/* Müzik butonu */}
                 {!showHudEditor && (
                 <div
@@ -487,6 +525,8 @@ export const GameScreen: React.FC<Props> = ({
                     <span>Hareket: <kbd className="bg-stone-800 text-stone-300 px-1 rounded">WASD</kbd></span>
                     <span>·</span>
                     <span>Etkileşim: <kbd className="bg-stone-800 text-stone-300 px-1 rounded">E</kbd> / <kbd className="bg-stone-800 text-stone-300 px-1 rounded">BOŞLUK</kbd></span>
+                    <span>·</span>
+                    <span>Doğra: <kbd className="bg-stone-800 text-amber-300 px-1 rounded">R</kbd> (basılı tut)</span>
                     <span>·</span>
                     <span className={dayPhase === 'night' ? 'text-indigo-400 font-bold' : dayPhase === 'prep' ? 'text-purple-400 font-bold' : ''}>
                         {dayPhase === 'prep'

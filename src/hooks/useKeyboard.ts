@@ -76,6 +76,17 @@ export function useKeyboard({ isJoinedRef, socket, audioCtxRef, gameStateRef, lo
                     }
                     break;
                 }
+
+                // R tuşu — kesme tahtasında basılı tut
+                case 'r': case 'R': {
+                    e.preventDefault();
+                    if (e.repeat) break; // basılı tutma tekrarını engelle, sadece ilk basışta emit
+                    const gs2 = gameStateRef.current;
+                    const lp2 = localPlayerRef.current;
+                    const board = gs2.choppingBoards?.find(b => Math.hypot(b.x - lp2.x, b.y - lp2.y) < 90);
+                    if (board) socket?.emit('chop_start', board.id);
+                    break;
+                }
             }
         };
 
@@ -86,6 +97,14 @@ export function useKeyboard({ isJoinedRef, socket, audioCtxRef, gameStateRef, lo
                 case 'a': case 'A': case 'ArrowLeft': keys.current.a = false; break;
                 case 's': case 'S': case 'ArrowDown': keys.current.s = false; break;
                 case 'd': case 'D': case 'ArrowRight': keys.current.d = false; break;
+                // R bırakılınca chop_stop
+                case 'r': case 'R': {
+                    const gs = gameStateRef.current;
+                    const lp = localPlayerRef.current;
+                    const board = gs.choppingBoards?.find(b => Math.hypot(b.x - lp.x, b.y - lp.y) < 90);
+                    if (board) socket?.emit('chop_stop', board.id);
+                    break;
+                }
             }
         };
 

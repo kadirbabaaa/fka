@@ -60,6 +60,14 @@ export {
   EXTERIOR_Y,
   SIDEWALK_Y,
   ROAD_Y,
+  // Kesme Tahtası
+  type ChoppingBoard,
+  CHOP_PREFIX,
+  CHOP_TICKS,
+  isChopped,
+  getChoppedSource,
+  CHOPPABLE,
+  CHOPPING_BOARD_POS,
 } from '../../shared/types';
 
 // ─── Client-Only Sabitler ────────────────────────────────────────────────────

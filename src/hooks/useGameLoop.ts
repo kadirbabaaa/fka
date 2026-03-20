@@ -31,6 +31,7 @@ import { drawLayoutPreview, LayoutEditorState } from '../renderer/drawLayoutEdit
 import { drawDirtyTrayBasket } from '../renderer/drawDirtyTrayBasket';
 import { drawWaitList } from '../renderer/drawWaitList';
 import { drawDirtyTable } from '../renderer/drawDirtyTable';
+import { drawChoppingBoard } from '../renderer/drawChoppingBoard';
 
 interface UseGameLoopProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
@@ -190,6 +191,10 @@ export function useGameLoop({
       if (state.cookStations) {
         for (const station of state.cookStations) drawCookStation(ctx, station, time);
       }
+
+      // Kesme tahtaları
+      const boards = state.choppingBoards ?? [];
+      for (const board of boards) drawChoppingBoard(ctx, board, time);
 
       state.customers.forEach((c) => drawCustomer(ctx, c));
       (state.dirtyTables ?? []).forEach((t) => drawDirtyTable(ctx, t.seatX, t.seatY));

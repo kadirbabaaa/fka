@@ -230,6 +230,29 @@ io.on("connection", (socket) => {
     socket.emit("sound", "success");
   });
 
+  // ─── Kesme Tahtası ────────────────────────────────────────────────────────
+  socket.on("chop_start", (boardId: string) => {
+    if (!roomId || !RoomManager.getRoomState(roomId)) return;
+    const gs = RoomManager.getRoomState(roomId)!;
+    const board = gs.choppingBoards?.find(b => b.id === boardId);
+    if (!board || !board.input || board.isChopping) return;
+    // Zaten doğranmışsa tekrar doğrama
+    if (board.input.startsWith('CHOPPED_')) return;
+    board.isChopping = true;
+    board.choppingPlayerId = socket.id;
+  });
+
+  socket.on("chop_stop", (boardId: string) => {
+    if (!roomId || !RoomManager.getRoomState(roomId)) return;
+    const gs = RoomManager.getRoomState(roomId)!;
+    const board = gs.choppingBoards?.find(b => b.id === boardId);
+    if (!board) return;
+    if (board.choppingPlayerId === socket.id) {
+      board.isChopping = false;
+      board.choppingPlayerId = null;
+    }
+  });
+
   socket.on("punchCustomer", (customerId) => {
     if (!roomId || !RoomManager.getRoomState(roomId)) return;
     const gs = RoomManager.getRoomState(roomId)!;

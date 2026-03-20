@@ -16,105 +16,84 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onPlay, onQuickSta
     const [showPatchNotes, setShowPatchNotes] = useState(false);
 
     return (
-        <div className="menu-screen bg-[radial-gradient(circle_at_top,#fef3c7_0%,#fed7aa_28%,#7c2d12_70%,#1c1917_100%)] safe-top safe-bottom overflow-y-auto relative">
-            {/* Grid arka plan */}
-            <div className="fixed inset-0 opacity-20 pointer-events-none [background-image:linear-gradient(to_right,transparent_0,transparent_47px,rgba(255,255,255,0.14)_48px),linear-gradient(to_bottom,transparent_0,transparent_47px,rgba(255,255,255,0.14)_48px)] [background-size:48px_48px]" />
+        <div className="menu-screen bg-[#0f0e0c] safe-top safe-bottom overflow-y-auto relative flex items-center justify-center">
 
-            {/* Sağ Üst Bilgi Butonu */}
+            {/* Sağ Üst — Yama Notları */}
             <div className="absolute top-4 right-4 z-20">
                 <button
                     onClick={() => setShowPatchNotes(true)}
-                    className="w-12 h-12 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 rounded-2xl flex items-center justify-center text-2xl text-amber-200 shadow-xl transition-all active:scale-90"
+                    className="w-10 h-10 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl flex items-center justify-center text-lg text-stone-400 transition-all active:scale-90"
                     title="Yama Notları"
                 >
                     ℹ️
                 </button>
             </div>
 
-            <div className="relative mx-auto flex w-full max-w-lg flex-col gap-5 px-5 py-8 md:py-12 md:max-w-2xl">
-                {/* ── Logo & Başlık ──────────────────────────────────────────────── */}
-                <div className="text-center space-y-3">
-                    <div className="inline-flex items-center rounded-full border border-amber-300/40 bg-amber-200/12 px-3 py-1 text-[11px] font-black uppercase tracking-[0.24em] text-amber-100">
-                        Yerel co-op mutfak
-                    </div>
-                    <h1 className="text-4xl font-black uppercase leading-none text-amber-50 sm:text-5xl drop-shadow-lg">
+            <div className="relative mx-auto flex w-full max-w-sm flex-col items-center gap-6 px-6 py-12">
+
+                {/* Logo */}
+                <div className="text-center space-y-2">
+                    <div className="text-5xl mb-2">🍽️</div>
+                    <h1 className="text-3xl font-black uppercase tracking-widest text-stone-100">
                         {MARKET_NAME}
                     </h1>
-                    <p className="text-sm leading-6 text-stone-300 max-w-md mx-auto">
-                        Pişir, servis et, bulaşık yıka. Gece gelince upgrade al!
-                    </p>
+                    <p className="text-xs text-stone-500 tracking-widest uppercase">Multiplayer Mutfak Oyunu</p>
                 </div>
 
-                {/* ── Bilgi Kartları ─────────────────────────────────────────────── */}
-                <div className="grid grid-cols-3 gap-2">
-                    {[
-                        { icon: '🔧', title: 'Hazırlık', text: 'Stokla & pişir' },
-                        { icon: '☀️', title: 'Servis', text: 'Müşteri ağırla' },
-                        { icon: '🌙', title: 'Gece', text: 'Upgrade al' },
-                    ].map((card) => (
-                        <div key={card.title} className="rounded-2xl border border-white/12 bg-stone-950/60 backdrop-blur-sm p-3 text-center">
-                            <div className="text-2xl">{card.icon}</div>
-                            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-200 mt-1">{card.title}</div>
-                            <p className="mt-1 text-xs leading-4 text-stone-400">{card.text}</p>
-                        </div>
-                    ))}
-                </div>
-
-                {/* ── Aksiyon Butonları ──────────────────────────────────────────── */}
-                <div className="space-y-3 mt-2">
-
+                {/* Butonlar */}
+                <div className="w-full space-y-2 mt-2">
                     {!showJoinForm && !showQuickStart && (
                         <>
                             <button
                                 onClick={() => onPlay()}
-                                className="w-full rounded-2xl bg-[linear-gradient(135deg,#f59e0b,#ea580c)] px-6 py-4 text-lg font-black uppercase tracking-[0.16em] text-stone-950 shadow-lg active:scale-[0.97] transition-transform"
+                                className="w-full rounded-xl bg-amber-500 hover:bg-amber-400 px-6 py-3.5 text-sm font-black uppercase tracking-widest text-stone-950 shadow-md active:scale-[0.97] transition-all"
                             >
-                                🏠 Oda Kur
+                                Oda Kur
                             </button>
-
                             <button
                                 onClick={() => setShowJoinForm(true)}
-                                className="w-full rounded-2xl bg-[linear-gradient(135deg,#3b82f6,#2563eb)] px-6 py-4 text-lg font-black uppercase tracking-[0.16em] text-white shadow-lg active:scale-[0.97] transition-transform"
+                                className="w-full rounded-xl bg-stone-800 hover:bg-stone-700 border border-stone-700 px-6 py-3.5 text-sm font-black uppercase tracking-widest text-stone-200 active:scale-[0.97] transition-all"
                             >
-                                🤝 Odaya Katıl
+                                Odaya Katıl
                             </button>
-
                             <button
                                 onClick={() => setShowQuickStart(true)}
-                                className="w-full rounded-2xl bg-[linear-gradient(135deg,#16a34a,#15803d)] px-6 py-4 text-base font-black uppercase tracking-[0.16em] text-white shadow-lg active:scale-[0.97] transition-transform"
+                                className="w-full rounded-xl bg-stone-800 hover:bg-stone-700 border border-stone-700 px-6 py-3.5 text-sm font-black uppercase tracking-widest text-stone-200 active:scale-[0.97] transition-all"
                             >
-                                ⚡ Hızlı Başla
+                                Hızlı Başla
+                            </button>
+                            <button
+                                onClick={onSettings}
+                                className="w-full rounded-xl border border-stone-800 px-6 py-3 text-xs font-bold uppercase tracking-widest text-stone-500 hover:text-stone-400 transition-colors"
+                            >
+                                Ayarlar
                             </button>
                         </>
                     )}
 
-                    {/* Odaya Katılma Formu */}
+                    {/* Odaya Katılma */}
                     {showJoinForm && (
-                        <div className="space-y-3 rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4 backdrop-blur-md">
-                            <div className="text-xs font-black uppercase tracking-[0.2em] text-blue-200 mb-2">Arkadaşının Odasına Katıl</div>
+                        <div className="space-y-3">
                             <input
                                 type="text"
                                 value={quickRoom}
                                 onChange={(e) => setQuickRoom(e.target.value.toUpperCase())}
                                 placeholder="Oda Kodu (örn: AB12)"
                                 maxLength={8}
-                                className="w-full rounded-xl border border-blue-500/30 bg-stone-900 px-4 py-3 text-base font-semibold uppercase text-stone-100 outline-none placeholder:text-stone-500 focus:border-blue-400"
+                                autoFocus
+                                className="w-full rounded-xl border border-stone-700 bg-stone-900 px-4 py-3 text-sm font-semibold uppercase text-stone-100 outline-none placeholder:text-stone-600 focus:border-amber-500"
                             />
                             <div className="flex gap-2">
                                 <button
-                                    onClick={() => {
-                                        if (quickRoom.trim()) {
-                                            onPlay(quickRoom.trim());
-                                        }
-                                    }}
+                                    onClick={() => quickRoom.trim() && onPlay(quickRoom.trim())}
                                     disabled={!quickRoom.trim()}
-                                    className="flex-1 rounded-xl bg-blue-600 px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-white active:bg-blue-500 disabled:bg-stone-700 disabled:text-stone-500"
+                                    className="flex-1 rounded-xl bg-amber-500 px-4 py-3 text-sm font-black uppercase tracking-widest text-stone-950 disabled:bg-stone-700 disabled:text-stone-500"
                                 >
-                                    Devam Et
+                                    Katıl
                                 </button>
                                 <button
                                     onClick={() => setShowJoinForm(false)}
-                                    className="rounded-xl border border-stone-600 bg-stone-800 px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-stone-300"
+                                    className="rounded-xl border border-stone-700 bg-stone-900 px-4 py-3 text-sm font-bold text-stone-400"
                                 >
                                     İptal
                                 </button>
@@ -122,61 +101,40 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onPlay, onQuickSta
                         </div>
                     )}
 
-                    {/* Hızlı Başlama Formu */}
+                    {/* Hızlı Başla */}
                     {showQuickStart && (
-                        <div className="space-y-3 rounded-2xl border border-green-500/30 bg-green-500/10 p-4 backdrop-blur-md">
-                            <div className="text-xs font-black uppercase tracking-[0.2em] text-green-200 mb-2">Hızlıca Oyuna Gir</div>
+                        <div className="space-y-3">
                             <input
                                 type="text"
                                 value={quickName}
                                 onChange={(e) => setQuickName(e.target.value)}
                                 placeholder="Oyuncu adın"
                                 maxLength={12}
-                                className="w-full rounded-xl border border-green-500/30 bg-stone-900 px-4 py-3 text-base font-semibold text-stone-100 outline-none placeholder:text-stone-500 focus:border-green-400"
+                                autoFocus
+                                className="w-full rounded-xl border border-stone-700 bg-stone-900 px-4 py-3 text-sm font-semibold text-stone-100 outline-none placeholder:text-stone-600 focus:border-amber-500"
                             />
                             <div className="flex gap-2">
                                 <button
                                     onClick={() => quickName.trim() && onQuickStart(quickName.trim(), Math.random().toString(36).substring(2, 6).toUpperCase())}
                                     disabled={!quickName.trim()}
-                                    className="flex-1 rounded-xl bg-green-600 px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-white active:bg-green-500 disabled:bg-stone-700 disabled:text-stone-500"
+                                    className="flex-1 rounded-xl bg-amber-500 px-4 py-3 text-sm font-black uppercase tracking-widest text-stone-950 disabled:bg-stone-700 disabled:text-stone-500"
                                 >
                                     Başla
                                 </button>
                                 <button
                                     onClick={() => setShowQuickStart(false)}
-                                    className="rounded-xl border border-stone-600 bg-stone-800 px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-stone-300"
+                                    className="rounded-xl border border-stone-700 bg-stone-900 px-4 py-3 text-sm font-bold text-stone-400"
                                 >
                                     İptal
                                 </button>
                             </div>
                         </div>
                     )}
-
-                    <button
-                        onClick={onSettings}
-                        className="w-full rounded-2xl border border-white/18 bg-white/8 px-6 py-3 text-base font-black uppercase tracking-[0.16em] text-stone-100 active:bg-white/14 transition-colors"
-                    >
-                        ⚙️ Ayarlar
-                    </button>
                 </div>
 
-                {/* ── Alt bilgi ─────────────────────────────────────────────────── */}
-                <div className="text-center space-y-2 mt-4">
-                    <div className="grid grid-cols-2 gap-2 text-xs text-stone-400">
-                        <div className="rounded-xl border border-white/8 bg-white/5 p-3">
-                            <div className="font-black text-stone-300">🖥️ PC</div>
-                            <div className="mt-1">WASD + E tuşu</div>
-                        </div>
-                        <div className="rounded-xl border border-white/8 bg-white/5 p-3">
-                            <div className="font-black text-stone-300">📱 Mobil</div>
-                            <div className="mt-1">Joystick + buton</div>
-                        </div>
-                    </div>
-                    <p className="text-xs text-stone-500">v1.1.0 · Terracraft Deluxe</p>
-                </div>
+                <p className="text-[10px] text-stone-700 tracking-widest uppercase mt-2">v1.1.0</p>
             </div>
 
-            {/* Yama Notları Modalı */}
             {showPatchNotes && <PatchNotesModal onClose={() => setShowPatchNotes(false)} />}
         </div>
     );

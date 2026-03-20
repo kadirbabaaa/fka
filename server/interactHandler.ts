@@ -6,6 +6,7 @@ import {
   CLEAN_PLATE, DIRTY_PLATE, BURNED_FOOD, EAT_TICKS,
   MAX_TRAY_CAPACITY, isTray, getTrayItems, createTray,
   SINK_STATION, TRASH_STATION,
+  CHOPPABLE, CHOP_PREFIX, isChopped,
 } from "../shared/types.js";
 
 const INTERACT_R = 75;
@@ -149,11 +150,47 @@ export function registerInteractHandler(
       }
     }
 
+    // Kesme tahtaları — malzeme bırak/al (E tuşu)
+    if (gs.choppingBoards) {
+      for (const board of gs.choppingBoards) {
+        if (Math.hypot(px - board.x, py - board.y) < INTERACT_R) {
+          if (!p.holding && board.input) {
+            // Tahtadan malzeme al
+            p.holding = board.input;
+            board.input = null;
+            board.progress = 0;
+            board.isChopping = false;
+            board.choppingPlayerId = null;
+            socket.emit("sound", "pickup");
+          } else if (p.holding && CHOPPABLE.includes(p.holding as any) && !board.input) {
+            // Tahtaya malzeme bırak
+            board.input = p.holding;
+            board.progress = 0;
+            board.isChopping = false;
+            board.choppingPlayerId = null;
+            p.holding = null;
+            socket.emit("sound", "success");
+          } else if (!p.holding && board.input && isChopped(board.input)) {
+            // Doğranmış malzemeyi al
+            p.holding = board.input;
+            board.input = null;
+            board.progress = 0;
+            board.isChopping = false;
+            board.choppingPlayerId = null;
+            socket.emit("sound", "pickup");
+          }
+          return;
+        }
+      }
+    }
+
     // Fırınlar
     for (const station of gs.cookStations) {
       if (Math.hypot(px - station.x, py - station.y) < INTERACT_R) {
-        if (INGREDIENTS.some(ing => ing.key === p.holding) && !station.input && !station.output) {
-          const recipe = RECIPE_DEFS[p.holding as keyof typeof RECIPE_DEFS];
+        // Doğranmış veya normal malzeme fırına konabilir
+        const holdingKey = p.holding as keyof typeof RECIPE_DEFS;
+        if ((INGREDIENTS.some(ing => ing.key === p.holding) || (typeof p.holding === 'string' && p.holding.startsWith(CHOP_PREFIX))) && !station.input && !station.output) {
+          const recipe = RECIPE_DEFS[holdingKey];
           if (recipe) {
             station.input = p.holding; station.timer = recipe.time;
             p.holding = null; station.isBurned = false; station.burnTimer = 0;
