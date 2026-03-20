@@ -3,7 +3,7 @@
   "short_name": "Market",
   "start_url": "/",
   "display": "standalone",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "background_color": "#0c0a09",
   "theme_color": "#0c0a09",
   "scope": "/",
