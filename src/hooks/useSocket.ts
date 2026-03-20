@@ -134,16 +134,34 @@ export function useSocket(
             }
         });
 
-        newSocket.on('state', (state: GameState) => {
-            gameStateRef.current = state;
-        });
+        // Son bilinen pozisyonları cache'le — state gelince ezilmesin
+        const lastPositions = new Map<string, { x: number; y: number }>();
 
-        newSocket.on('positions', (positions: Record<string, { x: number; y: number }>) => {
-            if (!gameStateRef.current) return;
-            for (const [id, pos] of Object.entries(positions)) {
+        newSocket.on('state', (state: GameState) => {
+            // Mevcut pozisyonları koru (positions event'inden gelen daha güncel olabilir)
+            if (gameStateRef.current?.players) {
+                for (const [id, p] of Object.entries(gameStateRef.current.players)) {
+                    lastPositions.set(id, { x: p.x, y: p.y });
+                }
+            }
+            gameStateRef.current = state;
+            // Pozisyonları geri yaz
+            for (const [id, pos] of lastPositions) {
                 if (gameStateRef.current.players[id]) {
                     gameStateRef.current.players[id].x = pos.x;
                     gameStateRef.current.players[id].y = pos.y;
+                }
+            }
+        });
+
+        newSocket.on('positions', (positions: Record<string, { x: number; y: number }>) => {
+            const players = gameStateRef.current?.players;
+            if (!players) return;
+            for (const [id, pos] of Object.entries(positions)) {
+                if (players[id]) {
+                    players[id].x = pos.x;
+                    players[id].y = pos.y;
+                    lastPositions.set(id, pos);
                 }
             }
         });
