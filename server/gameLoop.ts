@@ -121,7 +121,7 @@ export function gameTick(gs: GameState, io: Server, rid: string) {
       gs.dirtyTables = [];
       // Elde kirli tabak tutan oyuncuların elini boşalt (hazırlık fazında sorun çıkmaması için)
       Object.values(gs.players).forEach((player: any) => {
-        if (player.holding === 'dirty_plate') player.holding = null;
+        if (player.holding === '__dirty_plate__') player.holding = null;
       });
       gs.dayPhase = 'night';
       gs.dayTimer = NIGHT_TICKS;
