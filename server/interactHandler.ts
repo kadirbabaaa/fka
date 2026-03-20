@@ -164,12 +164,16 @@ export function registerInteractHandler(
               board.choppingPlayerId = null;
               socket.emit("sound", "pickup");
             } else if (board.input && isChopped(board.input)) {
-              // Doğranmış malzeme — elde tabak şart
-              socket.emit("sound", "fail");
+              // Doğranmış malzemeyi direkt al — tabak gerekmez
+              p.holding = board.input;
+              board.input = null;
+              board.progress = 0;
+              board.isChopping = false;
+              board.choppingPlayerId = null;
+              socket.emit("sound", "success");
             }
           } else if (p.holding === CLEAN_PLATE && board.input && isChopped(board.input)) {
-            // Tabakla doğranmış malzemeyi al — tabak korunur, malzeme tabağın üstüne gelir
-            // holding: CLEAN_PLATE → doğranmış malzeme (tabak fırından almak için hâlâ gerekli)
+            // Tabakla da alınabilir (opsiyonel)
             p.holding = board.input;
             board.input = null;
             board.progress = 0;

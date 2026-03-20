@@ -115,12 +115,12 @@ export function drawChoppingBoard(
     if (isChopped(input)) {
       // Doğranmış görsel — parçalar halinde
       drawChoppedVisual(ctx, getChoppedSource(input), x - 4, y - 2);
-      // "Tabakla al" ipucu (tahtanın altında)
+      // "Al" ipucu (tahtanın altında)
       ctx.fillStyle = 'rgba(255,255,255,0.9)';
       ctx.font = 'bold 9px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('🍽️ Tabakla al', x - 4, y + 30);
+      ctx.fillText('E ile al', x - 4, y + 30);
     } else {
       // Ham malzeme
       ctx.font = '20px Arial';
