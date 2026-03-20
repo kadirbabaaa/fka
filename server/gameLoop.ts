@@ -107,7 +107,7 @@ export function gameTick(gs: GameState, io: Server, rid: string) {
   // Gündüz timer
   if (gs.dayPhase === 'day') {
     if (gs.dayTimer > 0) gs.dayTimer--;
-    if (gs.dayTimer <= 0 && gs.customers.length === 0 && gs.waitList.length === 0 && gs.dirtyTables.length === 0) {
+    if (gs.dayTimer <= 0 && gs.customers.filter(c => !c.isLeaving).length === 0 && gs.waitList.length === 0 && gs.dirtyTables.length === 0) {
       gs.dayPhase = 'night';
       gs.dayTimer = NIGHT_TICKS;
       gs.hasOrderedTonight = false;

@@ -1,8 +1,10 @@
-import { TABLE_Y_DEFAULT } from '../types/game';
-
 export function drawDirtyTable(ctx: CanvasRenderingContext2D, seatX: number, seatY: number) {
-  const isTopSeat = seatY < TABLE_Y_DEFAULT;
-  const plateY = isTopSeat ? TABLE_Y_DEFAULT - 20 : TABLE_Y_DEFAULT + 20;
+  // seatY, masanın y'sinden ±47 uzakta (getSeatSlots'tan geliyor)
+  // Üst koltuk: seatY = tableY - 47 → tabak masanın üstünde (seatY + 27)
+  // Alt koltuk: seatY = tableY + 47 → tabak masanın altında (seatY - 27)
+  const tableY = seatY < 500 ? seatY + 47 : seatY - 47; // yaklaşık masa merkezi
+  const isTopSeat = seatY < tableY;
+  const plateY = isTopSeat ? seatY + 27 : seatY - 27;
 
   ctx.fillStyle = 'rgba(0,0,0,0.12)';
   ctx.beginPath(); ctx.ellipse(seatX + 1, plateY + 3, 18, 7, 0, 0, Math.PI * 2); ctx.fill();

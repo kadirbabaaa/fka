@@ -68,6 +68,13 @@ io.on("connection", (socket) => {
     if (roomId && playerId && RoomManager.getRoomState(roomId)) {
       const gs = RoomManager.getRoomState(roomId)!;
       delete gs.players[playerId];
+      // Oyuncunun kilitlediği istasyon/masaları serbest bırak
+      for (const [id, lockerId] of Object.entries(gs.lockedStations)) {
+        if (lockerId === playerId) delete gs.lockedStations[id];
+      }
+      for (const [id, lockerId] of Object.entries(gs.lockedTables)) {
+        if (lockerId === playerId) delete gs.lockedTables[id];
+      }
       if (Object.keys(gs.players).length === 0) {
         RoomManager.deleteRoom(roomId);
       } else {
@@ -160,6 +167,7 @@ io.on("connection", (socket) => {
       gs.score -= cost;
       const pos = ADDITIONAL_OVEN_POSITIONS[ovenIdx];
       gs.cookStations.push(mkCook(`oven${currentOvens + 1}`, pos.x, pos.y));
+      gs.stationLayout[`oven${currentOvens + 1}`] = { id: `oven${currentOvens + 1}`, x: pos.x, y: pos.y };
       io.to(roomId).emit("state", gs);
       socket.emit("sound", "success");
     } else {
@@ -242,8 +250,16 @@ io.on("connection", (socket) => {
     gs.dayPhase = 'prep';
     gs.dayTimer = DAY_TICKS;
     gs.score = Math.floor(gs.score * 0.8);
+    gs.dirtyTrayCount = 0;
+    gs.revengeQueue = [];
+    gs.lockedStations = {};
+    gs.lockedTables = {};
     // Fırınları temizle
     gs.cookStations.forEach(s => { s.input = null; s.output = null; s.isBurned = false; s.burnTimer = 0; });
+    // Kesme tahtalarını temizle
+    gs.choppingBoards?.forEach(b => { b.input = null; b.progress = 0; b.isChopping = false; b.choppingPlayerId = null; });
+    // Oyuncuların elindeki itemları temizle
+    Object.values(gs.players).forEach(p => { p.holding = null; });
     io.to(roomId).emit("state", gs);
     socket.emit("sound", "success");
   });

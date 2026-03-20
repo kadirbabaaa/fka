@@ -1,4 +1,4 @@
-import { Customer, TABLE_Y_DEFAULT } from '../types/game';
+import { Customer } from '../types/game';
 import { stk, adjustColor, lighten, darken, drawShadowEllipse } from './rendererUtils';
 
 type CRS = {
@@ -84,14 +84,23 @@ function drawDialogBubble(ctx: CanvasRenderingContext2D, text: string, x: number
     lines.forEach((line, i) => { ctx.fillText(line, x, dby + padding + i * lineHeight); });
 }
 
-export function drawCustomer(ctx: CanvasRenderingContext2D, customer: Customer) {
+export function drawCustomer(ctx: CanvasRenderingContext2D, customer: Customer, tableLayout?: Record<string, { id: string; x: number; y: number }>) {
     const { id, x, y, seatY, wants, patience, maxPatience, isSeated, isEating, eatTimer, beatUpTimer, currentDialog } = customer;
     const shape = customer.bodyShape ?? 1;
     const bodyColor = customer.bodyColor ?? '#475569';
-    // facingUp: seatY < TABLE_Y_DEFAULT → müşteri masanın üstündeki koltukta → aşağı (masaya/bize) bakıyor → ÖNDEN
-    // facingUp: seatY > TABLE_Y_DEFAULT → masanın altındaki koltukta → yukarı (masaya) bakıyor → ARKADAN
-    const facingUp   = seatY !== undefined ? seatY < TABLE_Y_DEFAULT : true;
-    const facingBack = isSeated && !facingUp; // Arkasını dönerek oturuyor (yukarı bakıyor)
+    // Masanın y'sini tableLayout'tan bul — yoksa seatY'ye göre tahmin et
+    let tableY = 500;
+    if (tableLayout) {
+      const table = Object.values(tableLayout).find(t =>
+        Math.abs(t.x - customer.seatX) < 5 && (Math.abs(t.y - (seatY + 47)) < 5 || Math.abs(t.y - (seatY - 47)) < 5)
+      );
+      if (table) tableY = table.y;
+      else tableY = seatY < 500 ? seatY + 47 : seatY - 47;
+    } else {
+      tableY = seatY < 500 ? seatY + 47 : seatY - 47;
+    }
+    const facingUp   = seatY !== undefined ? seatY < tableY : true;
+    const facingBack = isSeated && !facingUp;
     const st = getCRS(id, x, y);
 
     const dx = x - st.lastX, dy = y - st.lastY;

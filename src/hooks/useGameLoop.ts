@@ -210,7 +210,7 @@ export function useGameLoop({
         }
       }
 
-      state.customers.forEach((c) => drawCustomer(ctx, c));
+      state.customers.forEach((c) => drawCustomer(ctx, c, state.tableLayout));
       (state.dirtyTables ?? []).forEach((t) => drawDirtyTable(ctx, t.seatX, t.seatY));
       drawWaitList(ctx, state.waitList ?? []);
 
