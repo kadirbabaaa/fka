@@ -5,6 +5,7 @@ const UPGRADE_UI: { id: UpgradeKey; icon: string; name: string; desc: string }[]
     { id: 'patience', icon: '⏳', name: 'Müşteri Sabrı', desc: 'Müşteriler daha uzun bekler' },
     { id: 'earnings', icon: '💰', name: 'Servis Kazancı', desc: 'Her servisten +5 ekstra puan' },
     { id: 'plateStackMax', icon: '🍽️', name: 'Tabak Yığını', desc: 'Başlangıçta daha çok tabak' },
+    { id: 'safeOven', icon: '🛡️', name: 'Güvenli Fırın', desc: 'Lv1: yanma 2x yavaş · Lv2: hiç yanmaz' },
 ];
 
 const DISH_NAMES: Record<string, string> = {

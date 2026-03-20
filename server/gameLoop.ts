@@ -70,9 +70,15 @@ export function gameTick(gs: GameState, io: Server, rid: string) {
         const recipe = RECIPE_DEFS[s.input as keyof typeof RECIPE_DEFS];
         s.output = recipe ? recipe.output : s.input;
         s.input = null;
-        s.burnTimer = BURN_TICKS;
+        // safeOven lv2: hiç yanmaz, lv1: 2x süre, lv0: normal
+        const safeOvenLv = gs.upgrades.safeOven ?? 0;
+        if (safeOvenLv >= 2) {
+          s.burnTimer = Infinity; // yanmaz
+        } else {
+          s.burnTimer = BURN_TICKS * (safeOvenLv >= 1 ? 2 : 1);
+        }
       }
-    } else if (s.output && s.burnTimer !== undefined && s.burnTimer > 0) {
+    } else if (s.output && s.burnTimer !== undefined && s.burnTimer > 0 && s.burnTimer !== Infinity) {
       s.burnTimer--;
       if (s.burnTimer <= 0) {
         s.isBurned = true;

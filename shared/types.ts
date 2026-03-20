@@ -9,7 +9,7 @@ export type { Personality };
 
 export type Item = string | null;
 export type StockKey = '🍞' | '🥩' | '🥬' | '🥘' | '🍢';
-export type UpgradeKey = 'patience' | 'earnings' | 'plateStackMax';
+export type UpgradeKey = 'patience' | 'earnings' | 'plateStackMax' | 'safeOven';
 export const CLEAN_PLATE = '__clean_plate__';
 export const DIRTY_PLATE = '__dirty_plate__';
 
@@ -68,7 +68,7 @@ export interface WaitingGuest {
 }
 
 export interface Upgrades {
-    patience: number; earnings: number; plateStackMax: number;
+    patience: number; earnings: number; plateStackMax: number; safeOven: number;
 }
 
 export interface CookStation {
@@ -326,6 +326,7 @@ export const UPGRADE_DEFS: Record<UpgradeKey, { costs: number[]; max: number }> 
     patience: { costs: [50, 100, 200], max: 3 },
     earnings: { costs: [100, 250], max: 2 },
     plateStackMax: { costs: [60, 120, 200], max: 3 }, // Her biri +2 tabak = 4→6→8→10
+    safeOven: { costs: [80, 180], max: 2 }, // lv1: yanma süresi 2x, lv2: hiç yanmaz
 };
 
 export const OVEN_UPGRADE_COSTS = [80, 120, 180];
@@ -351,7 +352,7 @@ export function mkGameState(): GameState {
     dirtyTables: [],
     score: 0, stock: { '🍞': 10, '🥩': 10, '🥬': 10, '🥘': 5, '🍢': 5 },
     marketName: "TerraMarket", dayPhase: 'prep', dayTimer: DAY_TICKS,
-    upgrades: { patience: 0, earnings: 0, plateStackMax: 0 }, day: 1, hasOrderedTonight: false,
+    upgrades: { patience: 0, earnings: 0, plateStackMax: 0, safeOven: 0 }, day: 1, hasOrderedTonight: false,
     cookStations: initialOvens,
     dirtyTrayCount: 0,
     // ─── Tabak Yığını ─────────────────────────────────────────────────────
