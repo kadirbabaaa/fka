@@ -4,7 +4,7 @@ import {
   DAY_TICKS, NIGHT_TICKS,
   RECIPE_DEFS, BURN_TICKS, EAT_TICKS, BURNED_FOOD,
   DISH_ITEMS, getSeatSlots, DISH_UNLOCK_POOL,
-  GAME_HEIGHT,
+  GAME_HEIGHT, EXTERIOR_Y,
 } from "../shared/types.js";
 import { DIALOGUES } from "../shared/dialogues.js";
 
@@ -32,9 +32,14 @@ export function tryQueueSeat(gs: GameState, io: Server, rid: string) {
     const guest = gs.waitList.shift()!;
     const seat = free[Math.floor(Math.random() * free.length)];
     const maxP = patLimit(gs.upgrades.patience);
+
+    // Kapı ortası: x=640, dışarıdan gelir
+    const DOOR_X = 640;
+    const DOOR_ENTRY_Y = GAME_HEIGHT - 20; // Dışarıdan başlar
+
     gs.customers.push({
       id: guest.id, seatX: seat.x, seatY: seat.y,
-      x: seat.x, y: GAME_HEIGHT + 60, targetY: seat.y,
+      x: DOOR_X, y: DOOR_ENTRY_Y, targetY: EXTERIOR_Y - 10,
       wants: guest.wants, patience: maxP, maxPatience: maxP,
       isSeated: false, isEating: false, eatTimer: 0,
       tipAmount: undefined,
@@ -44,6 +49,8 @@ export function tryQueueSeat(gs: GameState, io: Server, rid: string) {
       isBeatUp: false, isLeaving: false,
       bodyShape: guest.bodyShape, bodyColor: guest.bodyColor,
       punchCount: 0,
+      phase: 'entering',
+      doorX: DOOR_X,
     });
     io.to(rid).emit("sound", "arrive");
   }
@@ -183,8 +190,27 @@ function customerTick(gs: GameState, io: Server, rid: string) {
 
     if (c.isLeaving) {
       c.isSeated = false; c.isEating = false;
-      c.y += 4;
+      // Önce kapıya (EXTERIOR_Y), sonra dışarı çık
+      if (c.y < EXTERIOR_Y) {
+        c.y = Math.min(EXTERIOR_Y, c.y + 4);
+        c.x = c.doorX ?? 640; // kapıya doğru x'i hizala
+      } else {
+        c.y += 4;
+      }
       if (c.y >= GAME_HEIGHT + 60) gs.customers.splice(i, 1);
+      continue;
+    }
+
+    // Giriş fazı: dışarıdan kapıya doğru geliyor
+    if (c.phase === 'entering') {
+      if (c.y > (EXTERIOR_Y - 10)) {
+        c.y = Math.max(EXTERIOR_Y - 10, c.y - 3);
+      } else {
+        // Kapıdan geçti, koltuğa yönlen
+        c.phase = 'seating';
+        c.x = c.seatX;
+        c.targetY = c.seatY;
+      }
       continue;
     }
 

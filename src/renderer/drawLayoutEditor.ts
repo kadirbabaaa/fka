@@ -152,6 +152,7 @@ export function drawLayoutPreview(
     : movingStationId === 'sink' ? '🚿'
     : movingStationId === 'trash' ? '🗑️'
     : movingStationId === 'tray' ? '🍽️'
+    : movingStationId === 'plate_stack' ? '🍽️'
     : movingStationId.startsWith('oven') ? '🔥'
     : movingStationId.startsWith('counter') ? '🍽️'
     : '📦';

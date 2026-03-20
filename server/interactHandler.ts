@@ -67,8 +67,9 @@ export function registerInteractHandler(
       return;
     }
 
-    // Tabak Yığını
-    if (Math.hypot(px - PLATE_STACK_POS.x, py - PLATE_STACK_POS.y) < PLATE_STACK_POS.radius) {
+    // Tabak Yığını — dinamik koordinat (stationLayout'tan al, yoksa sabit)
+    const plateStackPos = gs.stationLayout?.['plate_stack'] ?? PLATE_STACK_POS;
+    if (Math.hypot(px - plateStackPos.x, py - plateStackPos.y) < PLATE_STACK_POS.radius) {
       const ps = gs.plateStack;
       if (!p.holding && ps.count > 0) {
         p.holding = CLEAN_PLATE; ps.count--;

@@ -51,6 +51,10 @@ export interface Customer {
     bodyColor: string;
     beatUpTimer?: number;
     punchCount?: number;
+
+    // Giriş fazı: 'entering' = kapıya doğru geliyor, 'seating' = koltuğa gidiyor
+    phase?: 'entering' | 'seating';
+    doorX?: number; // Hangi kapıdan girecek
 }
 
 export interface WaitingGuest {
@@ -343,6 +347,7 @@ export function mkGameState(): GameState {
       'sink':          { id: 'sink',          x: 1180, y: 90 },
       'trash':         { id: 'trash',         x: 1200, y: 190 },
       'dirty_tray':    { id: 'dirty_tray',    x: 1050, y: 90 },
+      'plate_stack':   { id: 'plate_stack',   x: 650, y: 65 },
       // Counter'lar kasıtlı olarak buraya dahil edilmedi — duvara sabit, taşınamaz
     },
     lockedStations: {},

@@ -47,7 +47,7 @@ let floorCache: OffscreenCanvas | HTMLCanvasElement | null = null;
 let floorCacheVersion = 0;
 let cachedUnlockedDishes = "";
 
-function drawFloorCached(ctx: CanvasRenderingContext2D, unlockedDishes: string[] = [], forceRedraw = false, ingredientPositions?: Record<string, { x: number; y: number }>, tablePositions?: Record<string, { id: string; x: number; y: number }>, movingTableId?: string | null) {
+function drawFloorCached(ctx: CanvasRenderingContext2D, unlockedDishes: string[] = [], forceRedraw = false, ingredientPositions?: Record<string, { x: number; y: number }>, tablePositions?: Record<string, { id: string; x: number; y: number }>, movingTableId?: string | null, plateStackPos?: { x: number; y: number }) {
   const currentDishesStr = [...unlockedDishes].sort().join(',');
   const ingPosStr = ingredientPositions
     ? Object.entries(ingredientPositions).map(([k, v]) => `${k}:${v.x},${v.y}`).join(';')
@@ -55,8 +55,9 @@ function drawFloorCached(ctx: CanvasRenderingContext2D, unlockedDishes: string[]
   const tablePosStr = tablePositions
     ? Object.entries(tablePositions).map(([k, v]) => `${k}:${v.x},${v.y}`).join(';')
     : '';
-  if (forceRedraw || floorCacheVersion !== FLOOR_CACHE_VERSION || cachedUnlockedDishes !== currentDishesStr + ingPosStr + tablePosStr) {
-    floorCache = null; floorCacheVersion = FLOOR_CACHE_VERSION; cachedUnlockedDishes = currentDishesStr + ingPosStr + tablePosStr;
+  const platePosStr = plateStackPos ? `${plateStackPos.x},${plateStackPos.y}` : '';
+  if (forceRedraw || floorCacheVersion !== FLOOR_CACHE_VERSION || cachedUnlockedDishes !== currentDishesStr + ingPosStr + tablePosStr + platePosStr) {
+    floorCache = null; floorCacheVersion = FLOOR_CACHE_VERSION; cachedUnlockedDishes = currentDishesStr + ingPosStr + tablePosStr + platePosStr;
   }
   if (!floorCache) {
     floorCache = typeof OffscreenCanvas !== "undefined"
@@ -64,7 +65,7 @@ function drawFloorCached(ctx: CanvasRenderingContext2D, unlockedDishes: string[]
       : Object.assign(document.createElement("canvas"), { width: GAME_WIDTH, height: GAME_HEIGHT });
     const offCtx = floorCache.getContext("2d");
     if (offCtx) {
-      drawFloor(offCtx as unknown as CanvasRenderingContext2D, unlockedDishes, ingredientPositions);
+      drawFloor(offCtx as unknown as CanvasRenderingContext2D, unlockedDishes, ingredientPositions, plateStackPos);
       const tables = tablePositions ? Object.values(tablePositions) : [];
       tables.forEach((t) => {
         if (movingTableId === t.id) {
@@ -117,7 +118,8 @@ export function useGameLoop({
         }
       }
       const movingTableId = editorStateRef?.current?.movingTableId;
-      drawFloorCached(ctx, state.unlockedDishes, isEditing, ingPositions, state.tableLayout, movingTableId);
+      const plateStackDynPos = state.stationLayout?.['plate_stack'] ?? undefined;
+      drawFloorCached(ctx, state.unlockedDishes, isEditing, ingPositions, state.tableLayout, movingTableId, plateStackDynPos);
 
       const stock = state.stock ?? { "🍞": 0, "🥩": 0, "🥬": 0 };
       const movingId = editorStateRef?.current?.movingStationId;
@@ -145,7 +147,9 @@ export function useGameLoop({
       const hs = state.holdingStations;
       if (hs) {
         if (state.plateStack && PLATE_STACK_POS) {
-          const sx = PLATE_STACK_POS.x, sy = PLATE_STACK_POS.y;
+          const platePos = state.stationLayout?.['plate_stack'] ?? PLATE_STACK_POS;
+          const sx = platePos.x, sy = platePos.y;
+          if (movingId !== 'plate_stack') {
           ctx.fillStyle = "rgba(0,0,0,0.15)";
           ctx.beginPath(); ctx.ellipse(sx, sy + 4, 25, 12, 0, 0, Math.PI * 2); ctx.fill();
           for (let i = 0; i < state.plateStack.count; i++) {
@@ -166,6 +170,7 @@ export function useGameLoop({
           ctx.shadowColor = "rgba(0,0,0,0.8)"; ctx.shadowBlur = 4;
           ctx.fillText(`${state.plateStack.count}/${state.plateStack.maxCount}`, sx, sy - state.plateStack.count * 4 - 15);
           ctx.shadowBlur = 0;
+          }
         }
         drawCounters(ctx, hs);
       }

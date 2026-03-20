@@ -204,8 +204,8 @@ export function useLayoutEditor({ socket, gameStateRef, localPlayerRef, dayPhase
     let closest: { id: string; dist: number } | null = null;
     const layout = gs.stationLayout as Record<string, { id: string; x: number; y: number }>;
     for (const [id, pos] of Object.entries(layout)) {
-      // Counter'lar ve plate_stack taşınamaz
-      if (id.startsWith('counter') || id === 'plate_stack') continue;
+      // Counter'lar taşınamaz — duvara sabit
+      if (id.startsWith('counter')) continue;
       // Kilitli istasyonları atla
       if (gs.lockedStations[id]) continue;
       const dist = Math.hypot(lp.x - pos.x, lp.y - pos.y);

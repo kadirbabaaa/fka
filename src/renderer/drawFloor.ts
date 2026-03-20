@@ -37,7 +37,7 @@ function drawWorkstationBase(
 }
 
 /** Restoran zemini — PlateUp tarzı koyu mutfak + sıcak ahşap salon */
-export function drawFloor(ctx: CanvasRenderingContext2D, unlockedDishes: string[] = [], ingredientPositions?: Record<string, { x: number; y: number }>) {
+export function drawFloor(ctx: CanvasRenderingContext2D, unlockedDishes: string[] = [], ingredientPositions?: Record<string, { x: number; y: number }>, plateStackPos?: { x: number; y: number }) {
 
   // ══════════════════════════════════════════════════════════════════
   // SALON — sıcak açık ahşap parke (PlateUp dining room tonu)
@@ -258,7 +258,8 @@ export function drawFloor(ctx: CanvasRenderingContext2D, unlockedDishes: string[
   // TABAK YIĞINI İSTASYONU (PLATE STACK BASE)
   // ══════════════════════════════════════════════════════════════════
   if (PLATE_STACK_POS) {
-    const { x, y } = PLATE_STACK_POS;
+    const pos = plateStackPos ?? PLATE_STACK_POS;
+    const { x, y } = pos;
     drawWorkstationBase(ctx, x, y, 42, 28, 10, 0.28);
     ctx.fillStyle = '#171717';
     ctx.font = 'bold 9px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
