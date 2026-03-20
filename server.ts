@@ -211,6 +211,8 @@ io.on("connection", (socket) => {
     // Race condition: zaten prep'e geçilmişse tekrar geçme
     if (gs.dayPhase === 'night' && !gs.menuChoices) {
       gs.day++; gs.dayPhase = 'prep'; gs.dayTimer = DAY_TICKS;
+      // Yeni günde tezgahları temizle ama tabak yığınını ve tepsiyi koru
+      gs.holdingStations.forEach(s => s.items = []);
       io.to(roomId).emit("state", gs);
       socket.emit("sound", "success");
     }
@@ -270,7 +272,7 @@ io.on("connection", (socket) => {
     gs.dayPhase = 'prep';
     gs.dayTimer = DAY_TICKS;
     gs.score = Math.floor(gs.score * 0.8);
-    gs.dirtyTrayCount = 0;
+    // Tabaklar ve tepsi durumu korunur (kullanıcı isteği)
     gs.revengeQueue = [];
     gs.lockedStations = {};
     gs.lockedTables = {};

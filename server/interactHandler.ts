@@ -40,18 +40,28 @@ export function registerInteractHandler(
       return;
     }
 
-    // Çöp kovası — yanmış yemek, kirli tabak, kirli tepsi içindekiler atılabilir
+    // Çöp kovası — Sadece yanmış yemek veya ham malzemeler atılabilir. TEMİZ VEYA KİRLİ TABAK ATILAMAZ.
     const trashPos = gs.stationLayout['trash'] ?? TRASH_STATION;
     if (Math.hypot(px - trashPos.x, py - trashPos.y) < 90) {
       if (p.holding) {
-        if (isTray(p.holding)) {
-          // Tepsi içindeki kirli tabakları say, dirtyTrayCount'u güncelle
-          const items = getTrayItems(p.holding);
-          const dirtyCount = items.filter(i => i === DIRTY_PLATE).length;
-          gs.dirtyTrayCount = Math.max(0, (gs.dirtyTrayCount || 0) - dirtyCount);
+        if (p.holding === CLEAN_PLATE || p.holding === DIRTY_PLATE) {
+          socket.emit("sound", "fail"); // Tabak çöpe atılamaz!
+          return;
         }
-        p.holding = null;
-        socket.emit("sound", "trash");
+        if (isTray(p.holding)) {
+          const items = getTrayItems(p.holding);
+          // Tepside tabak (temiz veya kirli) varsa çöpü engelle
+          if (items.some(i => i === CLEAN_PLATE || i === DIRTY_PLATE)) {
+            socket.emit("sound", "fail");
+            return;
+          }
+          p.holding = null;
+          socket.emit("sound", "trash");
+        } else {
+          // Diğer her şey (yanmış yemek, ham malzeme) atılabilir
+          p.holding = null;
+          socket.emit("sound", "trash");
+        }
       }
       return;
     }
@@ -67,17 +77,23 @@ export function registerInteractHandler(
         const items = getTrayItems(p.holding);
         const dirtyCountInTray = items.filter(i => i === DIRTY_PLATE).length;
         if (dirtyCountInTray > 0) {
-          // Tepsideki kirli tabakları sepete bırak
+          // Tepsideki TÜM kirli tabakları sepete bırak
           const cleaned = items.filter(i => i !== DIRTY_PLATE);
           p.holding = cleaned.length > 0 ? createTray(cleaned) : null;
           gs.dirtyTrayCount = (gs.dirtyTrayCount || 0) + dirtyCountInTray;
           socket.emit("sound", "success");
         } else if (items.length < MAX_TRAY_CAPACITY && (gs.dirtyTrayCount || 0) > 0) {
-          // Sepetten kirli tabağı tepsiye al
-          items.push(DIRTY_PLATE);
-          p.holding = createTray(items);
-          gs.dirtyTrayCount--;
-          socket.emit("sound", "pickup");
+          // Sepetten kirli tabakları tepsiye TOPLU AL (Tepsi kapasitesi kadar)
+          let added = 0;
+          while (items.length < MAX_TRAY_CAPACITY && gs.dirtyTrayCount > 0) {
+            items.push(DIRTY_PLATE);
+            gs.dirtyTrayCount--;
+            added++;
+          }
+          if (added > 0) {
+            p.holding = createTray(items);
+            socket.emit("sound", "pickup");
+          }
         }
       } else if (!p.holding && (gs.dirtyTrayCount || 0) > 0) {
         // Sepetten tek bir kirli tabak al
@@ -87,6 +103,7 @@ export function registerInteractHandler(
       }
       return;
     }
+    // Kirli masaları temizle — Tepsi ile TOPLU TOPLAMA desteği
     const dirtyIdx = gs.dirtyTables.findIndex(t => Math.hypot(px - t.seatX, py - t.seatY) < SERVE_R);
     if (dirtyIdx !== -1) {
       const dt = gs.dirtyTables[dirtyIdx];
@@ -100,6 +117,7 @@ export function registerInteractHandler(
         socket.emit("sound", "pickup");
       } else if (isTray(p.holding)) {
         const items = getTrayItems(p.holding);
+        // Tepside boş yer varsa kirli tabağı al
         if (items.length < MAX_TRAY_CAPACITY) {
           items.push(DIRTY_PLATE);
           p.holding = createTray(items);
@@ -135,10 +153,18 @@ export function registerInteractHandler(
           ps.count++;
           socket.emit("sound", "success"); return;
         } else if (ps.count > 0 && items.length < MAX_TRAY_CAPACITY) {
-          items.push(CLEAN_PLATE);
-          p.holding = createTray(items);
-          ps.count--;
-          socket.emit("sound", "pickup"); return;
+          // Tepsiye TOPLU TEMİZ TABAK AL
+          let added = 0;
+          while (items.length < MAX_TRAY_CAPACITY && ps.count > 0) {
+            items.push(CLEAN_PLATE);
+            ps.count--;
+            added++;
+          }
+          if (added > 0) {
+            p.holding = createTray(items);
+            socket.emit("sound", "pickup");
+          }
+          return;
         }
       }
     }
@@ -257,9 +283,11 @@ export function registerInteractHandler(
             io.to(roomId).emit("sound", "success"); return;
           } else if (isTray(p.holding)) {
             const items = getTrayItems(p.holding);
+            // Tepside bu müşterinin istediği yemek var mı?
             const wIdx = items.indexOf(c.wants as string);
             if (wIdx !== -1) {
-              items.splice(wIdx, 1);
+              // Yemeği tepsiden çıkar, yerine BOŞ TABAK koy (PlateUp mantığı)
+              items[wIdx] = CLEAN_PLATE;
               p.holding = createTray(items);
               c.tipAmount = earn(gs.upgrades.earnings);
               c.isEating = true; c.eatTimer = EAT_TICKS; c.wants = null;

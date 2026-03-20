@@ -15,11 +15,11 @@ const DOOR_X = 640;
 const DOOR_ENTRY_Y = GAME_HEIGHT - 20;
 
 function patLimit(lv: number, day: number, playerCount: number) {
-  // Tek kişi: daha sabırlı müşteriler. Çok kişi: daha az sabır (daha fazla baskı)
-  const basePatience = playerCount === 1 ? 1500 : 1200;
-  const perLv = playerCount === 1 ? 350 : 300;
-  const perDay = playerCount === 1 ? 20 : 30;
-  return Math.max(300, basePatience + perLv * lv - perDay * day);
+  // Sabır süreleri genel olarak %20-30 artırıldı
+  const basePatience = playerCount === 1 ? 2000 : 1600;
+  const perLv = playerCount === 1 ? 450 : 400;
+  const perDay = playerCount === 1 ? 15 : 25; // Günlük sabır düşüşü azaltıldı
+  return Math.max(400, basePatience + perLv * lv - perDay * day);
 }
 
 export function generateMenuChoices(gs: GameState): void {
@@ -181,12 +181,17 @@ function spawnTick(gs: GameState, io: Server, rid: string) {
   const isSolo = playerCount === 1;
 
   // Spawn hızı ve kuyruk limiti oyuncu sayısıyla doğrudan orantılı
-  const baseRate = 0.0007 + Math.min(gs.day * 0.0003, 0.005);
+  const baseRate = 0.0005 + Math.min(gs.day * 0.0002, 0.004); // Baz oran düşürüldü
   const dayProgress = 1 - gs.dayTimer / DAY_TICKS;
-  // 1 oyuncu = 1x, 2 oyuncu = 2x, 3 oyuncu = 3x, 4 oyuncu = 4x
-  const spawnMultiplier = playerCount;
+  
+  // PlateUp benzeri sistem: gün ortasında hafif yoğunluk, başında ve sonunda daha sakin
+  // Çan eğrisi (bell curve) benzeri bir çarpan: progress 0.5'te (gün ortası) max 1.5, uçlarda 0.5
+  const timeMultiplier = 0.5 + Math.sin(dayProgress * Math.PI); 
+
+  // 1 oyuncu = 1x, 2 oyuncu = 1.5x (eskiden 2x'ti, çok hızlı geliyordu), 3+ oyuncu = +0.5x her oyuncu için
+  const spawnMultiplier = 1 + (playerCount - 1) * 0.5;
   const queueLimit = (6 + gs.day) * playerCount;
-  const currentRate = (baseRate + dayProgress * 0.001) * spawnMultiplier;
+  const currentRate = (baseRate + dayProgress * 0.0008) * spawnMultiplier * timeMultiplier;
 
   if (Math.random() < currentRate && gs.customers.length + gs.waitList.length < queueLimit) {
     // Grup mu, tekil mi? Gün ilerledikçe grup şansı artar
