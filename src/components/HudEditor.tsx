@@ -217,6 +217,13 @@ export const HudEditor: React.FC<Props> = ({ layout, onChange, onClose, joystick
                         🔇
                     </div>
                 </DraggableHudItem>
+
+                <DraggableHudItem id="chopBtn" layout={layout.chopBtn} containerRef={containerRef} onUpdate={updateElement} label="Doğra">
+                    <div className="bg-amber-600 text-white rounded-full shadow-xl font-black text-xs border-4 border-amber-400 flex items-center justify-center"
+                        style={{ width: Math.round(actionBtnSize * 0.7), height: Math.round(actionBtnSize * 0.7) }}>
+                        🔪<br />DOĞRA
+                    </div>
+                </DraggableHudItem>
             </div>
         </div>
     );

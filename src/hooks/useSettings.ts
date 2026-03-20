@@ -12,6 +12,7 @@ export interface HudLayout {
     actionBtn: HudElementLayout;
     punchBtn: HudElementLayout;
     musicBtn: HudElementLayout;
+    chopBtn: HudElementLayout;
 }
 
 export const DEFAULT_HUD_LAYOUT: HudLayout = {
@@ -19,6 +20,7 @@ export const DEFAULT_HUD_LAYOUT: HudLayout = {
     actionBtn: { x: 82, y: 68, scale: 1.0 },
     punchBtn:  { x: 82, y: 55, scale: 1.0 },
     musicBtn:  { x: 82, y: 82, scale: 0.7 },
+    chopBtn:   { x: 72, y: 68, scale: 1.0 },
 };
 
 export interface Settings {
@@ -56,6 +58,8 @@ function load(): Settings {
         const parsed = JSON.parse(saved);
         // hudLayout yoksa default ekle
         if (!parsed.hudLayout) parsed.hudLayout = DEFAULT_HUD_LAYOUT;
+        // Yeni eklenen alanlar için fallback
+        if (!parsed.hudLayout.chopBtn) parsed.hudLayout.chopBtn = DEFAULT_HUD_LAYOUT.chopBtn;
         return { ...DEFAULTS, ...parsed };
     } catch {
         return DEFAULTS;

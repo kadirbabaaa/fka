@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Socket } from 'socket.io-client';
 import { GameState } from '../types/game';
+import { playSound } from '../utils/audio';
 
 interface UseKeyboardProps {
     isJoinedRef: React.MutableRefObject<boolean>;
@@ -19,6 +20,7 @@ interface UseKeyboardProps {
 export function useKeyboard({ isJoinedRef, socket, audioCtxRef, gameStateRef, localPlayerRef, onInteract }: UseKeyboardProps) {
     const keys = useRef({ w: false, a: false, s: false, d: false });
     const lastPunchTime = useRef(0);
+    const chopIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -80,11 +82,18 @@ export function useKeyboard({ isJoinedRef, socket, audioCtxRef, gameStateRef, lo
                 // R tuşu — kesme tahtasında basılı tut
                 case 'r': case 'R': {
                     e.preventDefault();
-                    if (e.repeat) break; // basılı tutma tekrarını engelle, sadece ilk basışta emit
+                    if (e.repeat) break;
                     const gs2 = gameStateRef.current;
                     const lp2 = localPlayerRef.current;
                     const board = gs2.choppingBoards?.find(b => Math.hypot(b.x - lp2.x, b.y - lp2.y) < 90);
-                    if (board) socket?.emit('chop_start', board.id);
+                    if (board) {
+                        socket?.emit('chop_start', board.id);
+                        // Doğrama ses efekti — her 300ms'de bir
+                        if (!chopIntervalRef.current) {
+                            playSound(null, 'chop');
+                            chopIntervalRef.current = setInterval(() => playSound(null, 'chop'), 300);
+                        }
+                    }
                     break;
                 }
             }
@@ -103,6 +112,11 @@ export function useKeyboard({ isJoinedRef, socket, audioCtxRef, gameStateRef, lo
                     const lp = localPlayerRef.current;
                     const board = gs.choppingBoards?.find(b => Math.hypot(b.x - lp.x, b.y - lp.y) < 90);
                     if (board) socket?.emit('chop_stop', board.id);
+                    // Ses intervalini durdur
+                    if (chopIntervalRef.current) {
+                        clearInterval(chopIntervalRef.current);
+                        chopIntervalRef.current = null;
+                    }
                     break;
                 }
             }
@@ -111,6 +125,10 @@ export function useKeyboard({ isJoinedRef, socket, audioCtxRef, gameStateRef, lo
         // Pencere focus kaybedince tüm tuşları sıfırla (takılı kalma sorunu)
         const handleBlur = () => {
             keys.current = { w: false, a: false, s: false, d: false };
+            if (chopIntervalRef.current) {
+                clearInterval(chopIntervalRef.current);
+                chopIntervalRef.current = null;
+            }
         };
 
         window.addEventListener('keydown', handleKeyDown);

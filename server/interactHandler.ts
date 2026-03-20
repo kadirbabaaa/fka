@@ -168,7 +168,8 @@ export function registerInteractHandler(
               socket.emit("sound", "fail");
             }
           } else if (p.holding === CLEAN_PLATE && board.input && isChopped(board.input)) {
-            // Tabakla doğranmış malzemeyi al — tabak + malzeme birleşir
+            // Tabakla doğranmış malzemeyi al — tabak korunur, malzeme tabağın üstüne gelir
+            // holding: CLEAN_PLATE → doğranmış malzeme (tabak fırından almak için hâlâ gerekli)
             p.holding = board.input;
             board.input = null;
             board.progress = 0;
@@ -208,7 +209,7 @@ export function registerInteractHandler(
         } else if (isRawChoppable && !station.input && !station.output) {
           // Ham doğranabilir malzeme — fırına koyma, uyar
           socket.emit("sound", "fail");
-        } else if (p.holding === CLEAN_PLATE && station.output && !station.isBurned) {
+        } else if ((p.holding === CLEAN_PLATE || (typeof p.holding === 'string' && p.holding.startsWith(CHOP_PREFIX))) && station.output && !station.isBurned) {
           p.holding = station.output;
           station.output = null; station.burnTimer = 0;
           socket.emit("sound", "success");

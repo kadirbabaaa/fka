@@ -14,6 +14,7 @@ import { Settings } from '../hooks/useSettings';
 import { useVoiceChat } from '../hooks/useVoiceChat';
 import { useGameState } from '../hooks/useGameState';
 import { useLayoutEditor } from '../hooks/useLayoutEditor';
+import { playSound } from '../utils/audio';
 
 const MUSIC_URL = 'https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@main/Light%20Hearted%20-%20Jeremy%20Blake.mp3';
 
@@ -465,8 +466,9 @@ export const GameScreen: React.FC<Props> = ({
                 <div
                     className="absolute z-10"
                     style={{
-                        left: `${settings.hudLayout.actionBtn.x + 8}%`,
-                        top: `${settings.hudLayout.actionBtn.y + 8}%`,
+                        left: `${settings.hudLayout.chopBtn.x}%`,
+                        top: `${settings.hudLayout.chopBtn.y}%`,
+                        transform: `scale(${settings.hudLayout.chopBtn.scale})`,
                         transformOrigin: 'top left',
                     }}
                 >
@@ -476,10 +478,15 @@ export const GameScreen: React.FC<Props> = ({
                             const gs = gameStateRef.current;
                             const lp = localPlayerRef.current;
                             const board = gs.choppingBoards?.find(b => Math.hypot(b.x - lp.x, b.y - lp.y) < 90);
-                            if (board) socket?.emit('chop_start', board.id);
+                            if (board) {
+                                socket?.emit('chop_start', board.id);
+                                playSound(null, 'chop');
+                                (e.currentTarget as any)._chopInterval = setInterval(() => playSound(null, 'chop'), 300);
+                            }
                         }}
                         onPointerUp={(e) => {
                             e.preventDefault();
+                            clearInterval((e.currentTarget as any)._chopInterval);
                             const gs = gameStateRef.current;
                             const lp = localPlayerRef.current;
                             const board = gs.choppingBoards?.find(b => Math.hypot(b.x - lp.x, b.y - lp.y) < 90);
@@ -487,6 +494,7 @@ export const GameScreen: React.FC<Props> = ({
                         }}
                         onPointerLeave={(e) => {
                             e.preventDefault();
+                            clearInterval((e.currentTarget as any)._chopInterval);
                             const gs = gameStateRef.current;
                             gs.choppingBoards?.forEach(b => socket?.emit('chop_stop', b.id));
                         }}

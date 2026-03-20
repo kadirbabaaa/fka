@@ -85,6 +85,27 @@ export function playSound(_audioCtxRef: any, type: string) {
       playChord(ctx, [784, 988], now + 0.12, 0.18, 0.08); // G5+B5
       break;
     }
+    case 'chop': {
+      // Bıçak sesi — kısa, keskin "thwack"
+      const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.04, ctx.sampleRate);
+      const data = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+      const noise = ctx.createBufferSource();
+      noise.buffer = noiseBuffer;
+      const noiseGain = ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.18, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+      const hpf = ctx.createBiquadFilter();
+      hpf.type = 'highpass';
+      hpf.frequency.value = 1800;
+      noise.connect(hpf);
+      hpf.connect(noiseGain);
+      noiseGain.connect(ctx.destination);
+      noise.start(now);
+      // Kısa "thud" alt frekans
+      playNote(ctx, 180, now, 0.05, 0.12, 'triangle');
+      break;
+    }
     default:
       break;
   }
