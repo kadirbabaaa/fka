@@ -24,7 +24,7 @@ const DEFAULT_STATE: GameState = {
     marketName: '',
     dayPhase: 'prep',
     dayTimer: 1800,
-    upgrades: { patience: 0, earnings: 0, plateStackMax: 0 },
+    upgrades: { patience: 0, earnings: 0, plateStackMax: 0, safeOven: 0 },
     day: 1,
     hasOrderedTonight: false,
     cookStations: [],
@@ -39,6 +39,7 @@ const DEFAULT_STATE: GameState = {
     lockedStations: {},
     tableLayout: {},
     lockedTables: {},
+    choppingBoards: [],
 };
 
 /**
@@ -152,7 +153,7 @@ export function useSocket(
         newSocket.on('state', (state: GameState) => {
             // Mevcut pozisyonları koru (positions event'inden gelen daha güncel olabilir)
             if (gameStateRef.current?.players) {
-                for (const [id, p] of Object.entries(gameStateRef.current.players)) {
+                for (const [id, p] of Object.entries(gameStateRef.current.players) as [string, { x: number; y: number }][]) {
                     lastPositions.set(id, { x: p.x, y: p.y });
                 }
             }

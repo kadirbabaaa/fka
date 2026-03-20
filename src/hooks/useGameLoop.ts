@@ -19,7 +19,7 @@ import {
 import { drawFloor } from "../renderer/drawFloor";
 import { drawStation } from "../renderer/drawStation";
 import { drawTable } from "../renderer/drawTable";
-import { drawCustomer } from "../renderer/drawCustomer";
+import { drawCustomer, cleanupCRS } from "../renderer/drawCustomer";
 import { drawPlayer } from "../renderer/drawPlayer";
 import { drawCookStation } from "../renderer/drawCookStation";
 import { drawHoldingStation } from "../renderer/drawHoldingStation";
@@ -211,6 +211,11 @@ export function useGameLoop({
       }
 
       state.customers.forEach((c) => drawCustomer(ctx, c, state.tableLayout));
+      // Her ~150 frame'de (~5sn) CRS temizliği
+      if (frameId % 150 === 0) {
+        const activeIds = new Set<string>(state.customers.map(c => c.id));
+        cleanupCRS(activeIds);
+      }
       (state.dirtyTables ?? []).forEach((t) => drawDirtyTable(ctx, t.seatX, t.seatY));
       drawWaitList(ctx, state.waitList ?? []);
 

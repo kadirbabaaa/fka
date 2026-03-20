@@ -4,6 +4,7 @@ export function setSfxEnabled(v: boolean) { _sfxEnabled = v; }
 export function isSfxEnabled() { return _sfxEnabled; }
 
 let _audioCtx: AudioContext | null = null;
+let chopBufferCache: AudioBuffer | null = null;
 function getAudioCtx(): AudioContext | null {
   if (!_audioCtx) {
     const AC = window.AudioContext || (window as any).webkitAudioContext;
@@ -86,12 +87,14 @@ export function playSound(_audioCtxRef: any, type: string) {
       break;
     }
     case 'chop': {
-      // Bıçak sesi — kısa, keskin "thwack"
-      const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.04, ctx.sampleRate);
-      const data = noiseBuffer.getChannelData(0);
-      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+      // Bıçak sesi — noise buffer cache'li
+      if (!chopBufferCache || chopBufferCache.sampleRate !== ctx.sampleRate) {
+        chopBufferCache = ctx.createBuffer(1, ctx.sampleRate * 0.04, ctx.sampleRate);
+        const data = chopBufferCache.getChannelData(0);
+        for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+      }
       const noise = ctx.createBufferSource();
-      noise.buffer = noiseBuffer;
+      noise.buffer = chopBufferCache;
       const noiseGain = ctx.createGain();
       noiseGain.gain.setValueAtTime(0.18, now);
       noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);

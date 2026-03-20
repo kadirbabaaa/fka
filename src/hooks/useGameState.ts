@@ -1,37 +1,78 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { GameState, DAY_TICKS, Upgrades } from '../types/game';
 import React from 'react';
 
+interface GameUIState {
+    score: number;
+    dayPhase: 'prep' | 'day' | 'night';
+    dayTimer: number;
+    upgrades: Upgrades;
+    day: number;
+    ovenCount: number;
+    queueLen: number;
+    lives: number;
+    isGameOver: boolean;
+    menuChoices: string[] | null;
+    unlockedDishes: string[];
+}
+
+const DEFAULT_UI: GameUIState = {
+    score: 0, dayPhase: 'prep', dayTimer: DAY_TICKS,
+    upgrades: { patience: 0, earnings: 0, plateStackMax: 0, safeOven: 0 },
+    day: 1, ovenCount: 1, queueLen: 0, lives: 3,
+    isGameOver: false, menuChoices: null, unlockedDishes: ['🥗', '🍔'],
+};
+
+function upgradesEqual(a: Upgrades, b: Upgrades): boolean {
+    return a.patience === b.patience && a.earnings === b.earnings
+        && a.plateStackMax === b.plateStackMax && a.safeOven === b.safeOven;
+}
+
+function arraysEqual(a: string[] | null, b: string[] | null): boolean {
+    if (a === b) return true;
+    if (!a || !b) return false;
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) { if (a[i] !== b[i]) return false; }
+    return true;
+}
+
 export function useGameState(gameStateRef: React.MutableRefObject<GameState>) {
-    const [score, setScore] = useState(0);
-    const [dayPhase, setDayPhase] = useState<'prep' | 'day' | 'night'>('prep');
-    const [dayTimer, setDayTimer] = useState(DAY_TICKS);
-    const [upgrades, setUpgrades] = useState<Upgrades>({ patience: 0, earnings: 0, plateStackMax: 0 });
-    const [day, setDay] = useState(1);
-    const [ovenCount, setOvenCount] = useState(1);
-    const [queueLen, setQueueLen] = useState(0);
-    const [lives, setLives] = useState(3);
-    const [isGameOver, setIsGameOver] = useState(false);
-    const [menuChoices, setMenuChoices] = useState<string[] | null>(null);
-    const [unlockedDishes, setUnlockedDishes] = useState<string[]>(['🥗', '🍔']);
+    const [ui, setUI] = useState<GameUIState>(DEFAULT_UI);
+    const prevRef = useRef<GameUIState>(DEFAULT_UI);
 
     useEffect(() => {
         const id = setInterval(() => {
             const s = gameStateRef.current;
-            setScore(s.score);
-            setDayPhase(s.dayPhase);
-            setDayTimer(s.dayTimer);
-            setUpgrades({ ...s.upgrades });
-            setDay(s.day);
-            setQueueLen(s.waitList?.length ?? 0);
-            setOvenCount(s.cookStations?.length ?? 1);
-            setLives(s.lives ?? 3);
-            setIsGameOver(s.isGameOver ?? false);
-            setMenuChoices(s.menuChoices ?? null);
-            setUnlockedDishes(s.unlockedDishes ?? ['🥗', '🍔']);
+            const prev = prevRef.current;
+            const next: GameUIState = {
+                score: s.score,
+                dayPhase: s.dayPhase,
+                dayTimer: s.dayTimer,
+                upgrades: s.upgrades,
+                day: s.day,
+                ovenCount: s.cookStations?.length ?? 1,
+                queueLen: s.waitList?.length ?? 0,
+                lives: s.lives ?? 3,
+                isGameOver: s.isGameOver ?? false,
+                menuChoices: s.menuChoices ?? null,
+                unlockedDishes: s.unlockedDishes ?? ['🥗', '🍔'],
+            };
+            // Shallow compare — değişmediyse setState çağırma
+            if (
+                next.score !== prev.score || next.dayPhase !== prev.dayPhase ||
+                next.dayTimer !== prev.dayTimer || next.day !== prev.day ||
+                next.ovenCount !== prev.ovenCount || next.queueLen !== prev.queueLen ||
+                next.lives !== prev.lives || next.isGameOver !== prev.isGameOver ||
+                !upgradesEqual(next.upgrades, prev.upgrades) ||
+                !arraysEqual(next.menuChoices, prev.menuChoices) ||
+                !arraysEqual(next.unlockedDishes, prev.unlockedDishes)
+            ) {
+                prevRef.current = next;
+                setUI(next);
+            }
         }, 200);
         return () => clearInterval(id);
     }, []);
 
-    return { score, dayPhase, dayTimer, upgrades, day, ovenCount, queueLen, lives, isGameOver, menuChoices, unlockedDishes };
+    return ui;
 }

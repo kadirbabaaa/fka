@@ -10,6 +10,14 @@ type CRS = {
 };
 
 const crs = new Map<string, CRS>();
+let _lastCleanup = 0;
+
+/** Artık aktif olmayan müşteri CRS verilerini temizle */
+export function cleanupCRS(activeIds: Set<string>) {
+    for (const key of crs.keys()) {
+        if (!activeIds.has(key)) crs.delete(key);
+    }
+}
 
 function getCRS(id: string, x: number, y: number): CRS {
     if (!crs.has(id)) crs.set(id, {

@@ -155,7 +155,7 @@ export function gameTick(gs: GameState, io: Server, rid: string) {
   io.to(rid).emit("positions", positions);
 
   // Ağır state'i daha seyrek gönder (her 3 tick'te bir = ~100ms)
-  gs._stateTick = ((gs._stateTick ?? 0) + 1) % 3;
+  gs._stateTick = ((gs._stateTick ?? 0) + 1) % 6;
   if (gs._stateTick === 0) {
     io.to(rid).emit("state", gs);
   }
