@@ -214,6 +214,14 @@ export const GameScreen: React.FC<Props> = ({
                 </div>
 
                 <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {dayPhase === 'prep' && (
+                        <button
+                            onClick={() => emit('openShop')}
+                            className="px-3 py-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white rounded-lg font-black text-xs border border-green-300 transition-all active:scale-95 animate-pulse whitespace-nowrap"
+                        >
+                            ☀️ Dükkânı Aç
+                        </button>
+                    )}
                     <div className="bg-emerald-600 text-white px-2 py-0.5 rounded-lg text-center">
                         <div className="text-[8px] font-bold opacity-70 uppercase tracking-widest">Ciro</div>
                         <div className="text-base font-black leading-none">${score}</div>
@@ -231,7 +239,8 @@ export const GameScreen: React.FC<Props> = ({
             </div>
 
             {/* ── Canvas ────────────────────────────────────────────────────────── */}
-            <div className="flex-1 min-h-0 relative" style={{ background: '#545250' }}>
+            <div className="flex-1 min-h-0 relative flex justify-center" style={{ background: '#9a7858' }}>
+                <div className="relative h-full" style={{ aspectRatio: '1280/870', maxWidth: '80vw' }}>
 
                 {/* ── Geliştirici Araçları (DEV) ── */}
                 {(dayPhase === 'prep' || dayPhase === 'day') && isDevMode && (
@@ -322,21 +331,11 @@ export const GameScreen: React.FC<Props> = ({
                     >{musicOn ? '🎵' : '🔇'}</button>
                 </div>
 
-                {/* ── Hazırlık: Küçük yüzen buton (ekranı KAPLAMAZ) ── */}
                 {dayPhase === 'prep' && !editorState.isMoving && !editorState.isMovingTable && (
-                    <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 bg-stone-900/90 backdrop-blur-sm px-4 py-2 rounded-2xl border border-purple-700/60 shadow-xl">
-                        <div className="text-center">
-                            <span className="text-white font-bold text-sm">🔧 Gün {day} — Hazırlık</span>
-                            <p className="text-stone-400 text-[10px] leading-none mt-0.5">
-                                {isTouchDevice ? 'AL/VER: İstasyon/Masa taşı' : 'E: İstasyon/Masa taşı'}
-                            </p>
-                        </div>
-                        <button
-                            onClick={() => emit('openShop')}
-                            className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white rounded-xl font-black text-sm border border-green-300 transition-all active:scale-95 shadow-lg animate-pulse whitespace-nowrap"
-                        >
-                            ☀️ DÜKKANI AÇ
-                        </button>
+                    <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-stone-900/80 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-purple-700/60 shadow-xl">
+                        <p className="text-stone-400 text-[10px] text-center">
+                            {isTouchDevice ? 'AL/VER: İstasyon/Masa taşı' : 'E: İstasyon/Masa taşı'}
+                        </p>
                     </div>
                 )}
 
@@ -451,6 +450,7 @@ export const GameScreen: React.FC<Props> = ({
                         onNextDay={() => emit('nextDay')}
                     />
                 )}
+                </div> {/* inner aspect-ratio wrapper */}
             </div>
 
             {/* PC İpuçları */}
